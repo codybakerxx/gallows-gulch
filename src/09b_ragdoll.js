@@ -180,7 +180,17 @@ class Ragdoll {
         px = x[k]; py = x[k + 1]; pz = x[k + 2]; }
       // the open leaves: thin walls hanging from the opening's side edges; whatever side a limb is on, it stays there
       if (py > leafB - r && py < yb && pz > z0 && pz < z1) for (const xw of [x0, x1]) { if (Math.abs(px - xw) >= r) continue; const side = (p[k] - xw) >= 0 ? 1 : -1; shove(k, xw + side * r - px, 0, 0); px = x[k]; }
-      const gy = this.free ? r * 0.8 : 0.05; // a free body lies on the ground on its full girth; the hanged man's toes only ever brush it
+      if (this.solids) for (const S of this.solids) { // a building's walls, roof and porch (a gunman shot off a roof): out through the face it came in by
+        const U = S.u, E = S.h, cx = x[k] - S.c.x, cy = x[k + 1] - S.c.y, cz = x[k + 2] - S.c.z;
+        const L0 = cx * U[0].x + cy * U[0].y + cz * U[0].z, L1 = cx * U[1].x + cy * U[1].y + cz * U[1].z, L2 = cx * U[2].x + cy * U[2].y + cz * U[2].z;
+        if (Math.abs(L0) >= E[0] + r || Math.abs(L1) >= E[1] + r || Math.abs(L2) >= E[2] + r) continue;
+        const qx = p[k] - S.c.x, qy = p[k + 1] - S.c.y, qz = p[k + 2] - S.c.z, L = [L0, L1, L2];
+        const Q = [qx * U[0].x + qy * U[0].y + qz * U[0].z, qx * U[1].x + qy * U[1].y + qz * U[1].z, qx * U[2].x + qy * U[2].y + qz * U[2].z];
+        let best = -1, bd = Infinity, sg = 1;
+        for (let a = 0; a < 3; a++) if (Math.abs(Q[a]) >= E[a] + r - 2e-3) { const g = Math.sign(Q[a]) || 1, dd = E[a] + r - g * L[a]; if (dd < bd) { bd = dd; best = a; sg = g; } }
+        if (best < 0) for (let a = 0; a < 3; a++) { const g = Math.sign(L[a]) || 1, dd = E[a] + r - g * L[a]; if (dd < bd) { bd = dd; best = a; sg = g; } }
+        const u = U[best]; shove(k, u.x * sg * bd, u.y * sg * bd, u.z * sg * bd); if (this.free && u.y * sg > 0.5) this.rub(k); }
+      const gy = (this.solids ? groundHeight(x[k], x[k + 2]) : 0) + (this.free ? r * 0.8 : 0.05); // a free body lies on the ground on its full girth; the hanged man's toes only ever brush it
       if (x[k + 1] < gy) { shove(k, 0, gy - x[k + 1], 0); if (this.free) this.rub(k); } }
     if (hit > (this.hitS || 0)) { this.hitS = hit; (this.hitAt || (this.hitAt = new THREE.Vector3())).set(x[hk], x[hk + 1], x[hk + 2]); }
   }

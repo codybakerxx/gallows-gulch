@@ -2,8 +2,8 @@
 #   python3 test/scenarios/screens.py
 #   DPR=2 python3 test/play.py 390 844 test/screens_phone.json 0.05 high
 #   python3 test/play.py 1280 720 test/screens_wide.json 0.05 high
-# Phone: the title menu; a round under way; a solved word with its meaning; the sword glinting at the gallows; the shootout;
-# GAME OVER; the Word Book holding the words from those rounds. Wide: a round on a landscape screen.
+# Phone: the title menu; a round under way; a solved word with its meaning; the sword glinting at the gallows; the shootout; the rooftop
+# gunmen and the red arc; GAME OVER; the Word Book holding the words from those rounds. Wide: a round on a landscape screen.
 import json
 
 OUT = "docs/screenshots"
@@ -56,6 +56,13 @@ def phone():
       S.holding = true; await __go(40); alive = S.enemies.filter(q => q.alive && q !== tgt); const next = alive.find(q => inView(q, 0.9)) || alive[0]; __aimAt(next, 'Spine2'); await __go(14);
       return JSON.stringify({ phase: S.phase, bullets: S.bullets, health: S.health, down: S.enemies.filter(q => !q.alive).length, bubble: STATE.bubble && STATE.bubble.text }); })()""")
     shot("05-shootout")
+    # the rooftops: up at the crates and aimed at the man on the general store, while the one on the sheriff's office takes aim from off to
+    # the left, and the red arc round the crosshair shows where
+    E("""(async () => { const S = SIEGE, R2 = S.enemies.filter(q => q.roof && q.alive); S.cover = 1; S.holding = true;
+      for (const q of S.enemies) if (q.alive) { q.state = 'recover'; q.t = 999; } for (const q of R2) { q.a.path = null; q.state = 'pause'; q.t = 999; } await __go(40);
+      const store = R2.find(q => q.roof.name === 'GENERAL STORE'); __aimAt(store); await __go(4); store.state = 'recover'; S.nextShot = 0; S.scanT = 0; await __go(20);
+      const A = S.enemies.find(q => q.state === 'aim'); return JSON.stringify({ aiming: A && A.a.name, arc: !document.getElementById('threat').hidden }); })()""")
+    shot("08-rooftops")
     # a lost round with no rescue: GAME OVER, the word and its meaning, and the sword still there to take
     E("""(async () => { const S = SIEGE; for (const q of S.enemies.filter(q => q.alive)) shotHits(q, SIEGE_PARTS[2], q.a.ch.bones.Spine2.getWorldPosition(V3()), V3(0, 0, -1));
       siegeWin(); await __go(2400, () => !document.getElementById('sign').hidden); SIEGE_CFG.hitUp = 0.5;

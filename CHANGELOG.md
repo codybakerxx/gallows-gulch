@@ -2,6 +2,18 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v28
+- Two more gunmen, on the roofs of the sheriff's office and the general store. They stand up behind the false
+  front to shoot and duck out of sight between shots; crossing the ridge, their hats show. Shot, a man on a roof
+  may pitch over the false front onto the porch roof or the street, fold over the top of it, or fall back out of
+  sight.
+- Nine gunmen in all, so the revolver now holds 11 bullets, keeping two to spare.
+- A red arc around the crosshair warns of a gunman taking aim at you from outside your view and points toward
+  him. It flares when he fires.
+- Gunmen outside your view can now shoot at you, if they have a clear line to you and you could turn to face
+  them. They take 0.5 s longer to aim than a man on your screen.
+- Far targets are a little easier to hit: the men on the roofs are 20–27 m away.
+
 ## Repository — 2026-10-23
 
 - The project's first commit. It holds the game as of v27, rearranged into `src/`, `assets/`, `vendor/`, `tools/`

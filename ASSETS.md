@@ -183,6 +183,7 @@ Most of the world has no asset file: it is generated when the page loads, sized 
 | `05-shootout.png` | 780×1688 | 1.50 MB |
 | `06-game-over.png` | 780×1688 | 1.33 MB |
 | `07-word-book.png` | 780×1688 | 518.7 KB |
+| `08-rooftops.png` | 780×1688 | 1.44 MB |
 
 ## Totals
 
