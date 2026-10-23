@@ -1,0 +1,311 @@
+<title>Gallows Gulch</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sancreek&family=Zilla+Slab:wght@500;700&family=Permanent+Marker&display=swap">
+<style>
+/* Layout: one-screen game. WebGL scene fills the stage, HUD floats on top, leather keyboard docks at the bottom. Single dusk-world theme. */
+:root{
+  --night:#17100c; --leather:#3a2417; --saddle:#5c3920; --wood:#7a4f2c; --brass:#d8a246;
+  --bone:#f0e4cb; --parch:#e9d6ae; --ink:#2b1a10; --blood:#a3301f; --sage:#6f8a4e;
+  --font-display:"Sancreek","Rye",Georgia,serif;
+  --font-ui:"Zilla Slab",Georgia,"Times New Roman",serif;
+  --font-marker:"Permanent Marker","Marker Felt","Comic Sans MS",cursive;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--night);color:var(--bone);font-family:var(--font-ui);overflow:hidden;
+  -webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible+span,input[type=range]:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+#app{height:100%;display:flex;flex-direction:column;position:relative;overflow:hidden}
+#stage{flex:1 1 auto;position:relative;min-height:0}
+#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+/* HUD */
+#hud{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:10px;padding-top:10px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));pointer-events:none;z-index:2}
+#gun{display:flex;align-items:center;gap:8px;pointer-events:auto}
+#cyl{width:44px;height:44px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
+#cyl g{transition:transform .5s cubic-bezier(.3,1.6,.5,1)}
+#left{font-family:var(--font-display);font-size:22px;color:var(--bone);text-shadow:0 2px 4px #000;font-variant-numeric:tabular-nums}
+#meta{flex:1;min-width:0;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--parch);opacity:.85;
+  text-shadow:0 1px 3px #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hud-btns{display:flex;gap:6px;pointer-events:auto}
+.hbtn{min-height:40px;min-width:40px;padding:0 12px;border-radius:8px;border:1px solid rgba(216,162,70,.55);
+  background:linear-gradient(180deg,var(--saddle),var(--leather));color:var(--parch);font-weight:700;font-size:14px;
+  box-shadow:inset 0 1px 0 rgba(255,220,160,.18),0 2px 6px rgba(0,0,0,.5)}
+.hbtn:disabled{opacity:.45;cursor:default}
+#muteBtn{display:flex;align-items:center;justify-content:center;padding:0 9px}#muteBtn svg{display:block}
+.hbtn.warn{background:linear-gradient(180deg,#7a2a1c,#4b170e);border-color:var(--blood)}
+#skip{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--parch);background:rgba(23,16,12,.55);padding:4px 10px;border-radius:20px;pointer-events:none;z-index:2}
+
+/* Keyboard */
+#kb{position:relative;z-index:3;display:flex;flex-direction:column;gap:6px;padding-block:8px 10px;
+  padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px));
+  background:linear-gradient(180deg,#2a1a10,#160e09);border-top:2px solid #4a2e1a;
+  box-shadow:0 -8px 24px rgba(0,0,0,.55);transform:translateY(110%);transition:transform .45s cubic-bezier(.2,.9,.3,1.1)}
+#kb.up{transform:translateY(0)}
+/* the shootout: the keyboard gives way to a two-part pad (aim | fire); crosshair, health, a red bloom when you're hit */
+#kb.siege .krow{visibility:hidden}
+#pad{position:absolute;inset:8px max(10px,env(safe-area-inset-right,0px)) 10px max(10px,env(safe-area-inset-left,0px));display:flex;gap:10px;z-index:4}
+#pad>div{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-radius:14px;border:1px solid #6b4526;
+  background:radial-gradient(120% 100% at 50% 20%,#6e4527 0%,#4a2d18 60%,#311d0f 100%);color:var(--parch);touch-action:none;-webkit-user-select:none;user-select:none;
+  box-shadow:inset 0 1px 0 rgba(255,215,160,.2),0 3px 0 #1d110a;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
+#pad>div span{opacity:.85}
+#padFire{color:#f0b39f;background:radial-gradient(120% 100% at 50% 20%,#8a3a26 0%,#5c2215 60%,#3a140b 100%)!important;border-color:#a4482f!important}
+#padFire.on,#padAim.on{transform:translateY(2px);filter:brightness(1.25)}
+#padAim.nudge{animation:nudge .9s ease-out}
+@keyframes nudge{0%,100%{box-shadow:inset 0 1px 0 rgba(255,215,160,.2),0 3px 0 #1d110a}25%,65%{box-shadow:0 0 0 3px #f4ead8,0 0 22px rgba(244,234,216,.6)}}
+#xhair{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:2;line-height:0}
+#hurt{position:absolute;inset:0;pointer-events:none;opacity:0;z-index:1;
+  background:radial-gradient(ellipse at center,rgba(120,0,0,0) 42%,rgba(115,4,2,.5) 74%,rgba(55,0,0,.92) 100%)}
+#siegeTip{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:2;pointer-events:none;max-width:calc(100% - 32px);
+  font-size:12px;letter-spacing:.06em;color:var(--parch);background:rgba(23,16,12,.72);padding:6px 12px;border-radius:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#hp{display:flex;gap:2px;color:#e2412f;filter:drop-shadow(0 1px 2px #000)}#hp svg{overflow:visible}#hp svg path{fill:currentColor}
+/* a lost heart is an empty outline; the one just lost swells white, flashes red and shrinks back to it */
+#hp svg.gone{color:#dccaa8}#hp svg.gone path{fill:rgba(20,10,6,.35);stroke:currentColor;stroke-width:1.8}
+#hp svg.lost{animation:heartLost .8s ease-out}#hp svg.lost path{fill:currentColor;stroke:none}
+@keyframes heartLost{0%{transform:scale(1);color:#fff}20%{transform:scale(2);color:#fff}55%{transform:scale(1.4) rotate(-10deg);color:#ff3b2b}100%{transform:scale(1);color:#dccaa8}}
+#hud.siege #meta{letter-spacing:.03em}
+/* "Hit! 2 hearts left" under the top bar */
+#hitMsg{position:absolute;top:66px;left:50%;transform:translateX(-50%);z-index:3;pointer-events:none;padding:7px 16px;border-radius:999px;white-space:nowrap;
+  background:rgba(128,14,8,.92);color:#ffe9de;font-weight:700;font-size:15px;letter-spacing:.08em;text-transform:uppercase;
+  box-shadow:0 4px 14px rgba(0,0,0,.5),inset 0 0 0 1.5px rgba(255,190,170,.35)}
+#hitMsg.pop{animation:hitPop 1.8s ease-out forwards}
+@keyframes hitPop{0%{opacity:0;transform:translate(-50%,-6px) scale(1.3)}12%{opacity:1;transform:translate(-50%,0) scale(1)}78%{opacity:1}100%{opacity:0}}
+/* the gun's empty with gunmen standing */
+#doomMsg{position:absolute;top:30%;left:50%;transform:translate(-50%,-50%);z-index:3;pointer-events:none;text-align:center;width:max-content;max-width:calc(100% - 32px)}
+#doomMsg b{display:block;font-family:var(--font-display);font-weight:400;font-size:clamp(34px,10vw,52px);line-height:1;color:#ffd9c9;
+  text-shadow:0 3px 0 #2a0703,0 0 26px rgba(255,60,30,.75)}
+#doomMsg span{display:inline-block;margin-top:8px;padding:5px 12px;border-radius:999px;background:rgba(23,16,12,.78);color:var(--parch);font-size:13px;letter-spacing:.06em}
+#doomMsg.show{animation:doomIn .5s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes doomIn{0%{opacity:0;transform:translate(-50%,-50%) scale(1.6)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@media (prefers-reduced-motion:reduce){#hp svg.lost,#hitMsg.pop,#doomMsg.show{animation-duration:.01s}}
+#gore{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+#gore .splat{position:absolute;animation:splat 3.6s ease-in forwards}#gore .splat svg{width:100%;height:auto;display:block}
+@keyframes splat{0%{opacity:.95;translate:0 0}55%{opacity:.8}100%{opacity:0;translate:0 7vmin}}
+#warn{position:absolute;left:0;top:0;transform:translate(-50%,-100%);pointer-events:none;z-index:2;color:#ff3b2b;line-height:0}
+.krow{display:flex;justify-content:center;gap:5px}
+.key{flex:1 1 0;max-width:46px;height:clamp(42px,6.6vh,54px);border-radius:7px;border:1px solid #6b4526;
+  background:radial-gradient(120% 90% at 50% 15%,#8a5c34 0%,#5e3a1f 55%,#3e2514 100%);
+  color:var(--bone);font-family:var(--font-ui);font-weight:700;font-size:clamp(17px,2.6vh,22px);
+  text-shadow:0 1px 0 #1b0f07;box-shadow:inset 0 1px 0 rgba(255,215,160,.25),0 3px 0 #1d110a,0 4px 6px rgba(0,0,0,.4);
+  transition:transform .08s,background .2s}
+.key:active:not(:disabled){transform:translateY(2px);box-shadow:inset 0 1px 0 rgba(255,215,160,.2),0 1px 0 #1d110a}
+.key.hit{background:radial-gradient(120% 90% at 50% 15%,#89a564 0%,#58723a 60%,#38491f 100%);border-color:#8eaa62}
+.key.miss{background:radial-gradient(120% 90% at 50% 15%,#b44a35 0%,#7c2617 60%,#4a140b 100%);border-color:#b8513a;color:#f3c9bd}
+.key:disabled{cursor:default}
+.key.used{opacity:.72}
+
+/* Overlays */
+.overlay{position:absolute;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;overflow:auto;
+  padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:radial-gradient(circle at 50% 40%,rgba(30,18,10,.55),rgba(10,6,4,.88))}
+.poster{width:100%;max-width:420px;margin:auto;padding:22px 22px 18px;color:var(--ink);border-radius:3px;position:relative;
+  background:
+    radial-gradient(60% 40% at 20% 15%,rgba(120,70,20,.18),transparent 70%),
+    radial-gradient(50% 35% at 85% 80%,rgba(110,60,20,.22),transparent 70%),
+    radial-gradient(120% 120% at 50% 50%,#efdcb3 40%,#d9bd88 85%,#b8955d 100%);
+  box-shadow:0 18px 50px rgba(0,0,0,.7),inset 0 0 40px rgba(90,50,15,.35);transform:rotate(-.6deg)}
+.poster::before{content:"";position:absolute;inset:8px;border:2px solid rgba(43,26,16,.55);pointer-events:none}
+.p-top{font-family:var(--font-display);text-align:center;font-size:clamp(34px,10vw,52px);letter-spacing:.06em;line-height:1;color:var(--ink)}
+.poster h1{font-family:var(--font-display);font-weight:400;text-align:center;font-size:clamp(26px,7.5vw,36px);margin:6px 0 2px;
+  color:var(--blood);text-wrap:balance;line-height:1.05}
+.p-sub{text-align:center;margin:0 0 6px;font-size:15px;font-style:italic}
+.rating{display:block;width:max-content;margin:0 auto 12px;padding:2px 10px;border:1.5px solid var(--ink);font-size:12px;
+  font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+fieldset{border:0;margin:0 0 10px;padding:0}
+legend{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.seg.three{grid-template-columns:repeat(3,1fr)}
+.seg label{position:relative;display:block}
+.seg input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.seg span{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:44px;padding:4px 2px;text-align:center;
+  border:1.5px solid rgba(43,26,16,.6);border-radius:4px;font-weight:700;font-size:14px;line-height:1.1;background:rgba(255,248,230,.25)}
+.seg span small{font-weight:500;font-size:11px;opacity:.8}
+.seg input:checked+span{background:var(--ink);color:var(--parch);border-color:var(--ink)}
+.note{margin:0 0 10px;font-size:13px;min-height:2.6em;line-height:1.3}
+.vol{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-bottom:14px}
+.vol input{flex:1;accent-color:var(--blood)}
+.p-actions{display:flex;gap:8px}
+.p-actions button,.sign-actions button{flex:1;min-height:50px;border-radius:5px;font-weight:700;font-size:18px;letter-spacing:.04em}
+#startBtn{border:0;color:var(--parch);background:linear-gradient(180deg,#b23a24,#7a2213);box-shadow:inset 0 1px 0 rgba(255,200,170,.3),0 3px 0 #3d0f07;
+  font-family:var(--font-display);font-weight:400;font-size:22px}
+#resumeBtn{border:1.5px solid var(--ink);background:transparent;color:var(--ink)}
+.best{text-align:center;margin:10px 0 0;font-size:13px}
+
+.sign-wrap{background:linear-gradient(180deg,rgba(8,4,2,0) 55%,rgba(8,4,2,.5));align-items:flex-end;padding-bottom:18px;pointer-events:none}
+.sign{position:relative;width:100%;max-width:380px;margin:0 auto;padding:22px 20px 18px;text-align:center;border-radius:6px;pointer-events:auto;
+  background:repeating-linear-gradient(0deg,#5a371d 0 3px,#64401f 3px 7px,#4f3019 7px 9px),linear-gradient(#6a4423,#3f2513);
+  background-blend-mode:multiply;border:3px solid #2a170b;
+  box-shadow:inset 0 0 0 2px rgba(255,210,150,.12),inset 0 0 30px rgba(0,0,0,.6),0 24px 50px rgba(0,0,0,.75);
+  transform-origin:50% -120px;animation:swing 1.6s cubic-bezier(.25,.8,.35,1) both;margin-bottom:0}
+.chain{position:absolute;top:-120px;width:6px;height:122px;
+  background:repeating-linear-gradient(180deg,#9c8a6a 0 7px,#4b4030 7px 9px);border-radius:3px}
+.chain.l{left:22%}.chain.r{right:22%}
+.sign h2{font-family:var(--font-display);font-weight:400;font-size:clamp(34px,10vw,48px);margin:0;line-height:1;color:var(--bone);
+  text-shadow:0 2px 0 #1a0d05,0 0 18px rgba(255,140,60,.35)}
+.sign h2.lose{color:#f0b199}
+#signWord{font-family:var(--font-marker);font-size:26px;letter-spacing:.12em;margin:10px 0 4px;color:var(--parch)}
+#signLine{margin:0 0 16px;font-size:15px;color:var(--parch);opacity:.9;text-wrap:balance}
+#signDef{margin:-2px auto 8px;max-width:30em;font-size:14.5px;line-height:1.35;color:var(--bone);text-wrap:pretty}
+#signDef i{color:var(--brass)}
+#signNew{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--brass)}
+/* the Word Book: a ruled ledger page over the menu, every word learned with its meaning */
+.bookbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:44px;margin-top:8px;border:1.5px solid var(--ink);
+  border-radius:5px;background:rgba(255,248,230,.25);color:var(--ink);font-weight:700;font-size:16px}
+.bookbtn b{min-width:1.9em;padding:1px 7px;border-radius:999px;background:var(--ink);color:var(--parch);font-size:13px;font-variant-numeric:tabular-nums}
+#book{z-index:12}
+.ledger{width:100%;max-width:440px;max-height:100%;margin:auto;display:flex;flex-direction:column;padding:18px 18px 12px;color:var(--ink);border-radius:3px;
+  background:repeating-linear-gradient(180deg,transparent 0 27px,rgba(70,90,120,.12) 27px 28px),radial-gradient(120% 120% at 50% 40%,#f2e3c2 40%,#e0c595 88%,#c7a56d 100%);
+  box-shadow:0 18px 50px rgba(0,0,0,.7),inset 0 0 36px rgba(90,50,15,.3);-webkit-user-select:text;user-select:text}
+.lhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.lhead h2{font-family:var(--font-display);font-weight:400;font-size:32px;margin:0;color:var(--blood);line-height:1}
+.lclose{display:grid;place-items:center;flex:none;width:44px;height:44px;border:1.5px solid rgba(43,26,16,.6);border-radius:50%;background:rgba(255,248,230,.35);color:var(--ink)}
+.lcount{margin:4px 0 10px;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:.8}
+.ltools{display:flex;gap:8px;margin-bottom:6px}
+#bookFind{flex:1;min-width:0;height:42px;padding:0 12px;border:1.5px solid rgba(43,26,16,.6);border-radius:5px;background:rgba(255,250,238,.75);color:var(--ink);font:inherit;font-size:16px}
+#bookFind:focus-visible{outline:2px solid var(--blood);outline-offset:1px}
+.lsort{display:flex;flex:none;border:1.5px solid rgba(43,26,16,.6);border-radius:5px;overflow:hidden}
+.lsort button{border:0;background:transparent;padding:0 11px;font-weight:700;font-size:13px;min-height:42px;color:var(--ink)}
+.lsort button[aria-pressed=true]{background:var(--ink);color:var(--parch)}
+.llist{list-style:none;margin:0;padding:0 2px 0 0;overflow:auto;flex:1 1 auto;min-height:0;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.llist li{padding:9px 0 10px;border-bottom:1px dashed rgba(43,26,16,.3)}
+.lw{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.lw b{font-family:var(--font-marker);font-weight:400;font-size:19px;letter-spacing:.06em}
+.lw i{font-size:13px;opacity:.75}
+.lmark{margin-left:auto;padding:1px 8px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.lmark.ok{background:rgba(111,138,78,.22);color:#3c5622;border:1px solid rgba(63,90,38,.5)}
+.lmark.no{background:rgba(163,48,31,.1);color:#8a2a1a;border:1px solid rgba(138,42,26,.45)}
+.llist p{margin:3px 0 0;font-size:15px;line-height:1.35}
+.lempty{margin:16px 6px;font-size:15px;font-style:italic;text-align:center}
+.lsync{margin:8px 0 0;font-size:12px;text-align:center;opacity:.7}
+.sign-actions{display:flex;gap:8px;flex-wrap:wrap}
+#againBtn{border:0;background:linear-gradient(180deg,#e1b25a,#a8761f);color:#2a1508;box-shadow:0 3px 0 #4b2f0b}
+#setBtn{border:1.5px solid var(--parch);background:rgba(0,0,0,.2);color:var(--parch)}
+@keyframes swing{0%{transform:translateY(-130%) rotate(-14deg)}45%{transform:translateY(0) rotate(7deg)}65%{transform:rotate(-4deg)}
+  82%{transform:rotate(2deg)}100%{transform:rotate(0)}}
+@media (max-height:520px){.key{height:36px;font-size:16px}#kb{gap:4px;padding-block:5px 6px}.sign-wrap{padding-top:16px}
+  .hbtn{min-height:34px}#cyl{width:36px;height:36px}}
+@media (max-height:640px){.poster{padding:14px 18px 12px}.p-top{font-size:32px}.poster h1{font-size:26px;margin:2px 0}.p-sub{font-size:13px;margin-bottom:4px}
+  .rating{margin-bottom:8px}.seg span{min-height:38px}fieldset{margin-bottom:6px}.note{min-height:0;margin-bottom:6px;font-size:12px}.vol,.gfxrow{margin-bottom:8px}
+  .p-actions button{min-height:44px}#startBtn{font-size:20px}.credits{display:none}}
+@media (prefers-reduced-motion:reduce){.sign{animation-duration:.01s}#kb{transition:none}#cyl g{transition:none}#hintBox{animation-duration:.01s}}
+
+#bubble{position:absolute;left:0;top:0;z-index:4;max-width:min(62vw,280px);padding:8px 12px;border-radius:8px;pointer-events:none;
+  background:rgba(240,228,203,.95);color:var(--ink);font-weight:700;font-size:15px;line-height:1.25;box-shadow:0 6px 18px rgba(0,0,0,.45);transition:opacity .2s}
+#bubble::after{content:"";position:absolute;left:var(--tail,68%);bottom:-8px;border:8px solid transparent;border-top-color:rgba(240,228,203,.95);border-bottom:0}
+/* the last-chance clue: a small rounded card under the HUD (it describes the word, never shows it) */
+#hintBox{position:absolute;top:60px;left:50%;z-index:5;display:flex;align-items:flex-start;gap:8px;width:max-content;max-width:min(calc(100% - 48px),300px);
+  transform:translateX(-50%);padding:8px 8px 9px 13px;border-radius:14px;color:var(--ink);background:rgba(244,234,212,.96);
+  box-shadow:0 4px 14px rgba(0,0,0,.32);animation:hintIn .3s ease-out both}
+#hintBox .hb-body{min-width:0}
+#hintBox .hb-tag{margin:0 0 1px;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--blood)}
+#hintText{margin:0;font-size:14px;line-height:1.3;font-weight:500;text-wrap:pretty}
+#hintClose{position:relative;flex:none;width:24px;height:24px;margin:1px 0 0;padding:0;border:0;border-radius:50%;background:rgba(43,26,16,.09);color:var(--ink);font-size:15px;line-height:24px}
+#hintClose::after{content:"";position:absolute;inset:-9px}
+@keyframes hintIn{from{opacity:0;transform:translate(-50%,-6px)}to{opacity:1;transform:translate(-50%,0)}}
+#loading{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:radial-gradient(circle at 50% 40%,#3a2214,#120a06 70%)}
+#loading h1{font-family:var(--font-display);font-weight:400;font-size:clamp(34px,9vw,58px);margin:0;color:var(--parch);text-shadow:0 3px 0 #000}
+#loading p{margin:0;color:var(--parch);opacity:.85;font-size:15px;max-width:34ch}
+.lbar{width:min(320px,80vw);height:8px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden}
+#loadBar{height:100%;width:0;background:linear-gradient(90deg,#b0742a,#e1b25a);transition:width .3s}
+.sndrow{display:flex;align-items:center;gap:12px;margin-bottom:12px}.sndrow .vol{flex:1;margin:0}
+#soundBtn{min-height:40px;padding:0 12px;border-radius:4px;border:1.5px solid var(--ink);background:var(--ink);color:var(--parch);font-weight:700;font-size:14px;white-space:nowrap}
+#soundBtn[aria-pressed=false]{background:transparent;color:var(--ink)}
+.gfxrow{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px}
+.gfxrow select{flex:1;min-height:36px;border:1.5px solid rgba(43,26,16,.6);border-radius:4px;background:rgba(255,248,230,.35);color:var(--ink);font:inherit;font-size:14px;letter-spacing:0;text-transform:none;padding:0 8px}
+.credits{margin:8px 0 0;font-size:10.5px;line-height:1.35;text-align:center;opacity:.75}
+</style>
+
+<div id="app">
+  <div id="stage">
+    <canvas id="scene" aria-label="3D Wild West town with a gallows, a whiteboard and a masked host"></canvas>
+    <div id="bubble" hidden></div>
+    <div id="hintBox" role="note" aria-live="polite" hidden><div class="hb-body"><p class="hb-tag">Hint</p><p id="hintText"></p></div><button id="hintClose" type="button" aria-label="Hide hint">&times;</button></div>
+    <div id="hud">
+      <div id="gun" title="Guesses left"><svg id="cyl" viewBox="-50 -50 100 100" aria-hidden="true"></svg><span id="left" aria-label="Guesses left">8</span></div>
+      <div id="meta"></div>
+      <div class="hud-btns">
+        <button id="hintBtn" class="hbtn" type="button">Hint</button>
+        <button id="muteBtn" class="hbtn" type="button" aria-label="Turn sound off" aria-pressed="true"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3.5 9.5h3.6L12 5.6v12.8l-4.9-3.9H3.5z" fill="currentColor"/><path d="M15.3 9.2a4 4 0 0 1 0 5.6M17.9 6.6a7.6 7.6 0 0 1 0 10.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></button>
+        <button id="menuBtn" class="hbtn" type="button">Menu</button>
+      </div>
+    </div>
+    <div id="skip" hidden>Tap to skip</div>
+  </div>
+  <div id="kb" role="group" aria-label="Letter keyboard"></div>
+
+  <div id="loading"><h1>Gallows Gulch</h1><div class="lbar"><div id="loadBar"></div></div><p id="loadText">Riding into town…</p></div>
+
+  <div id="menu" class="overlay" hidden>
+    <form id="poster" class="poster" autocomplete="off">
+      <div class="p-top">WANTED</div>
+      <h1>Gallows Gulch</h1>
+      <p class="p-sub">Spell the word or the stranger swings. Sound on.</p>
+      <span class="rating">Rated 17+ &middot; Mature</span>
+      <fieldset>
+        <legend>Word length</legend>
+        <div class="seg">
+          <label><input type="radio" name="len" id="len-short" value="short"><span>Short<small>4&ndash;5</small></span></label>
+          <label><input type="radio" name="len" id="len-medium" value="medium" checked><span>Medium<small>6&ndash;7</small></span></label>
+          <label><input type="radio" name="len" id="len-long" value="long"><span>Long<small>8+</small></span></label>
+          <label><input type="radio" name="len" id="len-any" value="any"><span>Any<small>4&ndash;12</small></span></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Difficulty</legend>
+        <div class="seg three">
+          <label><input type="radio" name="diff" id="diff-easy" value="easy"><span>Greenhorn<small>10 misses</small></span></label>
+          <label><input type="radio" name="diff" id="diff-medium" value="medium" checked><span>Gunhand<small>7 misses</small></span></label>
+          <label><input type="radio" name="diff" id="diff-hard" value="hard"><span>Outlaw<small>5 misses</small></span></label>
+        </div>
+      </fieldset>
+      <p id="diffNote" class="note"></p>
+      <div class="sndrow"><button id="soundBtn" type="button" aria-pressed="true">Sound: On</button><label class="vol" for="vol">Volume <input id="vol" type="range" min="0" max="100" value="80"></label></div>
+      <label class="gfxrow" for="gfx">Graphics <select id="gfx"><option value="auto">Auto</option><option value="high">High</option><option value="medium">Balanced</option><option value="low">Fast</option></select></label>
+      <div class="p-actions">
+        <button id="resumeBtn" type="button" hidden>Resume</button>
+        <button id="startBtn" type="submit">Ride Out</button>
+      </div>
+      <button id="bookBtn" class="bookbtn" type="button"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 5.5C6.5 4.3 9.3 4.3 12 6c2.7-1.7 5.5-1.7 8-.5V19c-2.5-1.2-5.3-1.2-8 .5-2.7-1.7-5.5-1.7-8-.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 6v13.5" stroke="currentColor" stroke-width="1.8"/></svg><span>Word Book</span><b id="bookN">0</b></button>
+      <p class="best">Best streak: <b id="bestOut">0</b></p>
+      <p class="credits">Head scan: Lee Perry-Smith / Infinite-Realities (CC BY 3.0) &middot; Motion capture: Mixamo &middot; Voices: ElevenLabs &middot; Rendered with three.js</p>
+    </form>
+  </div>
+
+  <div id="book" class="overlay" hidden role="dialog" aria-modal="true" aria-labelledby="bookTitle">
+    <section class="ledger">
+      <div class="lhead"><h2 id="bookTitle">Word Book</h2><button id="bookClose" class="lclose" type="button" aria-label="Close the Word Book"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button></div>
+      <p id="bookCount" class="lcount"></p>
+      <div class="ltools">
+        <input id="bookFind" type="search" placeholder="Find a word" aria-label="Find a word" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+        <div class="lsort" role="group" aria-label="Order"><button type="button" data-sort="new" aria-pressed="true">Newest</button><button type="button" data-sort="az" aria-pressed="false">A&ndash;Z</button></div>
+      </div>
+      <ol id="bookList" class="llist"></ol>
+      <p id="bookEmpty" class="lempty" hidden></p>
+      <p id="bookSync" class="lsync"></p>
+    </section>
+  </div>
+
+  <div id="sign" class="overlay sign-wrap" hidden>
+    <div class="sign" id="signBoard">
+      <div class="chain l"></div><div class="chain r"></div>
+      <h2 id="signTitle">GAME OVER</h2>
+      <p id="signWord"></p>
+      <p id="signDef" hidden></p>
+      <p id="signNew" hidden><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 5.5C6.5 4.3 9.3 4.3 12 6c2.7-1.7 5.5-1.7 8-.5V19c-2.5-1.2-5.3-1.2-8 .5-2.7-1.7-5.5-1.7-8-.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 6v13.5" stroke="currentColor" stroke-width="1.8"/></svg>New in your Word Book</p>
+      <p id="signLine"></p>
+      <div class="sign-actions">
+        <button id="againBtn" type="button">Play Again</button>
+        <button id="setBtn" type="button">Change Settings</button>
+      </div>
+    </div>
+  </div>
+</div>

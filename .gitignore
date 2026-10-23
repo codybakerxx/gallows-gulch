@@ -1,0 +1,21 @@
+# build output (python3 build.py)
+dist/
+test/game.html
+
+# test runs
+test/*.png
+test/*.json
+test/*.log
+test-results/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# editors and OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
