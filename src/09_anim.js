@@ -6,6 +6,7 @@ function floorAt(x, z) {
   const P = LAY.plat, S = LAY.stairs;
   if (x > P.x - P.w / 2 && x < P.x + P.w / 2 && z > P.z - P.d / 2 && z < P.z + P.d / 2 + 0.03) return P.h + 0.028;
   if (Math.abs(x - S.x) < S.w / 2 + 0.08 && z <= S.zBot + 0.1 && z >= S.zTop - 0.05) return P.h * clamp((S.zBot - z) / (S.zBot - S.zTop), 0, 1) + 0.026;
+  for (const Rf of WORLD.roofs) { const l = roofLocal(Rf, x, z); if (onRoof(Rf, l)) return roofTop(Rf, l[0]); } // (the roofs the shootout's gunmen stand on)
   return groundHeight(x, z);
 }
 // tread k: 0 = ground at the foot of the stairs, 1..12 = treads, 13 = platform deck
@@ -95,7 +96,7 @@ class Actor {
     this.walkW = clamp(this.walkW + (moving ? dt * 3.2 : -dt * 3.6), 0, 1);
     let dy = ((this.yawTarget - this.yaw + Math.PI) % TAU + TAU) % TAU - Math.PI; this.yaw += dy * Math.min(1, dt * 5.5);
     if (this.stair) this.updateStair(dt);
-    else if (!this.hang) { const fy = floorAt(this.pos.x, this.pos.z); this.pos.y += (fy - this.pos.y) * Math.min(1, dt * 14); }
+    else if (!this.hang) { const fy = floorAt(this.pos.x, this.pos.z) + (this.yOff || 0); this.pos.y += (fy - this.pos.y) * Math.min(1, dt * 14); } // (yOff: a man ducking down behind a false front)
     this.root.position.copy(this.pos); this.root.rotation.set(0, this.yaw, 0);
     const run = this.act.run; if (run) this.runK += (clamp((this.speed - 1.9) / 0.9, 0, 1) - this.runK) * Math.min(1, dt * 6);
     const rk = run ? this.runK : 0;

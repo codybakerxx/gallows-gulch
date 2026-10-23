@@ -47,6 +47,7 @@ round plays in seconds and only the screenshots are rendered.
 | `mk_s127.py` | v24: nine bullets |
 | `mk_s128.py` | The thicker sword, its sheen and sparks; tapping it after GAME OVER; the streak given back; the Word Book entry made once |
 | `mk_s129.py` | GAME OVER four seconds after he hangs; the sword still works after |
+| `mk_s130.py` | v28: the rooftop gunmen (footing, standing and ducked against the false front, what each cover can see), the red arc for a man aiming from outside the view, and how a man shot off a roof falls (`mk_s130.py PREFIX over,drape`) |
 | `screens.py` | The README screenshots |
 
 Some builders check numbers from an older version, such as reaction times or the bullet count, so read a builder's

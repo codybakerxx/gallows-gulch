@@ -1,5 +1,5 @@
 // ---------- WORLD: desert terrain, mesas, rocks, cacti, scrub, frontier town ----------
-const WORLD = { ground: null, lit: [], windows: [] };
+const WORLD = { ground: null, lit: [], windows: [], roofs: [] };
 // play-area layout (meters). Camera looks roughly toward -x/-z, sun sets behind the town.
 const LAY = {
   plat: { x: -3.2, z: -5.5, w: 3.4, d: 3.0, h: 2.4 },
@@ -273,17 +273,57 @@ function building(x, z, ry, w, h, d, name, opt = {}) {
   if (grp.userData.smokeAt) { grp.updateMatrixWorld(true); (WORLD.chimneys = WORLD.chimneys || []).push(grp.localToWorld(grp.userData.smokeAt.clone())); }
   return grp;
 }
+// ---- the roofs a gunman climbs onto in the shootout (12d): where the building stands and its measurements (the same as building() draws),
+// so a man can stand behind the false front (floorAt), a falling body lands on the roof, the porch roof or the street (the ragdoll's solids),
+// and a drop of blood or a dropped gun comes to rest on whichever it reaches first (surfaceAt)
+function roofInfo(x, z, ry, w, h, d, name, opt) {
+  const Rf = { name, x, z, y0: groundHeight(x, z), c: Math.cos(ry), s: Math.sin(ry), w, h, d, pd: 2.4, pitch: Math.min(0.42, Math.atan(1.3 / (w / 2))),
+    porchY: opt.balcony ? 3.24 : 3.15, porchTilt: opt.balcony ? 0 : 0.12, top: h + 1.76 }; // (top: the cap on the false front)
+  Rf.solids = roofSolids(Rf); return Rf;
+}
+const _rl = [0, 0];
+function roofLocal(Rf, x, z, out = _rl) { const dx = x - Rf.x, dz = z - Rf.z; out[0] = dx * Rf.c - dz * Rf.s; out[1] = dx * Rf.s + dz * Rf.c; return out; } // world -> the building's own x (along the front) and z (toward the street)
+function roofWorld(Rf, lx, ly, lz, out = V3()) { return out.set(Rf.x + lx * Rf.c + lz * Rf.s, Rf.y0 + ly, Rf.z - lx * Rf.s + lz * Rf.c); }
+function roofTop(Rf, lx) { return Rf.y0 + Rf.h + 0.1 + Math.tan(Rf.pitch) * (Rf.w / 2 + 0.07 - Math.abs(lx)); } // the shingles: eaves low at the sides, ridge running back from the street
+function onRoof(Rf, l) { return Math.abs(l[0]) < Rf.w / 2 + 0.07 && l[1] > -Rf.d / 2 - 0.3 && l[1] < Rf.d / 2; }
+function porchTop(Rf, l) { const { w, d, pd } = Rf; if (Math.abs(l[0]) > w / 2 + 0.1 || l[1] < d / 2 + 0.05 || l[1] > d / 2 + pd + 0.25) return -1e9;
+  return Rf.y0 + Rf.porchY + 0.05 - (l[1] - (d / 2 + pd / 2 + 0.15)) * Math.tan(Rf.porchTilt); }
+// the top of whatever is under (x, z) at height y or a little below: a roof, a porch roof, the gallows deck, the street
+function surfaceAt(x, z, y) {
+  let f = floorAt(x, z); if (!WORLD.roofs.length || y === undefined) return f;
+  for (const Rf of WORLD.roofs) { const py = porchTop(Rf, roofLocal(Rf, x, z)); if (py > f && y >= py - 0.25) f = py; }
+  return f;
+}
+// the building as boxes a body can't pass through, in world space: [centre, its three axes, half sizes]. The roof slabs and the porch roof are
+// thickened downward so a falling body can't slip through them in a step
+function roofSolids(Rf) {
+  const { w, h, d, pd, pitch } = Rf, out = [], ax = (x, y, z) => V3(x * Rf.c + z * Rf.s, y, -x * Rf.s + z * Rf.c);
+  const box = (cx, cy, cz, hx, hy, hz, rz = 0, rx = 0) => { // a box in the building's frame, turned rz about its z axis or rx about its x axis
+    const ux = V3(Math.cos(rz), Math.sin(rz), 0), uy = V3(-Math.sin(rz) * Math.cos(rx), Math.cos(rz) * Math.cos(rx), Math.sin(rx)), uz = V3(0, -Math.sin(rx), Math.cos(rx));
+    out.push({ c: roofWorld(Rf, cx, cy, cz), u: [ax(ux.x, ux.y, ux.z), ax(uy.x, uy.y, uy.z), ax(uz.x, uz.y, uz.z)], h: [hx, hy, hz] }); };
+  box(0, h / 2, 0, w / 2, h / 2, d / 2); // the walls
+  const rw = (w / 2 + 0.3) / Math.cos(pitch);
+  for (const e of [-1, 1]) { const r = -e * pitch, cy = h + Math.tan(pitch) * w / 4 + 0.06, cx = e * (w / 4 + 0.07); // the two roof slabs, 0.58 thick below the shingles
+    box(cx + Math.sin(r) * 0.25, cy - Math.cos(r) * 0.25, -0.1, rw / 2, 0.29, (d + 0.4) / 2, r); }
+  box(0, (h + 1.6) / 2, d / 2 + 0.09, w / 2, (h + 1.6) / 2, 0.09); // the false front
+  box(0, h + 1.65, d / 2 + 0.1, (w + 0.3) / 2, 0.11, 0.2); // its cap
+  box(0, Rf.porchY - 0.1 * Math.cos(Rf.porchTilt), d / 2 + pd / 2 + 0.15 - 0.1 * Math.sin(Rf.porchTilt), w / 2 + 0.1, 0.15, (pd + 0.2) / 2, 0, Rf.porchTilt); // the porch roof
+  box(0, 0.12, d / 2 + pd / 2 + 0.18, w / 2, 0.125, pd / 2); // the porch deck
+  for (let i = 0; i <= 3; i++) box(-w / 2 + 0.2 + i * (w - 0.4) / 3, 1.6, d / 2 + pd + 0.1, 0.08, 1.5, 0.08); // its posts
+  return out;
+}
 const STREET = { o: [-3.5, -6.0], a: [-0.55, -0.835], r: [0.835, -0.55] };
 function streetPt(along, side) { return [STREET.o[0] + STREET.a[0] * along + STREET.r[0] * side, STREET.o[1] + STREET.a[1] * along + STREET.r[1] * side]; }
 function buildTown() {
   WORLD.town = new THREE.Group(); R.scene.add(WORLD.town);
   const yawL = Math.atan2(STREET.r[0], STREET.r[1]), yawR = Math.atan2(-STREET.r[0], -STREET.r[1]);
   const B = [
-    [9, -1, 8, 5.5, 9, "SHERIFF", { smoke: true, hang: "JAIL" }], [18.5, -1, 9, 7.5, 10, "SALOON", { signBg: "#7a2418", signFg: "#f0dcae", smoke: true, balcony: true }], [28, -1, 8, 6.5, 9, "HOTEL", { mat: MAT.woodRed, balcony: true }],
+    [9, -1, 8, 5.5, 9, "SHERIFF", { smoke: true, hang: "JAIL", roofGun: true }], [18.5, -1, 9, 7.5, 10, "SALOON", { signBg: "#7a2418", signFg: "#f0dcae", smoke: true, balcony: true }], [28, -1, 8, 6.5, 9, "HOTEL", { mat: MAT.woodRed, balcony: true }],
     [37, -1, 7, 5, 8, "BARBER", { hang: "BATHS 25c" }], [45.5, -1, 8, 6, 9, "UNDERTAKER"],
-    [11, 1, 8, 6, 9, "GENERAL STORE", { smoke: true, hang: "DRY GOODS" }], [20, 1, 7, 5.5, 8, "BANK", { signBg: "#2b2a28", signFg: "#d8b264", brick: true }], [29, 1, 9, 6, 9, "ASSAY OFFICE", { mat: MAT.woodRed, hang: "GUNSMITH" }], [38.5, 1, 8, 5.5, 9, "LIVERY"]
+    [11, 1, 8, 6, 9, "GENERAL STORE", { smoke: true, hang: "DRY GOODS", roofGun: true }], [20, 1, 7, 5.5, 8, "BANK", { signBg: "#2b2a28", signFg: "#d8b264", brick: true }], [29, 1, 9, 6, 9, "ASSAY OFFICE", { mat: MAT.woodRed, hang: "GUNSMITH" }], [38.5, 1, 8, 5.5, 9, "LIVERY"]
   ];
-  for (const [along, side, w, h, d, name, opt] of B) { const [x, z] = streetPt(along, side * (11.5 + d / 2)); building(x, z, side < 0 ? yawL : yawR, w, h, d, name, opt); }
+  for (const [along, side, w, h, d, name, opt] of B) { const [x, z] = streetPt(along, side * (11.5 + d / 2)), ry = side < 0 ? yawL : yawR; building(x, z, ry, w, h, d, name, opt);
+    if (opt && opt.roofGun) WORLD.roofs.push(roofInfo(x, z, ry, w, h, d, name, opt)); }
   // church with steeple
   const ch = new THREE.Group(), cb = woodBox(8, 6, 14, MAT.wood); cb.position.y = 3; ch.add(cb);
   const roofG = new THREE.CylinderGeometry(0.01, 6.2, 3.5, 4, 1); roofG.rotateY(Math.PI / 4); const roof = new THREE.Mesh(roofG, MAT.woodDark); roof.scale.set(0.95, 1, 1.7); roof.position.y = 7.7; roof.castShadow = true; ch.add(roof);

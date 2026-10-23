@@ -22,8 +22,8 @@ on a desktop too.
     <td align="center"><img src="docs/screenshots/06-game-over.png" alt="GAME OVER sign with the word and its meaning, and a Try Again button" width="100%"><br><sub>Game over</sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/screenshots/08-rooftops.png" alt="Up from cover aiming at a gunman on the general store roof, while a red arc at the left warns of the gunman on the sheriff's roof" width="100%"><br><sub>Rooftop gunmen and the red arc</sub></td>
     <td align="center"><img src="docs/screenshots/07-word-book.png" alt="The Word Book: every word played, its meaning, and whether it was solved or missed" width="100%"><br><sub>The Word Book</sub></td>
-    <td></td>
     <td></td>
   </tr>
 </table>
@@ -46,15 +46,21 @@ and he goes free. On your last chance a clue appears at the top (except on Outla
 **When he hangs.** A sword glints, stuck in the ground under the gallows. Tap it within 4 seconds, or even after the GAME OVER sign comes
 up, to cut him down and fight for the round.
 
-**The shootout.** Now you're the stranger, behind cover, and seven gunmen are out for you.
-- You have **9 bullets and no reloads**, and **3 hearts**. Hearts you lose show as empty outlines.
+**The shootout.** Now you're the stranger, behind cover, and nine gunmen are out for you: seven in the street and
+two on the rooftops, behind the false fronts of the sheriff's office and the general store.
+- You have **11 bullets and no reloads**, and **3 hearts**. Hearts you lose show as empty outlines.
 - **Hold Aim** to rise up and drag to aim. **Fire** shoots. **Tap a piece of cover** to run to it.
   On a keyboard, hold **Shift** or **A** to rise and press **Space** or **Enter** to fire.
 - While you're down behind cover, nobody can hit you. Once you're up, a gunman takes **0.3 s** to fire, and his
-  hammer cocks just before he does.
-- They taunt you now and then. They hide behind their own cover too: a trough, a crate stack and barrels.
+  hammer cocks just before he does. A red chevron marks the man taking aim.
+- A gunman outside your view can take aim at you too, but he takes longer about it, and a **red arc** around the
+  crosshair points toward him. Duck, or turn and take him first.
+- The men on the roofs stand up at the false front to shoot and duck out of sight between shots. Hit one and he
+  may pitch over the edge.
+- They taunt you now and then. In the street they hide behind their own cover too: a trough, a crate stack and
+  barrels.
 - Run out of bullets with gunmen still standing and they know your gun is empty. They finish you off.
-- Down all seven and the host lets you go.
+- Down all nine and the host lets you go.
 
 **The Word Book.** Every finished word goes in your book with its part of speech, its meaning, and whether you
 solved or missed it. Open it from the menu, then search it or sort it by newest or A–Z. It's saved in your browser.

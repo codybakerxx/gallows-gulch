@@ -1,20 +1,24 @@
 // ---------- THE SIEGE AT THE GALLOWS ----------
 // When he hangs, a sword leaning on a leg of the platform glints, and after four seconds the GAME OVER sign comes up; until you start
-// another round it can still be taken up. Tap it and he's cut down, and you are him: the seven
-// who came to watch him die (six townsfolk and the executioner) draw on you. Nine bullets for the seven of them (two to spare), and no reloading: every
-// shot spends one, hit or miss. Run dry with any of them still standing and they know it (siegeDoomed): they take turns shooting you,
-// a heart a shot, cover or no cover. Three hits and you're dead. You stay down behind cover except while you hold the left half of the
-// pad (Aim): then you rise and drag to aim, and the right half fires. Let go and you duck, and while you've a bullet left nothing can
-// touch you there. Tap a barrel, the crates or the hay to run to it. Only a gunman you can see can shoot you, one at a time, and nobody
-// can until 0.3 seconds after you come up. They don't stand still long, and a few of their spots are behind a trough, crates or
-// barrels (ENEMY_COVER). Now and then one of them calls out to you (taunt). Every hit you take shows: the heart breaks in the top bar
+// another round it can still be taken up. Tap it and he's cut down, and you are him: the seven who came to watch him die (six townsfolk and
+// the executioner) draw on you, and two more come up on the roofs behind the false fronts of the sheriff's office and the general store.
+// Eleven bullets for the nine of them (two to spare), and no reloading: every shot spends one, hit or miss. Run dry with any of them still
+// standing and they know it (siegeDoomed): they take turns shooting you, a heart a shot, cover or no cover. Three hits and you're dead.
+// You stay down behind cover except while you hold the left half of the pad (Aim): then you rise and drag to aim, and the right half
+// fires. Let go and you duck, and while you've a bullet left nothing can touch you there. Tap a barrel, the crates or the hay to run to
+// it. One gunman at a time takes aim, only one with a clear line to you, and nobody can hit you until 0.3 seconds after you come up.
+// Most often it's one on your screen; one you can't see takes longer about it, and a red arc round the crosshair points his way. They
+// don't stand still long, a few of their spots are behind a trough, crates or barrels (ENEMY_COVER), and the men on the roofs duck out
+// of sight between shots. Now and then one of them calls out to you (taunt). Every hit you take shows: the heart breaks in the top bar
 // and a banner says how many you've got left.
-const SIEGE_CFG = { window: 4.0, bullets: 9, health: 3, grace: 2.5, telegraph: 0.3, gap: [1.8, 3.0], hitUp: 0.5, hitRun: 0.3, react: 0.3,
+const SIEGE_CFG = { window: 4.0, bullets: 11, health: 3, grace: 2.5, telegraph: 0.3, gap: [1.8, 3.0], hitUp: 0.5, hitRun: 0.3, react: 0.3,
   speed: [3.0, 3.7], hold: [0.8, 1.9], // how fast they dash between their spots (m/s), and how long they hold each one
   eye: 1.56, crouchEye: 0.72, sens: 0.0042, yawLim: 1.2, pitchLo: -0.3, pitchHi: 0.5, fireCool: 0.4, runSpeed: 4.2,
   doom: [1.3, 0.85], // out of bullets: the first of them takes aim this long after your last shot, and the next every 0.85 s after
-  tauntGap: 7, hideTaunt: 8 }; // at least 7 s between taunts; 8 s down behind cover and they call you out
-const SIEGE = { on: false, phase: null, winLeft: 0, bullets: 9, health: 3, holding: false, keyAim: false, scanT: 0, upT: 0, enemies: [], cover: 1, cv: 1, crouch: true, run: null, yaw: 0, pitch: 0,
+  tauntGap: 7, hideTaunt: 8, // at least 7 s between taunts; 8 s down behind cover and they call you out
+  offAim: 0.5, // a man taking aim from outside your view takes this much longer about it: the red arc gives you the time to get down
+  roofSpeed: 1.5, duck: -1.15 }; // the men on the roofs: how fast they move bent double behind the false front, and how far down that puts them
+const SIEGE = { on: false, phase: null, winLeft: 0, bullets: 11, health: 3, holding: false, keyAim: false, scanT: 0, upT: 0, enemies: [], cover: 1, cv: 1, crouch: true, run: null, yaw: 0, pitch: 0,
   recoil: 0, cool: 0, nextShot: 0, t: 0, used: {}, spawned: [], pool: [], hiddenCrowd: [], fx: [], pools: [], drops: [], occ: null, aimId: null, hurt: 0, hbT: 0,
   sword: null, vm: null, swing: -1, coughT: 0, flash: 0, flashPos: new THREE.Vector3(), tip: 0, tipNext: null, deadT: 0,
   shots: 0, downT: 0, aims: 0, said: new Set(), tauntT: 0, talkUntil: 0, wordsAt: 0, lastAt: 0, doomT: 0, doomI: 0, doomSaid: false, hitT: 0 };
@@ -26,6 +30,14 @@ const COVERS = [{ at: [-5.6, 1.55], kind: "barrels" }, { at: [-1.3, 2.1], kind: 
 const SIEGE_SPOTS = [[[-6.8, -2.4], [-7.6, -1.2]], [[-8.0, -4.6], [-7.3, -3.4]], [[1.5, -6.3], [2.6, -6.9]], [[-0.3, -8.4], [1.2, -8.9]],
   [[-7.75, -6.0], [-8.5, -7.5]], [[2.2, -3.3], [3.1, -4.5]]];
 const EXEC_SPOTS = [[-4.55, -4.15], [-4.5, -5.95]]; // (up and down the deck beside the lever, clear of the trap: a shot doesn't tip him down through it)
+// and two more on the roofs, behind the false fronts of the sheriff's office and the general store. Each has a spot either side of the ridge,
+// up near it, where the false front comes no higher than his hips: standing, you see him from the waist up (from the street, looking up and
+// across, from the chest up); ducked, he's out of sight (crossing the ridge his hat shows)
+const ROOF_MEN = [
+  { roof: "SHERIFF", vr: 1.04, spec: { body: { coat: true, kerchief: true }, shirt: 0x7a6a52, trousers: 0x2e2822, coat: 0x4a3c2c, kerchief: 0x6a1e16, skin: { tint: 0xd2a284, hair: 0x2a1c12, stubble: 0.8 }, hat: { color: 0x2c241c, y: 2.93 } } },
+  { roof: "GENERAL STORE", vr: 0.95, spec: { body: { vest: true, kerchief: true }, shirt: 0xa89878, trousers: 0x3a3430, vest: 0x2a2018, kerchief: 0x2a3a52, skin: { tint: 0xe0b89c, hair: 0x5a3a22, stubble: 0.5 }, hat: { color: 0x6a5238, y: 2.94, tilt: 0.04 } } }];
+const ROOF_SPOT = 1.1; // (how far either side of the ridge, along the front: the roof there sits 0.66 m below the top of the false front)
+function roofSpot(Rf, lx, back = 0.32) { const p = roofWorld(Rf, lx, 0, Rf.d / 2 - back); return [p.x, p.z]; }
 // cover for the gunmen, set out (like yours) only for the fight: a water trough, a stack of crates and a pair of barrels, each a stride
 // in front of one man's near spot, square to your side of the street. From some of your covers it hides his legs or his side; from
 // others he's in the open. [kind, x, z, turn]
@@ -110,6 +122,7 @@ function buildSiege() {
     return { grp, stand, away, side, top, yaw0: Math.atan2(SIEGE_FOCUS.x - stand.x, SIEGE_FOCUS.z - stand.z) };
   });
   buildEnemyCover(ENEMY_COVER);
+  SIEGE.roofActors = ROOF_MEN.map((m, i) => { const a = new Actor(Object.assign({ boots: 0x2e2016, gloves: 0x6a5038, lod: true }, m.spec), "roof" + i); a.root.visible = false; return a; });
   // the player's revolver, the guns the townsfolk carry, flashes and blood
   const vm = revolver(true); vm.visible = false; vm.traverse(o => { o.castShadow = false; o.frustumCulled = false; }); R.scene.add(vm);
   const fl = new THREE.Sprite(new THREE.SpriteMaterial({ fog: false, map: flashTex(), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 }));
@@ -217,7 +230,7 @@ function cutRopeAt(at) {
   puff(at, 14, 0.5, 0.06, 0.9, 0.5); // a few fibres
 }
 
-// ---- the seven ----
+// ---- the nine ----
 function armEnemies() {
   const S = SIEGE; S.enemies = []; S.hiddenCrowd = [];
   // exactly six townsfolk fight, whatever the quality setting put in the crowd: extras slip away, missing ones join
@@ -233,6 +246,10 @@ function armEnemies() {
   for (let i = 0; i < 6; i++) S.enemies.push(mk(LIFE.crowd[i], SIEGE_SPOTS[i], !!(CROWD_SPECS[i].spec.body && CROWD_SPECS[i].spec.body.skirt), [1.0, 1, 1.06, 1, 0.96, 0.92][i]));
   EXEC.gripping = false; EXEC.setGrip("L", 0); EXEC.setIK("L", null, 0); EXEC.lookPt = null; EXEC.ik.L.fast = EXEC.ik.R.fast = false;
   S.enemies.push(mk(EXEC, EXEC_SPOTS, false, 1.0));
+  // the two on the roofs come up the back of the roof bent double and make for the false front
+  ROOF_MEN.forEach((m, i) => { const Rf = WORLD.roofs.find(q => q.name === m.roof), a = S.roofActors[i]; if (!Rf || !a) return;
+    const side = i ? 1 : -1, back = roofSpot(Rf, side * ROOF_SPOT, 2.8); a.root.visible = true; a.yOff = SIEGE_CFG.duck; a.place(back[0], back[1], Math.atan2(Rf.s, Rf.c));
+    const E = mk(a, [roofSpot(Rf, side * ROOF_SPOT), roofSpot(Rf, -side * ROOF_SPOT)], false, m.vr); E.roof = Rf; a.walkTo([E.spots[0]], SIEGE_CFG.roofSpeed); S.enemies.push(E); });
   HOST.root.visible = false; HOST.path = null; // the host ducks out of sight behind the store
   S.occ = null;
 }
@@ -241,9 +258,14 @@ function updateEnemies(dt) {
   const S = SIEGE, P = playerEye(_s4), fighting = S.phase === "fight";
   for (const E of S.enemies) {
     const a = E.a; if (!E.alive) { dropGun(E, dt); continue; }
-    // a dash to his other spot, a hold there with the gun ready, and, when it's his turn, he takes aim
+    if (E.roof) a.yOff = E.state === "move" || E.state === "duck" ? SIEGE_CFG.duck : 0; // (on a roof: bent double behind the false front whenever he isn't up at it)
+    // a dash to his other spot, a hold there with the gun ready, and, when it's his turn, he takes aim. A man on a roof ducks out of sight
+    // between times, and as often as not comes up again where he went down
     if (E.state === "move") { if (!a.path) { E.state = "pause"; E.t = rnd(SIEGE_CFG.hold[0], SIEGE_CFG.hold[1]); } }
-    else if (E.state === "pause") { a.faceTo(P.x, P.z); E.t -= dt; if (E.t <= 0 && fighting) { E.i ^= 1; const [x, z] = E.spots[E.i]; a.walkTo([[x + rnd(-0.35, 0.35), z + rnd(-0.35, 0.35)]], rnd(SIEGE_CFG.speed[0], SIEGE_CFG.speed[1])); E.state = "move"; } }
+    else if (E.state === "duck") { E.t -= dt; if (E.t <= 0) { E.state = "pause"; E.t = rnd(SIEGE_CFG.hold[0], SIEGE_CFG.hold[1]); } }
+    else if (E.state === "pause") { a.faceTo(P.x, P.z); E.t -= dt; if (E.t <= 0 && fighting) {
+      if (E.roof && Math.random() < 0.45) { E.state = "duck"; E.t = rnd(1.2, 2.2); }
+      else { E.i ^= 1; const [x, z] = E.spots[E.i], j = E.roof ? 0 : 0.35; a.walkTo([[x + rnd(-j, j), z + rnd(-j, j)]], E.roof ? SIEGE_CFG.roofSpeed : rnd(SIEGE_CFG.speed[0], SIEGE_CFG.speed[1])); E.state = "move"; } } }
     else if (E.state === "aim") { a.path = null; a.faceTo(P.x, P.z); E.t -= dt;
       if (E.t <= 0) { const wait = S.phase === "fight" && !S.crouch ? SIEGE_CFG.react - S.upT : 0; // you just came up: he holds his fire until your 0.3 s are up
         if (wait > 0) E.t = wait; else { enemyFire(E); E.state = "recover"; E.t = 0.6; } } }
@@ -255,11 +277,14 @@ function updateEnemies(dt) {
     E.gun.position.copy(hand).addScaledVector(dir, 0.035).add(_s2.set(0, 0.01, 0)); E.gun.lookAt(_s2.copy(E.gun.position).add(dir));
   }
   if (S.phase !== "fight") return;
-  // one gun at a time, and only from a man you can see: whoever is on your screen with a clear line to where your head comes up
+  // one gun at a time, from a man with a clear line to where your head comes up: most often one on your screen, but a man you can't see
+  // can take aim too, more slowly, and a red arc round the crosshair shows which side he's on (siegeLate)
   S.nextShot -= dt; if (S.nextShot > 0 || S.enemies.some(E => E.alive && E.state === "aim")) return;
   S.scanT -= dt; if (S.scanT > 0) return; S.scanT = 0.2;
-  const ready = S.enemies.filter(E => E.alive && (E.state === "move" || E.state === "pause") && inView(E)); if (!ready.length) return;
-  const E = ready[Math.random() * ready.length | 0]; E.state = "aim"; E.t = SIEGE_CFG.telegraph * (S.t < 8 ? 1.2 : 1); E.a.path = null; E.tAim = E.t;
+  const ready = S.enemies.filter(E => E.alive && (E.state === "move" || E.state === "pause") && canFace(E) && clearShot(E)); if (!ready.length) return;
+  const seen = ready.filter(E => onFrame(E)), unseen = ready.filter(E => !seen.includes(E)), pool = seen.length && (!unseen.length || Math.random() < 0.65) ? seen : unseen;
+  const E = pool[Math.random() * pool.length | 0], off = !seen.includes(E);
+  E.state = "aim"; E.t = SIEGE_CFG.telegraph * (S.t < 8 ? 1.2 : 1) + (off ? SIEGE_CFG.offAim : 0); E.a.path = null; E.tAim = E.t; if (E.roof) E.a.yOff = 0;
   Sound.clip(siegePick("cock", 2), E.gun.position, 0.9, 0.05, 0.1, rnd(0.95, 1.05), 4); // the hammer going back: your cue to get down
   S.nextShot = rnd(SIEGE_CFG.gap[0], SIEGE_CFG.gap[1]) + E.t;
   // as he draws a bead he may call out: the first of the men to take aim jeers at the one who got away, the executioner has his own line
@@ -325,12 +350,15 @@ function siegeStance(E) {
 // where your head is when you come up from this cover
 function upEye(out) { const C = SIEGE.covers[SIEGE.cover]; return out.set(C.stand.x, SIEGE_CFG.eye, C.stand.z).addScaledVector(C.side, 0.08); }
 // he is on your screen (in front of you, inside the frame) and nothing solid stands between him and where your head comes up
-function inView(E, margin = 0.9) {
-  const c = E.a.ch.bones.Spine2.getWorldPosition(_v5), p = _v6.copy(c).project(R.camera);
-  if (p.z > 1 || p.z < -1 || Math.abs(p.x) > margin || Math.abs(p.y) > 0.96) return false;
-  const eye = upEye(_v7), d = _v8.subVectors(c, eye), L = d.length(); d.normalize(); return !sceneryRay(eye, d, L - 0.3);
+function inView(E, margin = 0.9) { return onFrame(E, margin) && clearShot(E); }
+function onFrame(E, margin = 0.9) { const p = _v6.copy(E.a.ch.bones.Spine2.getWorldPosition(_v5)).project(R.camera); return !(p.z > 1 || p.z < -1 || Math.abs(p.x) > margin || Math.abs(p.y) > 0.96); }
+function canFace(E) { // you could turn to him from this cover (the men on the roofs can be off past the edge of what you can turn to)
+  const C = SIEGE.covers[SIEGE.cover], c = E.a.ch.bones.Spine2.getWorldPosition(_v5), y = Math.atan2(c.x - C.stand.x, c.z - C.stand.z);
+  return Math.abs(((y - C.yaw0 + Math.PI) % TAU + TAU) % TAU - Math.PI) <= SIEGE_CFG.yawLim + 0.05; }
+function clearShot(E) { // nothing solid between his chest and where your head comes up (whether or not he's on your screen)
+  const c = E.a.ch.bones.Spine2.getWorldPosition(_v5), eye = upEye(_v7), d = _v8.subVectors(c, eye), L = d.length(); d.normalize(); return !sceneryRay(eye, d, L - 0.3);
 }
-const _v5 = new THREE.Vector3(), _v6 = new THREE.Vector3(), _v7 = new THREE.Vector3(), _v8 = new THREE.Vector3();
+const _v5 = new THREE.Vector3(), _v6 = new THREE.Vector3(), _v7 = new THREE.Vector3(), _v8 = new THREE.Vector3(), _s4q = new THREE.Quaternion();
 function muzzleFlash(pos, size) { const f = SIEGE.flashes.find(q => q.t >= 1) || SIEGE.flashes[0]; f.t = 0; f.s.position.copy(pos); f.s.scale.setScalar(size); f.s.visible = true; f.s.material.rotation = Math.random() * TAU;
   SIEGE.flash = 1; SIEGE.flashPos.copy(pos); }
 function enemyFire(E) {
@@ -338,7 +366,9 @@ function enemyFire(E) {
   puff(muzzle, 9, 0.35, 0.3, 2.4, 0.36, 0xd8d3c8); // black powder: a cloud of white smoke hangs where he fired
   Sound.clip(siegePick("far", 4), muzzle, 1.0, 0, 0.35, rnd(0.94, 1.06), 7);
   const doomed = S.phase === "doomed", exposed = doomed || playerExposed(), p = doomed ? 1 : S.run ? SIEGE_CFG.hitRun : SIEGE_CFG.hitUp;
-  if (exposed && (doomed || inView(E, 1.0)) && Math.random() < p) { playerHit(E, doomed); return; } // (out of your sight, he can't hit you, unless your gun's empty)
+  const hit = exposed && (doomed || clearShot(E)) && Math.random() < p; // (behind something solid, he can't hit you, unless your gun's empty)
+  if (!onFrame(E, 1.0)) S.threat = { E, t: 0.7, hit }; // fired from outside your view: the arc flares on his side (siegeLate)
+  if (hit) { playerHit(E, doomed); return; }
   const C = S.covers[S.cover];
   if (exposed) { Sound.clip(siegePick("whiz", 3), playerEye(_s1).addScaledVector(V3().subVectors(muzzle, _s1).normalize(), -0.6).add(V3(rnd(-0.5, 0.5), 0.2, 0)), 0.9, 0.05, 0.05, rnd(0.9, 1.1), 2);
     const g = playerEye(V3()).add(V3(rnd(-1.4, 1.4), 0, rnd(0.6, 1.8))); g.y = 0.05; puff(g, 10, 0.5, 0.12, 0.8, 0.45); }
@@ -372,17 +402,17 @@ function rayCapsule(ro, rd, pa, pb, r) { // distance along the ray to a capsule,
     const oc = y <= 0 ? oa : _s3.subVectors(ro, pb); b = rd.dot(oc); c = oc.dot(oc) - r * r; h = b * b - c; if (h > 0) return -b - Math.sqrt(h); }
   return -1;
 }
-function rayActor(a, ro, rd, female) {
+function rayActor(a, ro, rd, female, pad = 0) { // (pad: a little extra width for a man far off, so the men on the roofs aren't a few pixels to hit)
   const B = a.ch.bones; let best = null; const pa = V3(), pb = V3();
   const parts = female ? SIEGE_PARTS.concat([["Hips", "_skirt", 0.2, "hips", "Hips"]]) : SIEGE_PARTS;
   for (const P of parts) { B[P[0]].getWorldPosition(pa);
     if (P[1] === "_skirt") B.LeftLeg.getWorldPosition(pb).add(B.RightLeg.getWorldPosition(_s4)).multiplyScalar(0.5); else B[P[1]].getWorldPosition(pb);
-    const t = rayCapsule(ro, rd, pa, pb, P[2] + (a.ch.coatU && P[2] > 0.14 ? 0.02 : 0)); if (t > 0 && (!best || t < best.t)) best = { t, part: P }; }
+    const t = rayCapsule(ro, rd, pa, pb, P[2] + pad + (a.ch.coatU && P[2] > 0.14 ? 0.02 : 0)); if (t > 0 && (!best || t < best.t)) best = { t, part: P }; }
   return best;
 }
 function sceneryRay(ro, rd, far) {
   const S = SIEGE;
-  if (!S.occ) { const skip = new Set(); for (const a of [HOST, MAN, EXEC, ...LIFE.crowd, ...S.pool]) a.root.traverse(o => skip.add(o));
+  if (!S.occ) { const skip = new Set(); for (const a of [HOST, MAN, EXEC, ...LIFE.crowd, ...S.pool, ...(S.roofActors || [])]) a.root.traverse(o => skip.add(o));
     for (const o of [S.vm.gun, S.sword.group, ...S.enemies.map(E => E.gun)]) o.traverse(q => skip.add(q));
     const shown = o => { for (let q = o; q; q = q.parent) if (!q.visible) return false; return true; };
     S.occ = []; R.scene.traverse(o => { if (o.isMesh && !o.isSkinnedMesh && !o.isInstancedMesh && !o.morphTargetInfluences && !skip.has(o) && shown(o) && o.geometry && !(o.material && (o.material.transparent || o.material.isShaderMaterial || o.material.side === THREE.BackSide)) && !o.userData.dyn) S.occ.push(o); }); } // (not the sky)
@@ -398,7 +428,8 @@ function fireTap() {
   Sound.clip(siegePick("shot", 3), null, 1.15, 0, 0.32, rnd(0.97, 1.03)); CAM.shake = Math.max(CAM.shake, 0.35);
   R.camera.updateMatrixWorld(); const ro = R.camera.position.clone(), rd = V3(0, 0, -1).applyQuaternion(R.camera.quaternion).normalize();
   muzzleFlash(S.vm.gun.localToWorld(V3(0, 0.035, 0.22)), 0.32);
-  let hit = null; for (const E of S.enemies) { if (!E.alive) continue; const h = rayActor(E.a, ro, rd, E.female); if (h && (!hit || h.t < hit.t)) hit = Object.assign(h, { E }); }
+  let hit = null; for (const E of S.enemies) { if (!E.alive) continue; const far = E.a.ch.bones.Spine2.getWorldPosition(_s3).distanceTo(ro);
+    const h = rayActor(E.a, ro, rd, E.female, clamp((far - 12) * 0.007, 0, 0.12)); if (h && (!hit || h.t < hit.t)) hit = Object.assign(h, { E }); }
   const env = sceneryRay(ro, rd, 80);
   if (hit && (!env || hit.t < env.distance)) shotHits(hit.E, hit.part, ro.clone().addScaledVector(rd, hit.t), rd);
   else if (env) { const p = env.point; setTimeout(() => { puff(p, 14, 0.6, 0.08, 0.9, 0.6); Sound.clip(siegePick("wood", 4), p, 0.8, 0, 0.3, rnd(0.9, 1.1), 3); }, 40); }
@@ -434,7 +465,8 @@ function shotHits(E, part, at, rd) {
   const S = SIEGE, a = E.a; E.alive = false; E.state = "dead"; a.path = null; a.arrive = null; a.setIK("R", null, 0); a.setIK("L", null, 0); a.setGrip("R", 0); a.setGrip("L", 0); a.lookPt = null; a.pre = null;
   const head = part[3] === "head" || part[3] === "neck";
   addWound(a, part, at, rd); bloodBurst(at, rd, head); addBleed(a.ch.bones[part[4]], at, part[3]); if (head) knockHat(E, rd);
-  a.root.updateMatrixWorld(true); const H = a.hang = new Ragdoll(a, null, 0); H.dead = true;
+  if (E.roof && a.yOff) { a.yOff = 0; a.pos.y = floorAt(a.pos.x, a.pos.z); a.root.position.copy(a.pos); } // (shot crossing the ridge: up out of the roof before he falls)
+  a.root.updateMatrixWorld(true); const H = a.hang = new Ragdoll(a, null, 0); H.dead = true; if (E.roof) H.solids = E.roof.solids;
   H.onHit = (p, sp) => Sound.thud(p, clamp(sp / 6, 0.2, 0.8)); H.onRest = () => bloodPool(a, head); E.poolT = 0.9; E.headShot = head; a.pooled = false;
   // where it struck decides how he goes down
   const n = part[3], d = rd.clone().setY(Math.max(-0.2, rd.y)).normalize(), I = H.I;
@@ -443,6 +475,11 @@ function shotHits(E, part, at, rd) {
   else if (n === "hips") { H.kick(I.hips, d.clone().multiplyScalar(2.2).add(V3(0, -0.8, 0)), 0.35); for (const k of ["lkn", "rkn"]) H.kick(I[k], V3(0, -0.3, 0).addScaledVector(d, -0.6), 0.12); }
   else if (/el|wr/.test(n)) { H.kick(I[n], d.clone().multiplyScalar(3.2), 0.13); H.kick(I.chest, d.clone().multiplyScalar(0.9), 0.3); H.kick(I.hips, V3(0, -0.5, 0), 1.4); }
   else { H.kick(I[n], d.clone().multiplyScalar(2.8).add(V3(0, 0.3, 0)), 0.16); H.kick(I.hips, d.clone().multiplyScalar(0.6).add(V3(0, -0.7, 0)), 0.5); }
+  // up on a roof, a shot that isn't to the head mostly doubles him over the false front: half the time he pitches right over it and drops to
+  // the porch roof or the street, otherwise he folds over the top and hangs there. A shot to the head, or one in four, throws him back out of sight
+  const fall = E.roof && !head ? (window.GULCH_ROOFFALL || (Math.random() < 0.5 ? "over" : Math.random() < 0.5 ? "drape" : "back")) : null;
+  if (fall === "over" || fall === "drape") { const f = V3(E.roof.s, 0, E.roof.c), k = fall === "over" ? 1 : 0.62;
+    H.kick(I.chest, f.clone().multiplyScalar(3.2 * k).add(V3(0, 1.0 * k, 0)), 0.45); H.kick(I.hips, f.clone().multiplyScalar(2.2 * k).add(V3(0, 2.6 * k, 0)), 0.5); }
   // the gun flies out of his hand; he cries out
   E.gunV = d.clone().multiplyScalar(1.4).add(V3(rnd(-0.6, 0.6), 1.6, rnd(-0.6, 0.6))); E.gunW = V3(rnd(-9, 9), rnd(-9, 9), rnd(-9, 9));
   const pain = E.female ? siegePick("painf", 3) : siegePick("painm", 7);
@@ -456,7 +493,7 @@ function siegeBodies() { // the fallen (and the man cut down) don't sink into on
   for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++) { const A = L[i], B = L[j];
     if (Math.hypot(A.x[0] - B.x[0], A.x[1] - B.x[1], A.x[2] - B.x[2]) < 2.2) ragTouch(A, B); }
 }
-function dropGun(E, dt) { const g = E.gun; if (!E.gunV) return; const floor = floorAt(g.position.x, g.position.z) + 0.03;
+function dropGun(E, dt) { const g = E.gun; if (!E.gunV) return; const floor = surfaceAt(g.position.x, g.position.z, g.position.y) + 0.03;
   E.gunV.y -= 9.81 * dt; g.position.addScaledVector(E.gunV, dt); g.rotation.x += E.gunW.x * dt; g.rotation.y += E.gunW.y * dt; g.rotation.z += E.gunW.z * dt;
   if (g.position.y < floor) { g.position.y = floor; if (Math.abs(E.gunV.y) > 1) Sound.knock(g.position, 0.25); E.gunV.multiplyScalar(0.3); E.gunV.y = Math.abs(E.gunV.y) * 0.3; E.gunW.multiplyScalar(0.3); if (E.gunV.lengthSq() < 0.02) { E.gunV = null; g.rotation.x = Math.PI / 2 * Math.sign(g.rotation.x || 1); } } }
 // ---- gore: sprays out of the exit and entry wounds, wounds that pulse and drip, spatter on the ground and on whatever stood behind him,
@@ -508,7 +545,7 @@ function buildGore() {
   S.bloodMat = new THREE.MeshStandardMaterial({ color: 0x640505, roughness: 0.26, metalness: 0, transparent: true, alphaMap: splatTex(), depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
 }
 const _b1 = new THREE.Vector3(), _b2 = new THREE.Vector3(), _b3 = new THREE.Vector3(), _b4 = new THREE.Vector3(), _bq = new THREE.Quaternion(), _bm = new THREE.Matrix4();
-function goreFloor(x, z) { const T = LAY.trap; return Math.abs(x - T.x) < T.w / 2 && Math.abs(z - T.z) < T.d / 2 ? groundHeight(x, z) : floorAt(x, z); } // (through the open trap to the ground)
+function goreFloor(x, z, y) { const T = LAY.trap; return Math.abs(x - T.x) < T.w / 2 && Math.abs(z - T.z) < T.d / 2 ? groundHeight(x, z) : surfaceAt(x, z, y); } // (through the open trap to the ground; y: from what height, for the porch roofs)
 function spray(D, p, v, life) { const j = D.next; D.next = (D.next + 1) % D.n; D.pts.geometry.attributes.position.setXYZ(j, p.x, p.y, p.z); D.v[j * 3] = v.x; D.v[j * 3 + 1] = v.y; D.v[j * 3 + 2] = v.z; D.life[j] = life; D.dirty = true; }
 function addSplat(p, size, stretch, ang) { // a drop landed: a blot on the ground, drawn out the way it was going
   const G = SIEGE.gore.splat; _bq.setFromAxisAngle(V_UP, ang); _bm.compose(p, _bq, _b4.set(size * stretch, 1, size)); G.im.setMatrixAt(G.next, _bm);
@@ -546,7 +583,7 @@ function updateBlood(dt) {
   for (const D of [G.fine, G.fat]) { const pos = D.pts.geometry.attributes.position, a = pos.array; let any = D.dirty; D.dirty = false;
     for (let j = 0; j < D.n; j++) { if (D.life[j] <= 0) continue; any = true; const k = j * 3; D.life[j] -= dt;
       let vx = D.v[k], vy = D.v[k + 1] - 9.81 * dt, vz = D.v[k + 2]; const drag = 1 - 0.35 * dt; vx *= drag; vz *= drag;
-      const x = a[k] + vx * dt, y = a[k + 1] + vy * dt, z = a[k + 2] + vz * dt, fy = goreFloor(x, z);
+      const x = a[k] + vx * dt, y = a[k + 1] + vy * dt, z = a[k + 2] + vz * dt, fy = goreFloor(x, z, a[k + 1]);
       if (y <= fy + 0.004) { // it lands: a splat where it hits, drawn out the way it was going
         if (Math.random() < (D.k === 2 ? 0.95 : 0.45)) { const sp = Math.hypot(vx, vz); addSplat(_b1.set(x, fy + 0.003, z), (D.k === 2 ? rnd(0.1, 0.24) : rnd(0.04, 0.1)) * (0.85 + 0.12 * Math.min(4, -vy)), 1 + Math.min(2.4, sp * 0.5), Math.atan2(-vz, vx)); }
         D.life[j] = 0; a[k + 1] = -50; continue; }
@@ -563,14 +600,14 @@ function updateBlood(dt) {
     if (b.t < 6) { b.beat -= dt; if (b.beat <= 0) { b.beat = 0.72 + b.t * 0.09; const k = b.art * (1 - b.t / 6);
       for (let i = 0; i < 14 * k; i++) spray(G.fine, w, _b3.copy(n).multiplyScalar(rnd(0.8, 2.6) * k + 0.3).add(_b4.set(rnd(-0.25, 0.25), rnd(0.2, 0.8), rnd(-0.25, 0.25))), 3);
       if (k > 0.4) for (let i = 0; i < 3; i++) spray(G.fat, w, _b3.copy(n).multiplyScalar(rnd(0.6, 1.8) * k + 0.2).add(_b4.set(rnd(-0.15, 0.15), rnd(0.2, 0.6), rnd(-0.15, 0.15))), 3); } } }
-  for (const E of G.hats) { const st = E.hatOff; if (!st || st.rest) continue; const h = st.obj, fl = goreFloor(h.position.x, h.position.z) + 0.02;
+  for (const E of G.hats) { const st = E.hatOff; if (!st || st.rest) continue; const h = st.obj, fl = goreFloor(h.position.x, h.position.z, h.position.y) + 0.02;
     st.v.y -= 9.81 * dt; h.position.addScaledVector(st.v, dt); h.rotation.x += st.w.x * dt; h.rotation.y += st.w.y * dt; h.rotation.z += st.w.z * dt;
     if (h.position.y < fl) { h.position.y = fl; st.v.multiplyScalar(0.35); st.v.y = Math.abs(st.v.y) * 0.3; st.w.multiplyScalar(0.35);
       if (st.v.lengthSq() < 0.04) { st.rest = true; h.rotation.set(Math.random() < 0.6 ? 0 : Math.PI, Math.random() * TAU, 0); h.position.y = fl + (h.rotation.x ? 0.12 : 0); } } }
   for (const P of SIEGE.pools) { P.t += dt; const s = P.r * (1 - Math.exp(-P.t / 3.2)); P.m.scale.set(s, s, 1); }
 }
 function bloodPool(a, head) { // where he lies it spreads, wide and dark; a shot to the head pools round the head as well
-  const H = a.hang; if (!H || a.pooled) return; a.pooled = true; const at = (c, r) => { const y = goreFloor(c.x, c.z) + 0.006 + SIEGE.pools.length * 0.0004;
+  const H = a.hang; if (!H || a.pooled) return; a.pooled = true; const at = (c, r) => { const y = goreFloor(c.x, c.z, c.y) + 0.006 + SIEGE.pools.length * 0.0004;
     const m = new THREE.Mesh(SIEGE.poolGeo || (SIEGE.poolGeo = new THREE.PlaneGeometry(2, 2)), SIEGE.bloodMat); m.rotation.x = -Math.PI / 2; m.rotation.z = Math.random() * TAU;
     m.position.set(c.x, y, c.z); m.scale.set(0.01, 0.01, 1); m.receiveShadow = true; R.scene.add(m); SIEGE.pools.push({ m, t: 0, r }); };
   at(H.P("chest", V3()).lerp(H.P("hips", V3()), 0.4), rnd(1.1, 1.55)); if (head) at(H.P("head", V3()), rnd(0.55, 0.85));
@@ -654,12 +691,20 @@ async function siegeWin() {
 function showSiegeSign(won) {
   STATE.locked = false; STATE.ts = 1; $("skip").hidden = true;
   const t = $("signTitle"); t.textContent = won ? "YOU SURVIVED" : "GAME OVER"; t.className = won ? "" : "lose"; signAgain(won); $("signWord").textContent = STATE.word; signMeaning(STATE.word, false); // (he hanged: the word was missed)
-  $("signLine").textContent = won ? `${SIEGE.shots <= 7 ? "Seven shots, seven down" : `Seven down in ${SIEGE.shots} shots`} · Streak: ${STATE.streak} · Best: ${STATE.best}` : SIEGE.loseLine || SIEGE_LINES.lose;
+  const n = SIEGE.enemies.length, N = NUM_WORDS[n] || String(n);
+  $("signLine").textContent = won ? `${SIEGE.shots <= n ? `${N} shots, ${N.toLowerCase()} down` : `${N} down in ${SIEGE.shots} shots`} · Streak: ${STATE.streak} · Best: ${STATE.best}` : SIEGE.loseLine || SIEGE_LINES.lose;
   $("sign").hidden = false; $("againBtn").focus({ preventScroll: true });
 }
 
 // ---- HUD and the touch pad ----
 const SIEGE_TIP = "Hold Aim to come up · Fire to shoot · tap cover to move";
+// the warning for a man taking aim from outside your view: an arc round the crosshair at twelve o'clock with a small point on its outside,
+// fading at both ends, turned to face him (siegeLate)
+const THREAT_SVG = '<svg viewBox="0 0 200 200" aria-hidden="true"><defs><linearGradient id="thrG" gradientUnits="userSpaceOnUse" x1="58" y1="0" x2="142" y2="0">'
+  + '<stop offset="0" stop-color="#ff2a1a" stop-opacity="0"/><stop offset=".3" stop-color="#ff2a1a"/><stop offset=".7" stop-color="#ff2a1a"/><stop offset="1" stop-color="#ff2a1a" stop-opacity="0"/></linearGradient></defs>'
+  + '<path class="u" d="M58.6 24.6A86 86 0 0 1 141.4 24.6" fill="none" stroke="#000" stroke-opacity=".45" stroke-width="9" stroke-linecap="round"/>'
+  + '<path class="a" d="M58.6 24.6A86 86 0 0 1 141.4 24.6" fill="none" stroke="url(#thrG)" stroke-width="5.5" stroke-linecap="round"/>'
+  + '<path d="M93 11.5L100 3l7 8.5z" fill="#ff2a1a" stroke="#000" stroke-opacity=".45" stroke-width="1.5" stroke-linejoin="round"/></svg>';
 function buildSiegeUI() {
   const pad = document.createElement("div"); pad.id = "pad"; pad.hidden = true;
   pad.innerHTML = '<div id="padAim" role="button" aria-label="Aim: drag to look"><svg viewBox="0 0 48 48" width="40" height="40" aria-hidden="true"><circle cx="24" cy="24" r="15" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M24 3v10M24 35v10M3 24h10M35 24h10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg><span>Aim</span></div>'
@@ -670,7 +715,8 @@ function buildSiegeUI() {
   for (const ev of ["pointerup", "pointercancel", "pointerleave"]) $("padFire").addEventListener(ev, () => $("padFire").classList.remove("on"));
   const st = $("stage");
   for (const [id, html] of [["xhair", '<svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><circle cx="20" cy="20" r="11" fill="none" stroke="#000" stroke-opacity=".55" stroke-width="3.2"/><circle cx="20" cy="20" r="11" fill="none" stroke="#f4ead8" stroke-width="1.6"/><circle cx="20" cy="20" r="1.8" fill="#e2483a"/></svg>'],
-    ["hurt", ""], ["gore", ""], ["siegeTip", SIEGE_TIP], ["hitMsg", ""], ["doomMsg", "<b>Out of bullets</b><span>They know your gun is empty</span>"], ["warn", '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 7l8 9 8-9" fill="none" stroke="#000" stroke-opacity=".5" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 7l8 9 8-9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>']]) { const d = document.createElement("div"); d.id = id; d.hidden = id !== "hurt" && id !== "gore"; d.innerHTML = html; st.appendChild(d); }
+    ["hurt", ""], ["gore", ""], ["siegeTip", SIEGE_TIP], ["hitMsg", ""], ["doomMsg", "<b>Out of bullets</b><span>They know your gun is empty</span>"], ["warn", '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 7l8 9 8-9" fill="none" stroke="#000" stroke-opacity=".5" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 7l8 9 8-9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'],
+    ["threat", THREAT_SVG]]) { const d = document.createElement("div"); d.id = id; d.hidden = id !== "hurt" && id !== "gore"; d.innerHTML = html; st.appendChild(d); }
   const hp = document.createElement("span"); hp.id = "hp"; hp.hidden = true; hp.setAttribute("aria-label", "Health"); $("gun").appendChild(hp);
 }
 // the bottom panel and top bar: "fight" (the aim | fire pad), "cut" and "end" (nothing to press, the letters stay hidden), "dead" (the pad,
@@ -680,9 +726,11 @@ function showSiegeUI(mode) {
   $("pad").hidden = !pad; $("kb").classList.toggle("siege", mode !== "off"); $("hp").hidden = !(pad || mode === "end");
   $("left").hidden = mode !== "off"; $("hud").classList.toggle("siege", mode !== "off"); // in the shootout the cylinder alone shows what's loaded: no number beside it
   $("hintBtn").style.display = mode === "off" ? "" : "none"; $("siegeTip").hidden = mode !== "fight"; // (out of the bar altogether, so the count of gunmen left has room) $("padAim").classList.remove("on", "nudge");
-  if (mode === "fight") { $("siegeTip").textContent = SIEGE_TIP; SIEGE.tip = 5; SIEGE.tipNext = SIEGE_TIP2; $("kb").classList.add("up"); }
+  if (mode === "fight") { $("siegeTip").textContent = SIEGE_TIP; SIEGE.tip = 5; SIEGE.tipNext = SIEGE_TIP2 = `${SIEGE_CFG.bullets} bullets for ${siegeMen()} gunmen · two on the rooftops · no reloads`; $("kb").classList.add("up"); }
 }
-const SIEGE_TIP2 = "9 bullets for 7 gunmen · no reloads";
+const NUM_WORDS = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve"];
+const siegeMen = () => 7 + ROOF_MEN.filter(m => WORLD.roofs.some(q => q.name === m.roof)).length; // the six townsfolk, the executioner, the men on the roofs
+let SIEGE_TIP2 = "";
 // the hearts in the top bar: full, or an empty outline once lost; the one you just lost swells, flashes and breaks first
 const HEART_D = "M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.6 6.6 4.6c2.2 0 3.6 1.2 5.4 3.2 1.8-2 3.2-3.2 5.4-3.2 3.6 0 5.7 3.7 4.2 7.1C19.5 16.4 12 21 12 21z";
 function siegeHearts() {
@@ -720,6 +768,7 @@ function updateSiege(rdt, dt) {
   if (!$("menu").hidden) return;
   S.t += dt; if (S.tip > 0) { S.tip -= rdt; if (S.tip <= 0) { if (S.tipNext && S.phase === "fight") { $("siegeTip").textContent = S.tipNext; S.tipNext = null; S.tip = 3.5; } else $("siegeTip").hidden = true; } }
   if (S.hitT > 0) { S.hitT -= rdt; if (S.hitT <= 0) $("hitMsg").hidden = true; }
+  for (const a of S.roofActors) if (a.root.visible) a.update(dt); // (the crowd and the executioner are updated with the town)
   updateEnemies(dt); updateBlood(dt); siegeBodies();
   if (S.phase === "fight" || S.phase === "doomed" || S.phase === "dead") updatePlayer(rdt, dt);
   // out of bullets: a word from one of them, then they take turns, one shot every 0.85 s, each a heart, till you're down
@@ -765,6 +814,17 @@ function siegeLate(rdt) {
     if (p.z < 1 && Math.abs(p.x) < 1 && Math.abs(p.y) < 1) { mark = true; W.style.left = ((p.x * 0.5 + 0.5) * R.w).toFixed(1) + "px"; W.style.top = ((-p.y * 0.5 + 0.5) * R.h).toFixed(1) + "px";
       const k = clamp(1 - A.t / (A.tAim || 1), 0, 1); W.style.opacity = (0.55 + 0.45 * Math.abs(Math.sin(T * (5 + 14 * k)))).toFixed(2); } }
   W.hidden = !mark;
+  // a man taking aim from outside your view: the red arc round the crosshair, on his side, pulsing faster as he's about to fire; it flares
+  // as he fires and fades (bright if the shot hit you)
+  const Th = $("threat"); let src = null, k = 0, glow = 0;
+  if (A && !mark) { src = A; k = clamp(1 - A.t / (A.tAim || 1), 0, 1); }
+  else if (S.threat && S.threat.t > 0) { S.threat.t -= rdt; src = S.threat.E; glow = Math.max(0, S.threat.t / 0.7); }
+  if (src && S.on && (S.phase === "fight" || S.phase === "doomed" || glow > 0)) {
+    const v = src.a.ch.bones.Spine2.getWorldPosition(_s2).sub(cam.position).applyQuaternion(_s4q.copy(cam.quaternion).invert()), ang = Math.atan2(v.x, -v.z);
+    const size = Math.round(Math.min(R.w, R.h) * 0.74); if (Th.dataset.size !== String(size)) { Th.dataset.size = size; Th.style.width = Th.style.height = size + "px"; }
+    Th.style.transform = `translate(-50%,-50%) rotate(${ang.toFixed(3)}rad)`; Th.classList.toggle("fire", glow > 0);
+    Th.style.opacity = (glow > 0 ? glow * (S.threat.hit ? 1 : 0.75) : 0.45 + 0.55 * Math.abs(Math.sin(T * (5 + 14 * k)))).toFixed(2); Th.hidden = false; }
+  else Th.hidden = true;
   for (const f of S.flashes) { if (f.t >= 1) continue; f.t = Math.min(1, f.t + rdt / 0.06); f.s.material.opacity = 1 - f.t; if (f.t >= 1) f.s.visible = false; }
   if (KEY_LIGHT && S.on) { S.flash = Math.max(0, S.flash - rdt / 0.07); KEY_LIGHT.intensity = S.flash * 9; KEY_LIGHT.distance = 9; KEY_LIGHT.color.setRGB(1, 0.72, 0.42); KEY_LIGHT.position.copy(S.flashPos); }
 }
@@ -783,6 +843,7 @@ function resetSiege() {
   for (const a of S.spawned) { a.root.visible = false; const k = LIFE.crowd.indexOf(a); if (k >= 0) LIFE.crowd.splice(k, 1); } S.spawned = [];
   const G = S.gore; for (const E of G.hats) { const st = E.hatOff; if (st) { st.parent.add(st.obj); st.obj.position.copy(st.p); st.obj.quaternion.copy(st.q); st.obj.scale.copy(st.s); E.hatOff = null; } } G.hats = [];
   for (const a of S.hiddenCrowd) a.root.visible = true; S.hiddenCrowd = []; S.enemies = [];
+  for (const a of S.roofActors) { a.root.visible = false; a.yOff = 0; a.path = null; } S.threat = null; $("threat").hidden = true; // (the men on the roofs climb back down out of sight)
   HOST.root.visible = true; EXEC.act.idle.timeScale = 1; MAN.root.visible = true; if (MAN.tie) MAN.tie.visible = true; GAL.rope.lowHidden = false;
   for (const P of S.pools) R.scene.remove(P.m); S.pools = [];
   for (const D of [G.fine, G.fat]) { D.life.fill(0); D.pts.geometry.attributes.position.array.fill(-50); D.pts.geometry.attributes.position.needsUpdate = true; }
