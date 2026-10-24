@@ -48,7 +48,10 @@ up, to cut him down and fight for the round.
 
 **The shootout.** Now you're the stranger, behind cover, and nine gunmen are out for you: seven in the street and
 two on the rooftops, behind the false fronts of the sheriff's office and the general store.
-- You have **11 bullets and no reloads**, and **3 hearts**. Hearts you lose show as empty outlines.
+- Your revolver holds **6 rounds**, and you get **one reload**: 12 rounds in all. The reload is automatic: when the
+  cylinder empties it refills by itself, and you can't fire until it's done. The speedloader beside the cylinder shows
+  whether your reload is still there.
+- You have **5 hearts**. Hearts you lose show as empty outlines.
 - **Hold Aim** to rise up and drag to aim. **Fire** shoots. **Tap a piece of cover** to run to it.
   On a keyboard, hold **Shift** or **A** to rise and press **Space** or **Enter** to fire.
 - While you're down behind cover, nobody can hit you. Once you're up, a gunman takes **0.3 s** to fire, and his
@@ -84,8 +87,9 @@ counts. Then:
   Ring it then and you ride.
 - **Lose, having rung it.** Nothing happens. A new shootout starts the bell over.
 
-**First half, the ride.** The horse gallops on its own and you steer: **A / D** or **← / →**, the Left and Right
-pads, or a drag on the view. Rocks, cactus, wagons and broken fences come at you in rows, closer together as you go,
+**First half, the ride.** The horse gallops on its own and you steer by swiping or dragging left and right anywhere on
+the screen. The horse moves straight across the trail to where your finger takes it. On a keyboard, hold **A / D** or
+**← / →**. Rocks, cactus, wagons and broken fences come at you in rows, closer together as you go,
 and there's always a way through. Hit something and you slow down and the posse gains on you. The bar at the top
 shows how close they are, and their hoofbeats get louder. Let them catch you and you're captured.
 
@@ -93,23 +97,25 @@ shows how close they are, and their hoofbeats get louder. Let them catch you and
 the same way, keeping to the trail, and nobody can hurt you while you turn.
 
 **Second half, the fight.**
-- Aim with the mouse or by dragging on the view, which works while another finger holds Fire. **Click** or **Fire**
-  shoots, and **R** or **Reload** reloads. You have six rounds and as many reloads as you like, but you're open while
-  you reload.
+- It's the same gun and the same hearts as the shootout: 6 rounds, one automatic reload, 5 hearts.
+- Aim with the mouse, by dragging the **Aim** pad (as in the shootout) or by dragging on the view. Any of these works
+  while another finger holds **Fire**. **Click** or **Fire** shoots.
+- When the cylinder empties it reloads by itself, once. Run dry with riders still coming and they ride in and finish
+  you.
 - The horse swerves round things on its own. Each swerve pulls your aim to one side, so watch the reticle and fire in
   the steady spells. Shots go exactly where the reticle is.
-- Gunmen hang back and take aim. Lasso men ride in close and spin a loop. The last rider comes up alongside and takes
-  two hits.
+- Gunmen hang back and take aim. Lasso men ride in close and spin a loop. The last rider comes up close and takes two
+  hits. They all keep where you can see them, even on a phone held upright.
 - A red mark shows who's about to attack, and the red arc points to anyone attacking from off the screen. Hit a man
   while he winds up and he loses the attack.
-- You have three hearts. Lose them all and you're captured.
+- Lose all five hearts and you're captured.
 
 **The end.** Drop the last rider and you've won. What happens next is a short scene you can't control. You can skip
 it after the first time. Then **Retry chase** (straight back in the saddle) or **Return to Hangman**.
 
 The ride takes about 40 seconds and the fight about 20–40, depending on your shooting. Every number (speeds, row
-spacing, the posse's pace, sway, attack timings, damage, reload, the ending's timing) is in `CHASE_CFG` at the top of
-`src/12g_chase.js`.
+spacing, the posse's pace, sway, attack timings, damage, the ending's timing) is in `CHASE_CFG` at the top of
+`src/12g_chase.js`. The gun and the hearts are in `GUN` at the top of `src/12d_siege.js`, shared by both.
 
 </details>
 

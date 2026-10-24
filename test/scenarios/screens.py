@@ -97,7 +97,7 @@ def getaway():
       if (C.attacker) endAttack(C.attacker); const L = C.riders.find(r => r.alive && r.kind === 'lasso'); L.d = 9; L.l = -1.5; startAttack(L); // (a lasso man spinning up, for the picture)
       await __go(240, () => { C.hp = 3; return L.state === 'windup' && L.t > 1.5; }); const A = C.attacker; __aimRider(A); C.ay -= 0.06; C.ap += 0.02; await __go(2); return JSON.stringify({ who: A && A.kind, errs: __errs }); })()""")
     shot("10-getaway-fight")
-    E("""(async () => { const C = CHASE; let g = 0; while (C.state === 'combat' && g++ < 400) { C.hp = 3; if (C.rounds <= 0) { chaseReload(); await __go(100, () => C.reloadT <= 0); continue; }
+    E("""(async () => { const C = CHASE; let g = 0; while (C.state === 'combat' && g++ < 400) { C.hp = 3; if (C.rounds <= 0 || C.reloadT > 0) { if (C.reloadT <= 0) { C.reloads = Math.max(C.reloads, 1); chaseReload(); } await __go(110, () => C.reloadT <= 0); continue; }
         const a = C.riders.filter(r => r.alive && r.state !== 'wait').sort((x, y) => x.d - y.d); if (a[0]) __fireAt(a[0]); await __go(20, () => C.state !== 'combat'); }
       await __go(900, () => C.cine && C.cine.phase === 'fall' && C.cine.ft > 0.78); return JSON.stringify({ state: C.state, errs: __errs }); })()""")
     shot("11-getaway-cliff")

@@ -2,6 +2,21 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v30
+- **The shootout:** you now have 5 hearts, and the revolver holds 6 rounds with one reload, 12 rounds in all. The
+  reload is automatic when the cylinder empties, and you can't fire while it runs. A speedloader beside the cylinder
+  shows whether your reload is still there.
+- **The getaway:**
+  - It uses the same gun and hearts as the shootout, drawn the same way. That's 5 hearts and 6 rounds with one
+    automatic reload, instead of unlimited reloads and 3 hearts.
+  - Run dry with riders still coming and they finish you.
+  - Steering in the ride is a swipe or drag left and right anywhere on the screen. The Left and Right buttons are
+    gone. The horse moves straight across the trail instead of turning diagonally.
+  - The fight's pad is Aim | Fire, as in the shootout. There is no Reload button and no R key.
+  - The posse stays in view. On a phone held upright they used to ride off the sides of the narrow view; now they keep
+    within it, follow the trail's bends, and keep pace when your horse swerves. The second wave waits closer, and the
+    last rider comes in close behind you rather than out to the side.
+
 ## v29
 - A brass bell now hangs off the gallows. It stirs in the wind and catches the light now and then. In the shootout
   it can be shot like anything else, and the bullet is spent as usual.

@@ -22,14 +22,14 @@ window.__shootBell = async () => { const S = SIEGE; await __up();
     if (__wouldHit() === 'bell') { S.cool = 0; const b0 = S.bullets; fireTap(); return { cover: c, spent: b0 - S.bullets, unlocked: BELL.unlocked, swing: __r(BELL.angV) }; } }
   return { err: 'no cover could hit the bell' }; };
 // one gunman you can shoot from where you are: kill the rest outright (no bullets spent), then put a real shot (fireTap) into him
-window.__lastOne = async (bullets) => { const S = SIEGE; await __up(); let pick = null;
+window.__lastOne = async (bullets, reloads = 0) => { const S = SIEGE; await __up(); let pick = null;
   for (const c of [S.cover, 0, 1, 2]) { if (c !== S.cover) { S.cover = c; S.yaw = S.covers[c].yaw0; await __go(60, () => { __calm(); return !S.run && S.cv < 0.05; }); }
     for (const q of S.enemies.filter(q => q.alive && !q.roof)) { q.a.path = null; q.state = 'pause'; q.t = 999; for (let i = 0; i < 3; i++) { const p = q.a.ch.bones.Spine2.getWorldPosition(V3()); __aimPt(p); await __go(2, () => { __calm(); return false; }); } if (__wouldHit() === q) { pick = q; break; } }
     if (pick) break; }
   if (!pick) return { err: 'nobody in a clear shot' };
   for (const q of S.enemies) if (q.alive && q !== pick) shotHits(q, SIEGE_PARTS[2], q.a.ch.bones.Spine2.getWorldPosition(V3()), V3(0, -0.2, -1).normalize());
   await __go(3, () => { __calm(); return false; }); for (let i = 0; i < 3; i++) { __aimPt(pick.a.ch.bones.Spine2.getWorldPosition(V3())); await __go(1); }
-  S.bullets = bullets; S.cool = 0; const would = __wouldHit() === pick; fireTap(); return { would, killed: !pick.alive, bulletsLeft: S.bullets, phase: S.phase, alive: S.enemies.filter(q => q.alive).length }; };
+  S.bullets = bullets; S.reloads = reloads; S.cool = 0; const would = __wouldHit() === pick; fireTap(); return { would, killed: !pick.alive, bulletsLeft: S.bullets, phase: S.phase, alive: S.enemies.filter(q => q.alive).length }; };
 // counters on the transitions that must happen once
 window.__cnt = { sg: 0, victory: 0, results: 0, capture: 0, tracks: [], begins: 0 };
 if (!window.__wrapped) { window.__wrapped = true;
@@ -37,7 +37,10 @@ if (!window.__wrapped) { window.__wrapped = true;
   w('startGetaway', 'sg'); w('beginVictory', 'victory'); w('chaseResults', 'results'); w('chaseCapture', 'capture'); w('chaseBegin', 'begins');
   const tr = Sound.track; Sound.track = function (nm) { __cnt.tracks.push({ nm, muted: Sound.muted, master: Sound.masterGain, ready: Sound.ready }); return tr.apply(Sound, arguments); }; }
 // riding: steer for the middle of the next row's way through
-window.__auto = () => { const C = CHASE; const next = C.rows.find(r => r.s > C.s - 1.2); if (!next) { C.steerPad = 0; return; } const d = next.g - C.lat; C.steerPad = Math.abs(d) < 0.2 ? 0 : Math.sign(d) * Math.min(1, Math.abs(d) / 0.6); };
+window.__auto = () => { const C = CHASE; const next = C.rows.find(r => r.s > C.s - 1.2); if (next) C.steerT = next.g; }; // (as a swipe would: the middle of the next way through)
+window.__steerTo = lat => { CHASE.steerKey = 0; CHASE.steerT = lat; };
+// on screen now, with the view where it rests (no aim): how many of the riders still in the fight can you see?
+window.__inView = () => { const C = CHASE, cam = R.camera, out = []; for (const r of C.riders) { if (!r.alive) continue; const p = r.a.ch.bones.Spine2.getWorldPosition(V3()).project(cam); out.push(p.z < 1 && Math.abs(p.x) < 0.98 && Math.abs(p.y) < 0.98); } return out; };
 // the fight: point the gun (ay/ap, the way a drag or the mouse does) so that, with the drift the horse puts on it right now, it's on his chest
 window.__aimRider = (R0, part = 'Spine2') => { const C = CHASE, K = CHASE_CFG, Sw = C.sway || { y: 0, p: 0 }, c = R.camera.position, p = R0.a.ch.bones[part].getWorldPosition(V3());
   const yawAbs = Math.atan2(p.x - c.x, p.z - c.z), pitchAbs = Math.atan2(p.y - c.y, Math.hypot(p.x - c.x, p.z - c.z));

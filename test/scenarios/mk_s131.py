@@ -5,7 +5,7 @@
 #  3) a win without the bell: the street stays live (you can still fire); the bell rung three times then: one getaway
 #  4) the ride: keys steer, the page doesn't scroll, one collision costs ground but not the chase, the course ridden clean to the turn
 #  5) the turn: the horse keeps going the same way while the view comes round; nothing can hurt you through it
-#  6) the fight: mouse aim and click, R reloads, the reticle is where the shot goes while the horse swerves, the horse steers itself
+#  6) the fight: mouse aim and click, no R key (the gun reloads itself, once), the reticle is where the shot goes while the horse swerves, the horse steers itself
 #     clear of everything, a lasso that lands costs a heart, a windup shot through is called off
 #  7) the last one down: the cliff, once; the scream through the master output; completion; the results
 #  8) retry: straight back in the saddle, everything cleaned up; caught in the ride, caught in the fight, retry after each; the cliff
@@ -35,7 +35,7 @@ shot("a_mount")
 E("""(async () => { try { const S = SIEGE, out = {}; newRound(); await __go(30); out.reset = { chase: CHASE.on, state: CHASE.state, unlocked: BELL.unlocked, siege: S.on, horse: CHASE.horse.grp.visible, man: MAN.root.visible };
   await __siege(); out.start = { unlocked: BELL.unlocked }; out.hit = await __shootBell();
   // throw the rest away: out of bullets with them standing, and they finish you
-  S.bullets = 1; S.pitch = 0.9; await __go(2); S.cool = 0; fireTap(); out.doomed = S.phase; await __go(3000, () => S.phase === 'dead');
+  S.bullets = 1; S.reloads = 0; S.pitch = 0.9; await __go(2); S.cool = 0; fireTap(); out.doomed = S.phase; await __go(3000, () => S.phase === 'dead');
   await __go(400); out.lost = { phase: S.phase, unlocked: BELL.unlocked, chase: CHASE.on, sg: __cnt.sg, sign: !document.getElementById('sign').hidden };
   out.errs = __errs; return JSON.stringify(out); } catch (e) { return 'ERR ' + e.stack; } })()""")
 shot("b_lost")
@@ -48,7 +48,7 @@ E("""(async () => { try { const S = SIEGE, out = {}; document.getElementById('si
   out.beforeTimer = { chase: CHASE.on, sg: __cnt.sg, pending: BELL.pending }; return JSON.stringify(out); } catch (e) { return 'ERR ' + e.stack; } })()""")
 steps.append(["wait", 1400])
 E("""(async () => { await __go(5); const out = { afterTimer: { chase: CHASE.on, state: CHASE.state, sg: __cnt.sg, pending: BELL.pending } }; await __go(240, () => CHASE.state === 'ride');
-  out.ride = { state: CHASE.state, sg: __cnt.sg, pad: [__vis('padLeft'), __vis('padRight'), __vis('padShoot')], pursuit: __vis('pursuit'), tip: document.getElementById('chaseTip').textContent, kbLetters: getComputedStyle(document.querySelector('.krow')).visibility };
+  out.ride = { state: CHASE.state, sg: __cnt.sg, pad: [__vis('padSteer'), !!document.getElementById('padLeft'), __vis('padShoot')], pursuit: __vis('pursuit'), tip: document.getElementById('chaseTip').textContent, kbLetters: getComputedStyle(document.querySelector('.krow')).visibility };
   out.errs = __errs; return JSON.stringify(out); })()""")
 shot("c_ride_start")
 # ---- 4) the ride ----
@@ -59,9 +59,9 @@ E("""(async () => { try { const C = CHASE, out = {}; await __go(30);
   // one collision: ride straight at the next row's blocked part
   const next = () => C.obs.filter(o => o.halfLat > 0 && !o.hit && o.s > C.s + 14).sort((a, b) => a.s - b.s)[0];
   await __go(600, () => { __auto(); return !!next(); }); const ob = next(), g0 = C.gap;
-  await __go(400, () => { C.steerPad = Math.abs(ob.lat - C.lat) < 0.15 ? 0 : Math.sign(ob.lat - C.lat) * 0.7; return C.stats.bumps > 0 || C.s > ob.s + 3; }); out.target = [ob.kind, __r(ob.lat), __r(ob.halfLat)];
+  await __go(400, () => { __steerTo(ob.lat); return C.stats.bumps > 0 || C.s > ob.s + 3; }); out.target = [ob.kind, __r(ob.lat), __r(ob.halfLat)];
   out.bump = { bumps: C.stats.bumps, gapBefore: __r(g0), gapAfter: __r(C.gap), speed: __r(C.speed), state: C.state, msg: document.getElementById('chaseMsg').textContent };
-  await __go(6); C.steerPad = 0; out.errs = __errs; return JSON.stringify(out); } catch (e) { return 'ERR ' + e.stack; } })()""")
+  await __go(6); C.steerT = null; out.errs = __errs; return JSON.stringify(out); } catch (e) { return 'ERR ' + e.stack; } })()""")
 shot("d_bump")
 E("""(async () => { const C = CHASE; await __go(800, () => { __auto(); return C.s > 200; }); return 1; })()""")
 shot("e_ride_rows")
@@ -74,7 +74,7 @@ E("""(async () => { try { const C = CHASE, out = {}; const b0 = C.stats.bumps; l
     const f = V3(0, 0, -1).applyQuaternion(R.camera.quaternion); const along = d.x * h.hx + d.z * h.hz; if (along <= 0) backwards++; if (C.attacker) attacks++;
     track.push([__r(C.yawOff), __r(f.x * h.hx + f.z * h.hz), __r(along)]); return C.state === 'combat' && C.safeT <= 0; });
   out.turn = { frames: track.length, backwardsFrames: backwards, attacksDuring: attacks, hpBefore: hp0, hpAfter: C.hp, safe: __r(maxSafe), first: track[0], mid: track[Math.floor(track.length * 0.4)], end: track[track.length - 1],
-    gun: SIEGE.vm.gun.visible, ret: __vis('chaseRet'), pads: [__vis('padReload'), __vis('padShoot'), __vis('padLeft')], tip: document.getElementById('chaseTip').textContent, posse: __posse() };
+    gun: SIEGE.vm.gun.visible, ret: __vis('chaseRet'), pads: [__vis('padAim2'), __vis('padShoot'), __vis('padSteer'), !!document.getElementById('padReload')], tip: document.getElementById('chaseTip').textContent, posse: __posse() };
   out.errs = __errs; return JSON.stringify(out); } catch (e) { return 'ERR ' + e.stack; } })()""")
 shot("f_combat")
 # ---- 6) the fight ----
@@ -85,8 +85,9 @@ E("""(async () => { await __go(3); const C = CHASE, r = document.getElementById(
 steps.append(["press", "(() => { const r = document.getElementById('stage').getBoundingClientRect(); return [r.left + r.width * 0.62, r.top + r.height * 0.38]; })()"])
 steps.append(["release", ""])
 E("""(async () => { const C = CHASE, out = { click: { shots: C.stats.shots, rounds: C.rounds } }; await __go(20);
-  __key('r', true); __key('r', false); out.reload = { reloadT: __r(C.reloadT), rounds: C.rounds }; C.cool = 0; const s0 = C.stats.shots; chaseFire(); out.fireWhileReloading = C.stats.shots - s0;
-  await __go(120, () => C.reloadT <= 0); out.reloaded = { rounds: C.rounds, meta: document.getElementById('meta').textContent }; return JSON.stringify(out); })()""")
+  __key('r', true); __key('r', false); out.rKey = { reloadT: __r(C.reloadT), rounds: C.rounds }; // (no manual reload any more)
+  C.rounds = 1; C.cool = 0; chaseFire(); out.auto = { rounds: C.rounds, reloadT: __r(C.reloadT), reloads: C.reloads, meta: document.getElementById('meta').textContent }; C.cool = 0; const s0 = C.stats.shots; chaseFire(); out.fireWhileReloading = C.stats.shots - s0;
+  await __go(140, () => C.reloadT <= 0); out.reloaded = { rounds: C.rounds, reloads: C.reloads, meta: document.getElementById('meta').textContent }; return JSON.stringify(out); })()""")
 # the reticle against the shot, through a swerve; the horse's own line past everything
 E("""(async () => { try { const C = CHASE, K = CHASE_CFG, out = { ret: [] }; C.mouse = null; let minMargin = 99, passes = 0, maxSway = 0; const seen = new Set();
   const watch = () => { for (const ob of C.obs) { if (!ob.halfLat || Math.abs(ob.s - C.s) > ob.halfS + K.reach) continue; const m = Math.abs(ob.lat - C.lat) - (ob.halfLat + K.horseHalf); minMargin = Math.min(minMargin, m); if (!seen.has(ob)) { seen.add(ob); passes++; } } maxSway = Math.max(maxSway, Math.abs(C.sway.y)); };
@@ -118,7 +119,7 @@ E("""(async () => { try { const C = CHASE, out = { log: [] }; let guard = 0, dro
   const watch = () => { for (const ob of C.obs) { if (!ob.halfLat || Math.abs(ob.s - C.s) > ob.halfS + K.reach) continue; minMargin = Math.min(minMargin, Math.abs(ob.lat - C.lat) - (ob.halfLat + K.horseHalf)); if (!seen.has(ob)) { seen.add(ob); passes++; } } return C.state !== 'combat'; };
   while (C.state === 'combat' && guard++ < 400) { C.hp = Math.max(C.hp, 2); // (so the run reaches the end; being caught is tested on its own below)
     const alive = C.riders.filter(r => r.alive); maxAlive = Math.max(maxAlive, alive.filter(r => r.state !== 'wait').length);
-    if (C.rounds <= 0 || C.reloadT > 0) { chaseReload(); await __go(100, () => C.reloadT <= 0); continue; }
+    if (C.rounds <= 0 || C.reloadT > 0) { if (C.reloadT <= 0) { C.reloads = Math.max(C.reloads, 1); chaseReload(); } await __go(110, () => C.reloadT <= 0); continue; } // (topped up: running dry is tested in s133)
     const tgt = (C.attacker && C.attacker.state === 'windup') ? C.attacker : alive.filter(r => r.state !== 'wait').sort((a, b) => a.d - b.d)[0];
     if (tgt && Math.abs(tgt.d) < 40) { const r = __fireAt(tgt); if (r === 'hit' && !tgt.alive) { dropped++; out.log.push([__r(C.stats.t - t0), tgt.kind, 'down']); } }
     await __go(24 + (guard % 3 === 0 ? 90 : 0), watch); } // (with pauses, so the horse swerves round a few more things)
@@ -149,7 +150,7 @@ E("""(async () => { const C = CHASE, out = {}; out.retry = { state: C.state, res
     riders: C.riders.filter(r => r.alive && !r.a.hang && r.H.grp.visible).length, used: Object.values(C.pool).flat().filter(o => o.used).length, dustLive: [...C.dust.life].filter(v => v > 0).length, begins: __cnt.begins };
   await __go(200, () => C.state === 'ride'); out.ride = { state: C.state, st: __r(C.st), s: __r(C.s) };
   // caught in the ride: run into row after row
-  await __go(4000, () => { const ob = C.obs.filter(o => o.halfLat > 0 && !o.hit && o.s > C.s + 0.5).sort((a, b) => a.s - b.s)[0]; if (ob) C.steerPad = Math.abs(ob.lat - C.lat) < 0.15 ? 0 : Math.sign(ob.lat - C.lat) * 0.8; return C.state !== 'ride'; });
+  await __go(4000, () => { const ob = C.obs.filter(o => o.halfLat > 0 && !o.hit && o.s > C.s + 0.5).sort((a, b) => a.s - b.s)[0]; if (ob) __steerTo(ob.lat); return C.state !== 'ride'; });
   out.caught = { state: C.state, bumps: C.stats.bumps, gap: __r(C.gap), msg: document.getElementById('chaseMsg').textContent, capture: __cnt.capture };
   await __go(400, () => C.state === 'results'); out.res = { title: document.getElementById('resTitle').textContent, line: document.getElementById('resLine').textContent, rides: STATE.rides, results: __cnt.results };
   out.errs = __errs; return JSON.stringify(out); })()""")
@@ -165,7 +166,7 @@ shot("o_caught_fight")
 steps.append(["click", "#resRetry"])
 E("""(async () => { try { const C = CHASE, out = {}; await __go(200, () => C.state === 'ride'); C.s = C.turnAt - 4; for (const ob of C.obs) dropObstacle(ob); C.obs = []; C.rows = []; C.nextRow = 1e9;
   await __go(400, () => C.state === 'combat' && C.safeT <= 0); const v0 = __cnt.victory; let guard = 0;
-  while (C.state === 'combat' && guard++ < 400) { C.hp = 3; if (C.rounds <= 0) { chaseReload(); await __go(100, () => C.reloadT <= 0); continue; } const alive = C.riders.filter(r => r.alive && r.state !== 'wait').sort((a, b) => a.d - b.d); if (alive[0]) __fireAt(alive[0]); await __go(20, () => C.state !== 'combat'); }
+  while (C.state === 'combat' && guard++ < 400) { C.hp = 3; if (C.rounds <= 0 || C.reloadT > 0) { if (C.reloadT <= 0) { C.reloads = Math.max(C.reloads, 1); chaseReload(); } await __go(110, () => C.reloadT <= 0); continue; } const alive = C.riders.filter(r => r.alive && r.state !== 'wait').sort((a, b) => a.d - b.d); if (alive[0]) __fireAt(alive[0]); await __go(20, () => C.state !== 'combat'); }
   await __go(30); out.skip = { state: C.state, shown: __vis('chaseSkip'), cliffSeen: STATE.cliffSeen, victory: __cnt.victory - v0 }; return JSON.stringify(out); } catch (e) { return 'ERR ' + e.stack; } })()""")
 steps.append(["click", "#chaseSkip"])
 E("""(async () => { const C = CHASE; await __go(5); return JSON.stringify({ state: C.state, title: document.getElementById('resTitle').textContent, scream: !!C.scream, victory: __cnt.victory, rides: STATE.rides, errs: __errs }); })()""")
