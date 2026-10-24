@@ -47,6 +47,11 @@ round plays in seconds and only the screenshots are rendered.
 | `mk_s127.py` | v24: nine bullets |
 | `mk_s128.py` | The thicker sword, its sheen and sparks; tapping it after GAME OVER; the streak given back; the Word Book entry made once |
 | `mk_s129.py` | GAME OVER four seconds after he hangs; the sword still works after |
+| `mk_s130.py` | v28: the rooftop gunmen (footing, standing and ducked against the false front, what each cover can see), the red arc for a man aiming from outside the view, and how a man shot off a roof falls (`mk_s130.py PREFIX over,drape`) |
+| `mk_s131.py` | v29, the bell and the getaway at desktop size (1280 × 720), keyboard and mouse: an early bell hit spends a bullet and marks the round without starting anything; the win on the last bullet starts the getaway, once; a new round clears the mark; rung then lost, no getaway; a win without the bell leaves the street live, and ringing it then starts one getaway however often it's hit; keys steer and the page doesn't scroll; one collision costs ground but not the chase; the course ridden clean; the turn (travel never reverses, no attacks, no damage); mouse aim, click, the automatic reload (no R key); the reticle against the shot through swerves; the horse's line past everything; a lasso that lands, a windup shot through; the cliff once, the scream, completion, the results; retry and its clean-up; caught in the ride and in the fight; the skip; back to the hangman |
+| `mk_s132.py` | The getaway on a phone (390 × 844) with touch: a drag on the view and a quick swipe on the panel steer (no Left / Right buttons) with the horse sidestepping; no scrolling; the Aim pad drags the aim while another finger holds Fire, and a drag on the view aims too; no Reload button, the gun reloads itself; Reduce motion (camera bob with it off and on, and the reticle still drifting); the scream played with the sound off goes through the muted output |
+| `mk_s133.py` | v30, the gun and the hearts (run at 390 × 844): five hearts, six rounds and one automatic reload in the shootout, the top bar fitting, firing blocked while it reloads, running dry and being finished off with five shots; the same gun and hearts in the getaway's ride and fight; every rider on screen on a phone held upright, the last one too; running dry in the getaway and being caught |
+| `chase_helpers.js` | Shared by `mk_s131.py` and `mk_s132.py`: the clock stepper, setting up a shootout, shooting the bell, the last gunman, the riding autopilot, aiming at a rider through the drift, touch and key events |
 | `screens.py` | The README screenshots |
 
 Some builders check numbers from an older version, such as reaction times or the bullet count, so read a builder's
@@ -58,6 +63,7 @@ To regenerate the README screenshots:
 python3 test/scenarios/screens.py
 DPR=2 python3 test/play.py 390 844 test/screens_phone.json 0.05 high
 DPR=1.5 python3 test/play.py 1280 720 test/screens_wide.json 0.05 high
+DPR=2 python3 test/play.py 390 844 test/screens_getaway.json 0.05 high
 ```
 
 Without internet access the Google Fonts won't load, and the screenshots fall back to system fonts. To avoid that,

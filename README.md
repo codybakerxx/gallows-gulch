@@ -22,8 +22,8 @@ on a desktop too.
     <td align="center"><img src="docs/screenshots/06-game-over.png" alt="GAME OVER sign with the word and its meaning, and a Try Again button" width="100%"><br><sub>Game over</sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/screenshots/08-rooftops.png" alt="Up from cover aiming at a gunman on the general store roof, while a red arc at the left warns of the gunman on the sheriff's roof" width="100%"><br><sub>Rooftop gunmen and the red arc</sub></td>
     <td align="center"><img src="docs/screenshots/07-word-book.png" alt="The Word Book: every word played, its meaning, and whether it was solved or missed" width="100%"><br><sub>The Word Book</sub></td>
-    <td></td>
     <td></td>
   </tr>
 </table>
@@ -46,15 +46,78 @@ and he goes free. On your last chance a clue appears at the top (except on Outla
 **When he hangs.** A sword glints, stuck in the ground under the gallows. Tap it within 4 seconds, or even after the GAME OVER sign comes
 up, to cut him down and fight for the round.
 
-**The shootout.** Now you're the stranger, behind cover, and seven gunmen are out for you.
-- You have **9 bullets and no reloads**, and **3 hearts**. Hearts you lose show as empty outlines.
+**The shootout.** Now you're the stranger, behind cover, and nine gunmen are out for you: seven in the street and
+two on the rooftops, behind the false fronts of the sheriff's office and the general store.
+- Your revolver holds **6 rounds**, and you get **one reload**: 12 rounds in all. The reload is automatic: when the
+  cylinder empties it refills by itself, and you can't fire until it's done. The speedloader beside the cylinder shows
+  whether your reload is still there.
+- You have **5 hearts**. Hearts you lose show as empty outlines.
 - **Hold Aim** to rise up and drag to aim. **Fire** shoots. **Tap a piece of cover** to run to it.
   On a keyboard, hold **Shift** or **A** to rise and press **Space** or **Enter** to fire.
 - While you're down behind cover, nobody can hit you. Once you're up, a gunman takes **0.3 s** to fire, and his
-  hammer cocks just before he does.
-- They taunt you now and then. They hide behind their own cover too: a trough, a crate stack and barrels.
+  hammer cocks just before he does. A red chevron marks the man taking aim.
+- A gunman outside your view can take aim at you too, but he takes longer about it, and a **red arc** around the
+  crosshair points toward him. Duck, or turn and take him first.
+- The men on the roofs stand up at the false front to shoot and duck out of sight between shots. Hit one and he
+  may pitch over the edge.
+- They taunt you now and then. In the street they hide behind their own cover too: a trough, a crate stack and
+  barrels.
 - Run out of bullets with gunmen still standing and they know your gun is empty. They finish you off.
-- Down all seven and the host lets you go.
+- Down all nine and you survive. The street stays yours, gun still in hand, until you press **Done**.
+- There's a bell on the gallows. It's a target like any other, and it costs a bullet like any other.
+
+<details>
+<summary><b>Spoiler: the getaway</b> (what the bell is for)</summary>
+
+<br>
+
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="docs/screenshots/09-getaway-ride.png" alt="Riding out across the desert, the horse's head and ears in front, rocks and a wagon ahead, the posse's distance shown at the top" width="100%"><br><sub>The ride</sub></td>
+    <td align="center" width="33%"><img src="docs/screenshots/10-getaway-fight.png" alt="Turned round in the saddle with the revolver, a lasso man spinning his rope as the posse rides up through the dust" width="100%"><br><sub>The fight</sub></td>
+    <td align="center" width="33%"><img src="docs/screenshots/11-getaway-cliff.png" alt="Horse and rider in mid-air off the edge of a canyon at sunset" width="100%"><br><sub>Should've watched the road</sub></td>
+  </tr>
+</table>
+
+Shoot the bell during a shootout and the round is marked. Nothing else changes: the fight goes on, and the bullet
+counts. Then:
+- **Win, having rung it.** "You survived" flashes up, the posse comes down the street, you get on a horse and ride.
+  It doesn't matter if your gun is empty by then.
+- **Win without ringing it.** The street stays live, and you can still shoot the bell (if you have a bullet left).
+  Ring it then and you ride.
+- **Lose, having rung it.** Nothing happens. A new shootout starts the bell over.
+
+**First half, the ride.** The horse gallops on its own and you steer by swiping or dragging left and right anywhere on
+the screen. The horse moves straight across the trail to where your finger takes it. On a keyboard, hold **A / D** or
+**← / →**. Rocks, cactus, wagons and broken fences come at you in rows, closer together as you go,
+and there's always a way through. Hit something and you slow down and the posse gains on you. The bar at the top
+shows how close they are, and their hoofbeats get louder. Let them catch you and you're captured.
+
+**The turn.** Halfway, a shot whistles past your shoulder. You twist round in the saddle and draw. The horse goes on
+the same way, keeping to the trail, and nobody can hurt you while you turn.
+
+**Second half, the fight.**
+- It's the same gun and the same hearts as the shootout: 6 rounds, one automatic reload, 5 hearts.
+- Aim with the mouse, by dragging the **Aim** pad (as in the shootout) or by dragging on the view. Any of these works
+  while another finger holds **Fire**. **Click** or **Fire** shoots.
+- When the cylinder empties it reloads by itself, once. Run dry with riders still coming and they ride in and finish
+  you.
+- The horse swerves round things on its own. Each swerve pulls your aim to one side, so watch the reticle and fire in
+  the steady spells. Shots go exactly where the reticle is.
+- Gunmen hang back and take aim. Lasso men ride in close and spin a loop. The last rider comes up close and takes two
+  hits. They all keep where you can see them, even on a phone held upright.
+- A red mark shows who's about to attack, and the red arc points to anyone attacking from off the screen. Hit a man
+  while he winds up and he loses the attack.
+- Lose all five hearts and you're captured.
+
+**The end.** Drop the last rider and you've won. What happens next is a short scene you can't control. You can skip
+it after the first time. Then **Retry chase** (straight back in the saddle) or **Return to Hangman**.
+
+The ride takes about 40 seconds and the fight about 20–40, depending on your shooting. Every number (speeds, row
+spacing, the posse's pace, sway, attack timings, damage, the ending's timing) is in `CHASE_CFG` at the top of
+`src/12g_chase.js`. The gun and the hearts are in `GUN` at the top of `src/12d_siege.js`, shared by both.
+
+</details>
 
 **The Word Book.** Every finished word goes in your book with its part of speech, its meaning, and whether you
 solved or missed it. Open it from the menu, then search it or sort it by newest or A–Z. It's saved in your browser.
@@ -78,7 +141,8 @@ or **Play Again** after one ends.
 - Graphics tiers (Low, Medium, High, or Auto) for older and newer phones. High adds the most bloom, soft shadows,
   ambient occlusion, light shafts and skin shading.
 - Built for touch, with safe-area insets for notched phones, sound that plays even with an iPhone's ring/silent
-  switch on (there's a mute button), and keyboard play on desktop.
+  switch on (there's a mute button), and keyboard play on desktop. A **Reduce motion** setting cuts camera shake.
+- Something hidden, for anyone who rings the bell.
 
 ## Run it
 
@@ -104,8 +168,8 @@ public repository.
 
 ```
 build.py                 builds dist/ from src/ and assets/ (standard library only)
-src/                     the game: one HTML shell and 22 JavaScript modules, loaded in the order build.py lists
-  00_head.html           page markup and all CSS: HUD, keyboard, menu poster, end sign, Word Book
+src/                     the game: one HTML shell and 24 JavaScript modules, loaded in the order build.py lists
+  00_head.html           page markup and all CSS: HUD, keyboard, menu poster, end sign, Word Book, the getaway's HUD
   01_util.js             helpers, seeded noise
   02_textures.js         procedural material textures and sprites
   03_audio.js            Web Audio: soundtrack, voice, 3D sound effects, synthesized ambience
@@ -127,11 +191,13 @@ src/                     the game: one HTML shell and 22 JavaScript modules, loa
   12b2_play.js           grabbing the hanged man
   12d_siege.js           the sword, the cut-down and the shootout
   12e_book.js            the Word Book
+  12f_bell.js            the bell, and the cleared street after a win
+  12g_chase.js           the getaway: posse, horses, the ride, the fight, the canyon, the results
   12c_boot.js            loading, menu, input, main loop
 assets/
   models/                Xbot.glb, LeePerrySmith.glb, Horse.glb, Stork.glb
   textures/              the head scan's colour, normal and specular maps
-  audio/                 soundtrack.mp3, silence.mp3, voice/ (41 host lines), sfx/ (41 effects and taunts)
+  audio/                 soundtrack.mp3, silence.mp3, voice/ (41 host lines), sfx/ (49 effects, taunts and shouts)
 vendor/three-r147/       the nine three.js r147 files the game uses, for offline tests (MIT)
 tools/
   check_build.py         checks the bundled script parses and every file the code asks for is in dist/

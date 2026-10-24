@@ -2,6 +2,48 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v30
+- **The shootout:** you now have 5 hearts, and the revolver holds 6 rounds with one reload, 12 rounds in all. The
+  reload is automatic when the cylinder empties, and you can't fire while it runs. A speedloader beside the cylinder
+  shows whether your reload is still there.
+- **The getaway:**
+  - It uses the same gun and hearts as the shootout, drawn the same way. That's 5 hearts and 6 rounds with one
+    automatic reload, instead of unlimited reloads and 3 hearts.
+  - Run dry with riders still coming and they finish you.
+  - Steering in the ride is a swipe or drag left and right anywhere on the screen. The Left and Right buttons are
+    gone. The horse moves straight across the trail instead of turning diagonally.
+  - The fight's pad is Aim | Fire, as in the shootout. There is no Reload button and no R key.
+  - The posse stays in view. On a phone held upright they used to ride off the sides of the narrow view; now they keep
+    within it, follow the trail's bends, and keep pace when your horse swerves. The second wave waits closer, and the
+    last rider comes in close behind you rather than out to the side.
+
+## v29
+- A brass bell now hangs off the gallows. It stirs in the wind and catches the light now and then. In the shootout
+  it can be shot like anything else, and the bullet is spent as usual.
+- Winning the shootout no longer jumps straight to the end sign. A "You survived" banner comes up, and the street
+  stays yours with the gun in hand until you press **Done**.
+- New in the menu: **Reduce motion**, which cuts the camera's shake and bob. It starts on if your device asks for
+  reduced motion.
+- Spoiler, a hidden getaway: ring the bell in a shootout you win and the posse rides in. You take a horse and run.
+  - **First half:** you steer through rocks, cactus, wagons and broken fences while they close in behind you.
+  - **Second half:** halfway, a shot past your shoulder turns you round in the saddle with a six-shooter. The horse
+    keeps to the trail and you shoot it out with the posse: gunmen, lasso men and one hard case who rides up
+    alongside.
+  - **The end:** drop the last of them and things do not end well. Retry the chase, or go back to the hangman.
+  - The README has the details, in a spoiler section.
+
+## v28
+- Two more gunmen, on the roofs of the sheriff's office and the general store. They stand up behind the false
+  front to shoot and duck out of sight between shots; crossing the ridge, their hats show. Shot, a man on a roof
+  may pitch over the false front onto the porch roof or the street, fold over the top of it, or fall back out of
+  sight.
+- Nine gunmen in all, so the revolver now holds 11 bullets, keeping two to spare.
+- A red arc around the crosshair warns of a gunman taking aim at you from outside your view and points toward
+  him. It flares when he fires.
+- Gunmen outside your view can now shoot at you, if they have a clear line to you and you could turn to face
+  them. They take 0.5 s longer to aim than a man on your screen.
+- Far targets are a little easier to hit: the men on the roofs are 20–27 m away.
+
 ## Repository — 2026-10-23
 
 - The project's first commit. It holds the game as of v27, rearranged into `src/`, `assets/`, `vendor/`, `tools/`

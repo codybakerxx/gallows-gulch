@@ -141,12 +141,22 @@ SFX = {
     "dry": "Empty revolver: the hammer falls on nothing",
     "cock": "A gunman cocking his hammer: your cue to duck",
 }
+SFX_ONE = { # the getaway (hidden): one line each
+    "shout0": "The getaway: a posse rider coming down the street, “There he is! Get him, boys!”",
+    "shout1": "The getaway: a posse rider as you ride off, “Don’t let him get away!”",
+    "shout2": "The getaway: a posse rider when your horse hits something, “Ha! We got him now!”",
+    "shout3": "The getaway: a posse rider at the halfway shot, “Shoot him off that damn horse!”",
+    "shout4": "The getaway: the last rider, coming alongside, “Just you and me now, you son of a bitch.”",
+    "shout5": "The getaway: a posse rider when the first of them falls, “Aw, hell! He shot Earl!”",
+    "scream0": "The getaway: his scream as he goes over the cliff (it falls away with him)",
+    "canyon0": "The getaway: horse and rider hitting the canyon floor, far below",
+}
 
 MODEL_ABOUT = {
     "Xbot.glb": "Every person in town: the host, the executioner, the hanged man, the crowd and the gunmen. One rigged body, "
                 "dressed and re-proportioned in code; its motion-capture clips drive walking, idling and reactions.",
     "LeePerrySmith.glb": "The scanned head every face is made from: skinned onto the body, given eyes, hair and hats in code, with the three textures below.",
-    "Horse.glb": "The loose horse that now and then bolts down the street (a bay coat painted in code; galloping by its morph targets).",
+    "Horse.glb": "The loose horse that now and then bolts down the street, and in the getaway your horse and the posse's five (coats painted and tinted in code; galloping by its morph targets).",
     "Stork.glb": "The vultures circling over the gulch (re-coloured in code; flapping by its morph targets).",
 }
 TEX_ABOUT = {
@@ -253,7 +263,7 @@ def main():
         total["audio"] += a["bytes"]
         k = f[:-4]
         kind = re.match(r"[a-z]+", k).group(0)
-        what = f"Taunt, said by {taunts[k][1]}: “{taunts[k][0]}”" if k in taunts else SFX.get(kind, "")
+        what = f"Taunt, said by {taunts[k][1]}: “{taunts[k][0]}”" if k in taunts else SFX_ONE.get(k) or SFX.get(kind, "")
         w(f"| `{f}` | {a['dur']:.2f} s | {a['sr']:,} Hz | {chan(a['ch'])} | {a['br'] // 1000} kb/s | {kb(a['bytes'])} | {what} |")
     w("")
 

@@ -14,7 +14,7 @@ glTF 2.0 binary. The build writes each one to `dist/models/<name>.glb.txt` as ba
 | `Stork.glb` | 75.1 KB | 1 (1) | 358 | 542 | – | 13 | 1 | – |
 | `Xbot.glb` | 2.79 MB | 2 (2) | 28,374 | 49,112 | 67 joints | – | 7 | – |
 
-**`Horse.glb`** — The loose horse that now and then bolts down the street (a bay coat painted in code; galloping by its morph targets).
+**`Horse.glb`** — The loose horse that now and then bolts down the street, and in the getaway your horse and the posse's five (coats painted and tinted in code; galloping by its morph targets).
 Mesh extent (model units, before node transforms): 61.1 × 182 × 322. 1 nodes, 1 material.
 
 | Animation | Length | Channels |
@@ -115,6 +115,7 @@ Short, trimmed and level-matched mono clips, placed in 3D around the listener wh
 
 | File | Length | Sample rate | Channels | Bit rate | Bytes | What it is |
 |---|---:|---:|---|---:|---:|---|
+| `canyon0.mp3` | 2.04 s | 44,100 Hz | mono | 58 kb/s | 14.7 KB | The getaway: horse and rider hitting the canyon floor, far below |
 | `cock0.mp3` | 0.18 s | 44,100 Hz | mono | 111 kb/s | 2.5 KB | A gunman cocking his hammer: your cue to duck |
 | `cock1.mp3` | 0.29 s | 44,100 Hz | mono | 105 kb/s | 3.7 KB | A gunman cocking his hammer: your cue to duck |
 | `cough0.mp3` | 0.89 s | 44,100 Hz | mono | 66 kb/s | 7.2 KB | The cut-down man gasping and coughing for air |
@@ -138,9 +139,16 @@ Short, trimmed and level-matched mono clips, placed in 3D around the listener wh
 | `painm4.mp3` | 1.88 s | 44,100 Hz | mono | 65 kb/s | 14.9 KB | A gunman crying out when your shot lands |
 | `painm5.mp3` | 1.72 s | 44,100 Hz | mono | 65 kb/s | 13.7 KB | A gunman crying out when your shot lands |
 | `painm6.mp3` | 0.94 s | 44,100 Hz | mono | 66 kb/s | 7.6 KB | A gunman crying out when your shot lands |
+| `scream0.mp3` | 4.55 s | 44,100 Hz | mono | 66 kb/s | 36.8 KB | The getaway: his scream as he goes over the cliff (it falls away with him) |
 | `shot0.mp3` | 1.85 s | 44,100 Hz | mono | 97 kb/s | 22.1 KB | Your revolver firing, close up |
 | `shot1.mp3` | 1.72 s | 44,100 Hz | mono | 97 kb/s | 20.6 KB | Your revolver firing, close up |
 | `shot2.mp3` | 1.88 s | 44,100 Hz | mono | 97 kb/s | 22.4 KB | Your revolver firing, close up |
+| `shout0.mp3` | 2.30 s | 44,100 Hz | mono | 57 kb/s | 16.0 KB | The getaway: a posse rider coming down the street, “There he is! Get him, boys!” |
+| `shout1.mp3` | 1.41 s | 44,100 Hz | mono | 62 kb/s | 10.7 KB | The getaway: a posse rider as you ride off, “Don’t let him get away!” |
+| `shout2.mp3` | 2.09 s | 44,100 Hz | mono | 55 kb/s | 14.1 KB | The getaway: a posse rider when your horse hits something, “Ha! We got him now!” |
+| `shout3.mp3` | 2.27 s | 44,100 Hz | mono | 58 kb/s | 16.2 KB | The getaway: a posse rider at the halfway shot, “Shoot him off that damn horse!” |
+| `shout4.mp3` | 3.60 s | 44,100 Hz | mono | 66 kb/s | 29.5 KB | The getaway: the last rider, coming alongside, “Just you and me now, you son of a bitch.” |
+| `shout5.mp3` | 2.87 s | 44,100 Hz | mono | 58 kb/s | 20.6 KB | The getaway: a posse rider when the first of them falls, “Aw, hell! He shot Earl!” |
 | `sword0.mp3` | 0.76 s | 44,100 Hz | mono | 99 kb/s | 9.2 KB | The sword pulled from the ground |
 | `taunt0.mp3` | 1.07 s | 44,100 Hz | mono | 65 kb/s | 8.6 KB | Taunt, said by a townsman: “Take this!” |
 | `taunt1.mp3` | 1.83 s | 44,100 Hz | mono | 65 kb/s | 14.5 KB | Taunt, said by a townsman: “Thought you could get away, huh?” |
@@ -183,7 +191,8 @@ Most of the world has no asset file: it is generated when the page loads, sized 
 | `05-shootout.png` | 780×1688 | 1.50 MB |
 | `06-game-over.png` | 780×1688 | 1.33 MB |
 | `07-word-book.png` | 780×1688 | 518.7 KB |
+| `08-rooftops.png` | 780×1688 | 1.44 MB |
 
 ## Totals
 
-91 asset files: models 3.43 MB, textures 349.9 KB, audio 3.81 MB (together 7.58 MB).
+99 asset files: models 3.43 MB, textures 349.9 KB, audio 3.97 MB (together 7.74 MB).
