@@ -2,6 +2,21 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v29
+- A brass bell now hangs off the gallows. It stirs in the wind and catches the light now and then. In the shootout
+  it can be shot like anything else, and the bullet is spent as usual.
+- Winning the shootout no longer jumps straight to the end sign. A "You survived" banner comes up, and the street
+  stays yours with the gun in hand until you press **Done**.
+- New in the menu: **Reduce motion**, which cuts the camera's shake and bob. It starts on if your device asks for
+  reduced motion.
+- Spoiler, a hidden getaway: ring the bell in a shootout you win and the posse rides in. You take a horse and run.
+  - **First half:** you steer through rocks, cactus, wagons and broken fences while they close in behind you.
+  - **Second half:** halfway, a shot past your shoulder turns you round in the saddle with a six-shooter. The horse
+    keeps to the trail and you shoot it out with the posse: gunmen, lasso men and one hard case who rides up
+    alongside.
+  - **The end:** drop the last of them and things do not end well. Retry the chase, or go back to the hangman.
+  - The README has the details, in a spoiler section.
+
 ## v28
 - Two more gunmen, on the roofs of the sheriff's office and the general store. They stand up behind the false
   front to shoot and duck out of sight between shots; crossing the ridge, their hats show. Shot, a man on a roof

@@ -192,6 +192,7 @@ function camTo(pos, tgt, fov, dur) { CAM.follow = null; CAM.name = "siege"; CAM.
 async function startSiege() {
   const late = SIEGE.phase === "late"; // cut down after the GAME OVER sign came up: the round he lost isn't held against your streak
   if (late && STATE.streakLost != null) { STATE.streak = STATE.streakLost; savePrefs(); } swordShine(0, false);
+  bellReset(); // (the bell's mark is for this shootout only: 12f)
   const S = SIEGE; S.on = true; S.phase = "cut"; S.sword.glint.visible = false; S.t = 0; S.used = {}; showSiegeUI("cut"); for (const C of S.covers) C.grp.visible = true; S.props.visible = true;
   S.bullets = SIEGE_CFG.bullets; S.health = SIEGE_CFG.health; S.hurt = 0; S.deadT = 0; S.cool = 0; S.recoil = 0; S.holding = S.keyAim = false; S.aimId = null; S.scanT = 0; S.upT = 0; S.vm.kick = 0;
   S.shots = 0; S.downT = 0; S.aims = 0; S.said.clear(); S.tauntT = 0; S.talkUntil = 0; S.wordsAt = S.lastAt = 0; S.doomT = S.doomI = 0; S.doomSaid = false; S.hitT = 0;
@@ -420,7 +421,7 @@ function sceneryRay(ro, rd, far) {
   const h = rc.intersectObjects(S.occ, false); return h.length ? h[0] : null;
 }
 function fireTap() {
-  const S = SIEGE; if (S.phase !== "fight" && S.phase !== "doomed") return;
+  const S = SIEGE; if (S.phase !== "fight" && S.phase !== "doomed" && S.phase !== "cleared") return;
   if (S.bullets <= 0) { if (S.cool <= 0) { Sound.clip("dry0", null, 0.9, 0, 0.05); S.cool = 0.3; } return; } // click: empty
   if (S.crouch || S.run || S.cv > 0.5) { nudgeAim(); return; } // still behind the cover: hold Aim to come up first
   if (S.cool > 0) return;
@@ -430,9 +431,11 @@ function fireTap() {
   muzzleFlash(S.vm.gun.localToWorld(V3(0, 0.035, 0.22)), 0.32);
   let hit = null; for (const E of S.enemies) { if (!E.alive) continue; const far = E.a.ch.bones.Spine2.getWorldPosition(_s3).distanceTo(ro);
     const h = rayActor(E.a, ro, rd, E.female, clamp((far - 12) * 0.007, 0, 0.12)); if (h && (!hit || h.t < hit.t)) hit = Object.assign(h, { E }); }
-  const env = sceneryRay(ro, rd, 80);
-  if (hit && (!env || hit.t < env.distance)) shotHits(hit.E, hit.part, ro.clone().addScaledVector(rd, hit.t), rd);
+  const env = sceneryRay(ro, rd, 80), bt = bellRay(ro, rd); // (the bell is a target too: 12f)
+  if (bt > 0 && (!hit || bt < hit.t) && (!env || bt < env.distance)) bellShot(ro.clone().addScaledVector(rd, bt), rd);
+  else if (hit && (!env || hit.t < env.distance)) shotHits(hit.E, hit.part, ro.clone().addScaledVector(rd, hit.t), rd);
   else if (env) { const p = env.point; setTimeout(() => { puff(p, 14, 0.6, 0.08, 0.9, 0.6); Sound.clip(siegePick("wood", 4), p, 0.8, 0, 0.3, rnd(0.9, 1.1), 3); }, 40); }
+  if (S.phase !== "fight" && S.phase !== "doomed") return; // (the street already cleared: nothing more to decide)
   const left = S.enemies.filter(E => E.alive).length;
   if (!left) siegeWin(); else if (S.bullets <= 0) siegeDoomed();
 }
@@ -641,7 +644,7 @@ function nudgeAim() { // Fire pressed while you're down: show where to press fir
   const t = $("siegeTip"); t.textContent = "Hold Aim to come up, then fire"; t.hidden = false; SIEGE.tip = Math.max(SIEGE.tip, 1.8);
 }
 function aimDown(e) { const S = SIEGE; if (!S.on) return; S.aimId = e.pointerId; S.aimX = e.clientX; S.aimY = e.clientY; peek(true); $("padAim").classList.add("on"); try { e.currentTarget.setPointerCapture(e.pointerId); } catch (er) {} e.preventDefault(); }
-function aimMove(e) { const S = SIEGE; if (e.pointerId !== S.aimId || (S.phase !== "fight" && S.phase !== "doomed")) return;
+function aimMove(e) { const S = SIEGE; if (e.pointerId !== S.aimId || (S.phase !== "fight" && S.phase !== "doomed" && S.phase !== "cleared")) return;
   const k = SIEGE_CFG.sens * (CAM.fov / 52); S.yaw -= (e.clientX - S.aimX) * k; S.pitch -= (e.clientY - S.aimY) * k; S.aimX = e.clientX; S.aimY = e.clientY;
   const C = S.covers[S.cover]; let d = ((S.yaw - C.yaw0 + Math.PI) % TAU + TAU) % TAU - Math.PI; d = clamp(d, -SIEGE_CFG.yawLim, SIEGE_CFG.yawLim); S.yaw = C.yaw0 + d;
   S.pitch = clamp(S.pitch, SIEGE_CFG.pitchLo, SIEGE_CFG.pitchHi); e.preventDefault(); }
@@ -650,7 +653,7 @@ function updatePlayer(rdt, dt) {
   const S = SIEGE, C = S.covers[S.cover];
   S.cool = Math.max(0, S.cool - dt); S.recoil = Math.max(0, S.recoil - dt * 4.5); S.vm.kick = Math.max(0, S.vm.kick - dt * 6);
   let base;
-  if (S.phase === "fight" || S.phase === "doomed") { const up = (S.holding || S.keyAim) && !S.run;
+  if (S.phase === "fight" || S.phase === "doomed" || S.phase === "cleared") { const up = (S.holding || S.keyAim) && !S.run;
     S.crouch = !up; S.upT = S.crouch ? 0 : S.upT + dt; // (how long you've been up: nobody fires at you in your first 0.3 s)
     S.downT = S.crouch && !S.run && S.phase === "fight" ? S.downT + dt : 0; } // (how long you've stayed down: too long and they call you out)
   if (S.run) { S.run.t = Math.min(1, S.run.t + dt / S.run.dur); const e = Ease.inOut(S.run.t), R0 = S.run;
@@ -667,7 +670,7 @@ function updatePlayer(rdt, dt) {
     yaw = ty + d * k; pitch = lerp(lerp(0.6, 0.05, smoothstep(0.0, 0.45, S.run.t)), pitch, k); }
   const dir = V3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
   CAM.pos.copy(base); CAM.tgt.copy(base).add(dir); CAM.fov = 54; CAM.to = null; CAM.follow = null; CAM.name = "siege";
-  $("xhair").hidden = (S.phase !== "fight" && S.phase !== "doomed") || S.cv > 0.25 || !!S.run;
+  $("xhair").hidden = (S.phase !== "fight" && S.phase !== "doomed" && S.phase !== "cleared") || S.cv > 0.25 || !!S.run;
 }
 
 // ---- endings ----
@@ -681,12 +684,14 @@ async function siegeDie() {
   STATE.streak = 0; savePrefs(); showSiegeSign(false);
 }
 async function siegeWin() {
-  const S = SIEGE; S.phase = "won"; STATE.lastWon = true; showSiegeUI("end"); $("xhair").hidden = true; await wait(1.2); if (!S.on) return;
-  // still through his eyes: he stands, lowers the gun and looks up at the rope he was hanging from, cut and swinging; the host gives up
-  const sim = GAL.rope.sim, k = Math.max(0, sim.cut), end = V3(sim.x[k * 3], sim.x[k * 3 + 1], sim.x[k * 3 + 2]), look = GAL.anchor.clone().lerp(end, 0.65);
-  camTo(upEye(V3()), look, 50, 1.8); await wait(1.5); if (!S.on) return;
-  manCough("cough0", 0.7); say(null, SIEGE_LINES.win); await wait(3.4); if (!S.on) return;
-  STATE.streak++; STATE.best = Math.max(STATE.best, STATE.streak); savePrefs(); showSiegeSign(true);
+  const S = SIEGE; if (S.phase !== "fight" && S.phase !== "doomed") return; // (once: from the shot that drops the last of them)
+  STATE.lastWon = true; STATE.streak++; STATE.best = Math.max(STATE.best, STATE.streak); savePrefs(); // the win counts now, whatever comes after
+  if (BELL.unlocked) { // the bell was rung during the fight: a moment to take in that they're all down, then the getaway (12g)
+    S.phase = "won"; showSiegeUI("end"); $("xhair").hidden = true; S.holding = S.keyAim = false;
+    const n = S.enemies.length, N = NUM_WORDS[n] || String(n), m = $("clearMsg"); $("clearLine").textContent = `${N} down · Streak: ${STATE.streak} · Best: ${STATE.best}`;
+    m.classList.add("brief"); m.hidden = false; m.classList.remove("show"); void m.offsetWidth; m.classList.add("show");
+    await wait(1.8); m.hidden = true; m.classList.remove("brief"); if (!S.on || S.phase !== "won") return; startGetaway(); return; }
+  enterCleared(); // no bell: the street is yours, gun still in hand (12f)
 }
 function showSiegeSign(won) {
   STATE.locked = false; STATE.ts = 1; $("skip").hidden = true;
@@ -716,7 +721,8 @@ function buildSiegeUI() {
   const st = $("stage");
   for (const [id, html] of [["xhair", '<svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><circle cx="20" cy="20" r="11" fill="none" stroke="#000" stroke-opacity=".55" stroke-width="3.2"/><circle cx="20" cy="20" r="11" fill="none" stroke="#f4ead8" stroke-width="1.6"/><circle cx="20" cy="20" r="1.8" fill="#e2483a"/></svg>'],
     ["hurt", ""], ["gore", ""], ["siegeTip", SIEGE_TIP], ["hitMsg", ""], ["doomMsg", "<b>Out of bullets</b><span>They know your gun is empty</span>"], ["warn", '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 7l8 9 8-9" fill="none" stroke="#000" stroke-opacity=".5" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 7l8 9 8-9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'],
-    ["threat", THREAT_SVG]]) { const d = document.createElement("div"); d.id = id; d.hidden = id !== "hurt" && id !== "gore"; d.innerHTML = html; st.appendChild(d); }
+    ["threat", THREAT_SVG], ["clearMsg", '<b>You survived</b><span id="clearLine"></span><button id="clearDone" type="button">Done</button>']]) { const d = document.createElement("div"); d.id = id; d.hidden = id !== "hurt" && id !== "gore"; d.innerHTML = html; st.appendChild(d); }
+  $("clearDone").addEventListener("click", e => { e.stopPropagation(); finishCleared(); });
   const hp = document.createElement("span"); hp.id = "hp"; hp.hidden = true; hp.setAttribute("aria-label", "Health"); $("gun").appendChild(hp);
 }
 // the bottom panel and top bar: "fight" (the aim | fire pad), "cut" and "end" (nothing to press, the letters stay hidden), "dead" (the pad,
@@ -770,7 +776,7 @@ function updateSiege(rdt, dt) {
   if (S.hitT > 0) { S.hitT -= rdt; if (S.hitT <= 0) $("hitMsg").hidden = true; }
   for (const a of S.roofActors) if (a.root.visible) a.update(dt); // (the crowd and the executioner are updated with the town)
   updateEnemies(dt); updateBlood(dt); siegeBodies();
-  if (S.phase === "fight" || S.phase === "doomed" || S.phase === "dead") updatePlayer(rdt, dt);
+  if (S.phase === "fight" || S.phase === "doomed" || S.phase === "dead" || S.phase === "cleared") updatePlayer(rdt, dt);
   // out of bullets: a word from one of them, then they take turns, one shot every 0.85 s, each a heart, till you're down
   if (S.phase === "doomed") { S.doomT += dt;
     if (!S.doomSaid && S.doomT > 0.35) S.doomSaid = doomTaunt() || S.doomT > 1.2;
@@ -786,7 +792,7 @@ function updateSiege(rdt, dt) {
     if (S.downT > SIEGE_CFG.hideTaunt && !S.said.has(TAUNTS.comeout[1])) taunt("comeout", tauntSpeaker("man"));
   }
   // hurt: a red bloom at the edges that fades, a heartbeat while you're low
-  S.hurt = Math.max(0, S.hurt - rdt * 0.9); const low = S.on && S.health === 1 && S.phase !== "won" ? 0.35 : 0;
+  S.hurt = Math.max(0, S.hurt - rdt * 0.9); const low = S.on && S.health === 1 && S.phase !== "won" && S.phase !== "cleared" && S.phase !== "chase" ? 0.35 : 0;
   $("hurt").style.opacity = Math.max(S.hurt, low + (S.phase === "dead" ? Math.min(1, S.deadT * 0.8) : 0)).toFixed(3);
   if ((S.health < SIEGE_CFG.health && (S.phase === "fight" || S.phase === "doomed")) || S.phase === "dead") { S.hbT -= rdt; if (S.hbT <= 0) { S.hbT = S.phase === "dead" ? 1.4 : S.health === 1 ? 0.62 : 0.85; Sound.pulse(S.phase === "dead" ? 0.6 : 0.9); } }
   if (MAN.hang && MAN.hang.free && S.phase === "fight") { S.coughT -= dt; if (S.coughT <= 0) { S.coughT = rnd(5, 9); manCough(siegePick("cough", 2), 0.8); } }
@@ -803,7 +809,7 @@ function siegeLate(rdt) {
     const dirC = V3(lerp(0.25, -0.95, e), lerp(0.95, 0.05, e), lerp(-0.35, -0.55, e)).normalize().transformDirection(cam.matrixWorld);
     g.position.copy(grip); g.quaternion.setFromUnitVectors(_s2.set(0, 1, 0), dirC); g.visible = true; }
   // the revolver: lower right, along the line of sight; it kicks up and back when it fires, drops away when you duck
-  const vm = S.vm.gun, show = S.on && (S.phase === "fight" || S.phase === "doomed") && !S.run;
+  const vm = S.vm.gun, show = S.on && (S.phase === "fight" || S.phase === "doomed" || S.phase === "cleared") && !S.run;
   vm.visible = show && S.cv < 0.85;
   if (vm.visible) { const k = S.vm.kick, down = Ease.inOut(clamp(S.cv, 0, 1)) * 0.22;
     vm.scale.setScalar(0.8); vm.position.copy(toW(Math.min(0.2, hw(0.62) * 0.46), -hh(0.62) * 0.56 - down + k * 0.02, -0.62 + k * 0.04));
@@ -829,11 +835,12 @@ function siegeLate(rdt) {
   if (KEY_LIGHT && S.on) { S.flash = Math.max(0, S.flash - rdt / 0.07); KEY_LIGHT.intensity = S.flash * 9; KEY_LIGHT.distance = 9; KEY_LIGHT.color.setRGB(1, 0.72, 0.42); KEY_LIGHT.position.copy(S.flashPos); }
 }
 // the shootout is still being fought (the menu can send you back to it), not won or lost
-function siegeLive() { return SIEGE.on && (SIEGE.phase === "cut" || SIEGE.phase === "fight" || SIEGE.phase === "doomed"); }
+function siegeLive() { return (SIEGE.on && (SIEGE.phase === "cut" || SIEGE.phase === "fight" || SIEGE.phase === "doomed" || SIEGE.phase === "cleared")) || chaseLive(); }
 // back to the start for a new round
 function resetSiege() {
   const S = SIEGE; if (!S.sword) return;
   S.phase = null; S.sword.glint.visible = false; swordShine(0, false); S.sword.held = false; S.sword.group.visible = true; for (const C of S.covers) C.grp.visible = false; if (S.props) S.props.visible = false; S.sword.group.position.copy(S.sword.rest.p); S.sword.group.quaternion.copy(S.sword.rest.q);
+  $("clearMsg").hidden = true; bellReset(); chaseReset(); // (and a getaway, if one was under way: 12g)
   if (!S.on) return; S.on = false;
   for (const E of S.enemies) { const a = E.a; a.hang = null; a.siege = false; a.pre = null; a.setIK("R", null, 0); a.setIK("L", null, 0); a.setGrip("R", 0); a.setGrip("L", 0); a.act.idle.timeScale = 1; R.scene.remove(E.gun);
     a.talkAmt = 0; a.ch.skin.userData.U.jaw.value = 0; // (in case he was cut off mid-taunt)

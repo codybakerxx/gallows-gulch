@@ -190,7 +190,7 @@ class Ragdoll {
         for (let a = 0; a < 3; a++) if (Math.abs(Q[a]) >= E[a] + r - 2e-3) { const g = Math.sign(Q[a]) || 1, dd = E[a] + r - g * L[a]; if (dd < bd) { bd = dd; best = a; sg = g; } }
         if (best < 0) for (let a = 0; a < 3; a++) { const g = Math.sign(L[a]) || 1, dd = E[a] + r - g * L[a]; if (dd < bd) { bd = dd; best = a; sg = g; } }
         const u = U[best]; shove(k, u.x * sg * bd, u.y * sg * bd, u.z * sg * bd); if (this.free && u.y * sg > 0.5) this.rub(k); }
-      const gy = (this.solids ? groundHeight(x[k], x[k + 2]) : 0) + (this.free ? r * 0.8 : 0.05); // a free body lies on the ground on its full girth; the hanged man's toes only ever brush it
+      const gy = (this.floorFn ? this.floorFn(x[k], x[k + 2]) : this.solids ? groundHeight(x[k], x[k + 2]) : 0) + (this.free ? r * 0.8 : 0.05); // a free body lies on the ground on its full girth; the hanged man's toes only ever brush it (floorFn: the ground as drawn, out on the plain)
       if (x[k + 1] < gy) { shove(k, 0, gy - x[k + 1], 0); if (this.free) this.rub(k); } }
     if (hit > (this.hitS || 0)) { this.hitS = hit; (this.hitAt || (this.hitAt = new THREE.Vector3())).set(x[hk], x[hk + 1], x[hk + 2]); }
   }

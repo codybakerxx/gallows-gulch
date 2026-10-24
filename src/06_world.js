@@ -1,5 +1,5 @@
 // ---------- WORLD: desert terrain, mesas, rocks, cacti, scrub, frontier town ----------
-const WORLD = { ground: null, lit: [], windows: [], roofs: [] };
+const WORLD = { ground: null, lit: [], windows: [], roofs: [], mesas: [], canyonU: { on: { value: 0 }, inv: { value: new THREE.Matrix4() } } };
 // play-area layout (meters). Camera looks roughly toward -x/-z, sun sets behind the town.
 const LAY = {
   plat: { x: -3.2, z: -5.5, w: 3.4, d: 3.0, h: 2.4 },
@@ -26,17 +26,30 @@ function groundHeight(x, z) {
   const far = smoothstep(45, 260, r);
   return far * (6 * tfbm(x * 0.004, z * 0.004, 4) + 9 * Math.max(0, tfbm(x * 0.0017 + 3, z * 0.0017, 3))) + 0.12 * tfbm(x * 0.12, z * 0.12, 2) * smoothstep(14, 30, r) * (1 - far);
 }
+// the ground as it is drawn: the height field sampled on the mesh's grid and cut into its triangles, so a horse out on the plain stands on what
+// you see rather than on the smooth field the grid only approximates (the getaway, 12f)
+const GROUND_GRID = { size: 1400, seg: 120, h: null };
+function groundVis(x, z) {
+  const G = GROUND_GRID, n = G.seg + 1, c = G.size / G.seg; if (!G.h) return groundHeight(x, z);
+  const fx = clamp((x + G.size / 2) / c, 0, G.seg - 1e-4), fz = clamp((z + G.size / 2) / c, 0, G.seg - 1e-4), ix = fx | 0, iz = fz | 0, u = fx - ix, v = fz - iz;
+  const ha = G.h[iz * n + ix], hb = G.h[(iz + 1) * n + ix], hc = G.h[(iz + 1) * n + ix + 1], hd = G.h[iz * n + ix + 1];
+  return u + v <= 1 ? ha + (hd - ha) * u + (hb - ha) * v : hc + (hb - hc) * (1 - u) + (hd - hc) * (1 - v);
+}
 function buildGround() {
   const size = 1400, seg = 120, g = new THREE.PlaneGeometry(size, size, seg, seg); g.rotateX(-Math.PI / 2);
-  const p = g.attributes.position, uv = g.attributes.uv;
-  for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i); p.setY(i, groundHeight(x, z)); uv.setXY(i, x / 3.2, z / 3.2); }
+  const p = g.attributes.position, uv = g.attributes.uv; GROUND_GRID.h = new Float32Array(p.count);
+  for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i); p.setY(i, GROUND_GRID.h[i] = groundHeight(x, z)); uv.setXY(i, x / 3.2, z / 3.2); }
   g.computeVertexNormals();
   const m = new THREE.MeshStandardMaterial({ map: TEX.ground.map, normalMap: TEX.ground.normalMap, roughnessMap: TEX.ground.orm, normalScale: new THREE.Vector2(0.65, 0.65) });
+  { // an apron under and beyond the plain, so out on the getaway trail (12g) the ground's far edge never shows sky below the horizon; the fog colours it
+    const ap = new THREE.Mesh(new THREE.RingGeometry(560, 9000, 96, 1).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0x4a3020 })); ap.position.y = -10; ap.matrixAutoUpdate = false; ap.updateMatrix(); R.scene.add(ap); }
   m.onBeforeCompile = sh => {
-    sh.uniforms.macroMap = { value: TEX.macro };
+    sh.uniforms.macroMap = { value: TEX.macro }; sh.uniforms.canyonOn = WORLD.canyonU.on; sh.uniforms.canyonInv = WORLD.canyonU.inv;
     sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vGW;").replace("#include <project_vertex>", "#include <project_vertex>\nvGW = (modelMatrix * vec4(transformed, 1.0)).xyz;");
-    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>
-      varying vec3 vGW; uniform sampler2D macroMap; float groundH = 0.0;
+    sh.fragmentShader = sh.fragmentShader.replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>
+      if (canyonOn > 0.5) { vec3 cl = (canyonInv * vec4(vGW, 1.0)).xyz; if (abs(cl.x) < 1.0 && cl.z > 0.0 && cl.z < 1.0) discard; } // (the canyon at the end of the getaway cuts through the plain)`)
+      .replace("#include <common>", `#include <common>
+      varying vec3 vGW; uniform sampler2D macroMap; uniform float canyonOn; uniform mat4 canyonInv; float groundH = 0.0;
       vec2 gh2(vec2 p) { return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }
       // prints: cells hold at most one oval dent, sized and turned per cell
       float prints(vec2 p, float cell, vec2 size, float keep) {
@@ -129,6 +142,7 @@ function buildMesas() {
     if (Math.abs(((P.a - sunA + Math.PI) % TAU + TAU) % TAU - Math.PI) < 0.08) continue; // keep the setting sun clear
     const R0 = P.butte ? 30 + r() * 35 : 80 + r() * 160, Hh = P.butte ? 80 + r() * 90 : 40 + r() * 70;
     const m = new THREE.Mesh(mesaGeo(r, R0, Hh, P.butte), mat); m.position.set(Math.cos(P.a) * P.d - 2, -4, Math.sin(P.a) * P.d - 4); m.rotation.y = r() * TAU; geos.push(m);
+    WORLD.mesas.push({ x: m.position.x, z: m.position.z, r: R0 * 1.7 }); // (its footprint, talus and all: the getaway's trail keeps clear of it)
   }
   for (const m of geos) { m.updateMatrixWorld(true); m.geometry.applyMatrix4(m.matrixWorld); }
   const merged = mergeGeos(geos.map(m => ({ geo: m.geometry }))); merged.clearGroups(); const mm = new THREE.Mesh(merged, mat); mm.receiveShadow = false; R.scene.add(mm);
@@ -147,7 +161,7 @@ function scatter(count, rMin, rMax, avoid, seed) {
   }
   return out;
 }
-const inPlayArea = (x, z) => { if (x > -9 && x < 6.5 && z > -11 && z < 4.5) return true; if (z > 1 && Math.abs(x - 2) < 9) return true;
+const inPlayArea = (x, z) => { if (x > -9 && x < 6.5 && z > -11 && z < 4.5) return true; if (z > 1 && Math.abs(x - 2) < 9) return true; if (nearTrail(x, z, 8)) return true;
   const dx = x - STREET.o[0], dz = z - STREET.o[1], al = dx * STREET.a[0] + dz * STREET.a[1], sd = dx * STREET.r[0] + dz * STREET.r[1];
   return al > 2 && al < 95 && Math.abs(sd) < 26; };
 function buildRocks() {
@@ -314,6 +328,29 @@ function roofSolids(Rf) {
 }
 const STREET = { o: [-3.5, -6.0], a: [-0.55, -0.835], r: [0.835, -0.55] };
 function streetPt(along, side) { return [STREET.o[0] + STREET.a[0] * along + STREET.r[0] * side, STREET.o[1] + STREET.a[1] * along + STREET.r[1] * side]; }
+// ---- the trail out of town for the getaway (12f): out the back of the street past the hay bales, away from the sunset, then a long bend
+// that slowly opens out (a spiral, so it never comes back round on itself). Points every 2 m: position, heading and the cumulative distance
+const TRAIL = { step: 2, x: null, z: null, hx: null, hz: null, len: 0, turn: 1, R0: 120, R1: 180, straight: 300, total: 1700 }; // (stays 200 m from town once past 300 m, and 250 m clear of every mesa)
+function buildTrail() {
+  const T = TRAIL, n = Math.ceil(T.total / T.step) + 1; T.x = new Float32Array(n); T.z = new Float32Array(n); T.hx = new Float32Array(n); T.hz = new Float32Array(n);
+  let [x, z] = streetPt(-12, 5.5), th = Math.atan2(-STREET.a[0], -STREET.a[1]); // heading: away from town, back down the street
+  for (let i = 0; i < n; i++) { const s = i * T.step; T.x[i] = x; T.z[i] = z; T.hx[i] = Math.sin(th); T.hz[i] = Math.cos(th);
+    const k = s < T.straight ? 0 : T.turn / lerp(T.R0, T.R1, clamp((s - T.straight) / (T.total - T.straight), 0, 1)) * smoothstep(T.straight, T.straight + 40, s);
+    th += k * T.step; x += Math.sin(th) * T.step; z += Math.cos(th) * T.step; }
+  T.len = (n - 1) * T.step; T.n = n;
+}
+// a point on the trail s metres along it, `lat` metres to its right: position (y on the drawn ground), heading and the right-hand normal
+function trailAt(s, lat = 0, out = {}) {
+  const T = TRAIL; if (!T.x) buildTrail();
+  if (s < 0 || s > T.len) { const e = s < 0 ? 0 : T.n - 1, d = s < 0 ? s : s - T.len; // (before its start, back up the street; past its end, straight on)
+    out.hx = T.hx[e]; out.hz = T.hz[e]; out.nx = -out.hz; out.nz = out.hx; out.x = T.x[e] + out.hx * d + out.nx * lat; out.z = T.z[e] + out.hz * d + out.nz * lat;
+    out.y = groundVis(out.x, out.z); out.yaw = Math.atan2(out.hx, out.hz); return out; }
+  const f = clamp(s / T.step, 0, T.n - 1.001), i = f | 0, u = f - i;
+  const hx = lerp(T.hx[i], T.hx[i + 1], u), hz = lerp(T.hz[i], T.hz[i + 1], u), hl = Math.hypot(hx, hz) || 1;
+  out.hx = hx / hl; out.hz = hz / hl; out.nx = -out.hz; out.nz = out.hx; // (right of the heading: x = -hz... turned clockwise seen from above)
+  out.x = lerp(T.x[i], T.x[i + 1], u) + out.nx * lat; out.z = lerp(T.z[i], T.z[i + 1], u) + out.nz * lat; out.y = groundVis(out.x, out.z); out.yaw = Math.atan2(out.hx, out.hz); return out;
+}
+function nearTrail(x, z, m) { const T = TRAIL; if (!T.x) buildTrail(); const m2 = m * m; for (let i = 0; i < T.n; i += 2) { const dx = x - T.x[i], dz = z - T.z[i]; if (dx * dx + dz * dz < m2) return true; } return false; }
 function buildTown() {
   WORLD.town = new THREE.Group(); R.scene.add(WORLD.town);
   const yawL = Math.atan2(STREET.r[0], STREET.r[1]), yawR = Math.atan2(-STREET.r[0], -STREET.r[1]);

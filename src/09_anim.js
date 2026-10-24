@@ -87,6 +87,7 @@ class Actor {
   setSad(w) { const a = this.act.sad; if (w > 0 && !a.isRunning()) a.play(); a.setEffectiveWeight(w); }
   update(dt) {
     this.time += dt;
+    if (this.ride) { this.path = null; this.yawTarget = this.yaw; } // in the saddle (the getaway, 12g): the horse carries him; whoever seats him sets pos and yaw
     if (this.path) {
       const tg = this.path[0], dx = tg.x - this.pos.x, dz = tg.z - this.pos.z, d = Math.hypot(dx, dz);
       if (d < 0.04) { this.path.shift(); if (!this.path.length) { this.path = null; const r = this.arrive; this.arrive = null; if (r) r(); } }
@@ -96,7 +97,7 @@ class Actor {
     this.walkW = clamp(this.walkW + (moving ? dt * 3.2 : -dt * 3.6), 0, 1);
     let dy = ((this.yawTarget - this.yaw + Math.PI) % TAU + TAU) % TAU - Math.PI; this.yaw += dy * Math.min(1, dt * 5.5);
     if (this.stair) this.updateStair(dt);
-    else if (!this.hang) { const fy = floorAt(this.pos.x, this.pos.z) + (this.yOff || 0); this.pos.y += (fy - this.pos.y) * Math.min(1, dt * 14); } // (yOff: a man ducking down behind a false front)
+    else if (!this.hang && !this.ride) { const fy = floorAt(this.pos.x, this.pos.z) + (this.yOff || 0); this.pos.y += (fy - this.pos.y) * Math.min(1, dt * 14); } // (yOff: a man ducking down behind a false front)
     this.root.position.copy(this.pos); this.root.rotation.set(0, this.yaw, 0);
     const run = this.act.run; if (run) this.runK += (clamp((this.speed - 1.9) / 0.9, 0, 1) - this.runK) * Math.min(1, dt * 6);
     const rk = run ? this.runK : 0;
