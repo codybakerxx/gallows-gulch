@@ -2,7 +2,7 @@
 const $ = id => document.getElementById(id);
 const STORE = "gallows-gulch-3d-v1";
 function loadPrefs() { try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch (e) { return {}; } }
-function savePrefs() { try { localStorage.setItem(STORE, JSON.stringify({ v: 2, len: STATE.len, diff: STATE.diff, best: STATE.best, vol: +$("vol").value, muted: Sound.muted, gfx: $("gfx").value })); } catch (e) {} }
+function savePrefs() { try { localStorage.setItem(STORE, JSON.stringify({ v: 2, len: STATE.len, diff: STATE.diff, best: STATE.best, vol: +$("vol").value, muted: Sound.muted, gfx: $("gfx").value, motion: !!STATE.reduceMotion, cliff: !!STATE.cliffSeen, ride: STATE.bestRide | 0, rides: STATE.rides | 0 })); } catch (e) {} }
 const crowdCenter = () => V3(-3.0, 1.6, -5.0);
 async function lose() {
   STATE.over = true; STATE.locked = true; showHintBox(false); hud(); STATE.duskT = 1;

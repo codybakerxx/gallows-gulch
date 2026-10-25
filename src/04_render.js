@@ -13,11 +13,11 @@ function pickTier(pref) {
 }
 const GradeShader = {
   uniforms: { tDiffuse: { value: null }, exposure: { value: 0.92 }, time: { value: 0 }, dusk: { value: 0 }, res: { value: new THREE.Vector2(1, 1) },
-    vignette: { value: 1 }, grain: { value: 0.035 }, flash: { value: 0 }, fade: { value: 0 },
+    vignette: { value: 1 }, grain: { value: 0.035 }, flash: { value: 0 }, fade: { value: 0 }, zoomBlur: { value: 0 },
     tDepth: { value: null }, sun: { value: new THREE.Vector2(0.5, 0.5) }, flare: { value: 0 }, sunCol: { value: new THREE.Color(1, 0.8, 0.6) } },
   vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
   fragmentShader: `
-    uniform sampler2D tDiffuse, tDepth; uniform float exposure, time, dusk, vignette, grain, flash, fade, flare; uniform vec2 res, sun; uniform vec3 sunCol; varying vec2 vUv;
+    uniform sampler2D tDiffuse, tDepth; uniform float exposure, time, dusk, vignette, grain, flash, fade, flare, zoomBlur; uniform vec2 res, sun; uniform vec3 sunCol; varying vec2 vUv;
     float gh(vec2 p){ return fract(sin(dot(p, vec2(41.3, 289.1))) * 43758.5453); }
     float gn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(gh(i), gh(i + vec2(1.0, 0.0)), f.x), mix(gh(i + vec2(0.0, 1.0)), gh(i + vec2(1.0, 1.0)), f.x), f.y); }
     // a soft hexagonal iris ghost
@@ -31,6 +31,9 @@ const GradeShader = {
       vec2 c = vUv - 0.5; float r2 = dot(c, c);
       vec2 off = c * r2 * 0.0035;
       vec3 col = vec3(texture2D(tDiffuse, vUv + off).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - off).b);
+      // speed: the edges of the view smear outward from where you're heading (the getaway's run at a full gallop); the middle stays sharp
+      if (zoomBlur > 0.002) { vec2 zc = vUv - vec2(0.5, 0.46); float zr = smoothstep(0.08, 0.5, length(zc * vec2(res.x / res.y, 1.0))); vec3 acc = col; float jit = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
+        for (int i = 1; i <= 5; i++) acc += texture2D(tDiffuse, vUv - zc * zoomBlur * zr * (float(i) - jit) * 0.012).rgb; col = acc / 6.0; }
       // the lens: with the sun in frame and not blocked, ghosts of the iris line up through the centre and the glare lights the dust on the glass
       if (flare > 0.001) {
         float vis = 0.0; for (int k = 0; k < 5; k++) { vec2 o = vec2(cos(float(k) * 1.2566), sin(float(k) * 1.2566)) * 0.006 * float(k > 0); vis += step(0.9999995, texture2D(tDepth, clamp(sun + o, 0.001, 0.999)).x); }
@@ -147,7 +150,7 @@ function patchFog(sunAz) {
       // plus dust that hangs in the bottom few metres of air: exponential height fog integrated along the view ray
       float fh0 = max(cameraPosition.y, 0.0), fh1 = max(vFogH, 0.0), fdh = fh1 - fh0;
       float fhf = abs(fdh) > 0.05 ? (exp(-0.5 * fh0) - exp(-0.5 * fh1)) / (0.5 * fdh) : exp(-0.5 * fh0);
-      fogFactor = 1.0 - (1.0 - fogFactor) * exp(-fogDensity * 1.6 * vFogDepth * fhf);
+      fogFactor = 1.0 - (1.0 - fogFactor) * exp(-fogDensity * 1.6 * vFogDepth * fhf * mix(0.08, 1.0, smoothstep(-30.0, -2.0, vFogH))); // (down in a canyon the air is clearer than the dust over the plain)
     #else
       float fogFactor = smoothstep(fogNear, fogFar, vFogDepth);
     #endif

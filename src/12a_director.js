@@ -25,7 +25,7 @@ const SLOW = { t: 99, hold: 0.32, ease: 0.7, k: 0.25 };
 function slowK(rdt) { SLOW.t += rdt; const S = SLOW; return S.t < S.hold ? S.k : S.t < S.hold + S.ease ? lerp(S.k, 1, Ease.inOut((S.t - S.hold) / S.ease)) : 1; }
 function shotSet() { return R.w / R.h < 1 ? SHOTS.P : SHOTS.L; }
 function shot(name, dur = 1.2) {
-  const S = shotSet()[name]; CAM.name = name; CAM.follow = null;
+  const S = shotSet()[name]; if (!S) return; CAM.name = name; CAM.follow = null; // (a camera someone else drives, like the getaway's: a resize leaves it alone)
   if (dur <= 0) { CAM.pos.set(...S[0]); CAM.tgt.set(...S[1]); CAM.fov = S[2]; CAM.to = null; return; }
   CAM.from = { pos: CAM.pos.clone(), tgt: CAM.tgt.clone(), fov: CAM.fov }; CAM.to = { pos: V3(...S[0]), tgt: V3(...S[1]), fov: S[2] }; CAM.t = 0; CAM.dur = dur;
 }
@@ -46,7 +46,7 @@ function updateCamera(rdt, t, sdt) { // sdt: scene time, so camera moves keep pa
     if (CAM.t < 1) { CAM.t = Math.min(1, CAM.t + dt / CAM.dur); const e = Ease.inOut(CAM.t); CAM.pos.lerpVectors(CAM.from.pos, f.pos, e); CAM.tgt.lerpVectors(CAM.from.tgt, f.tgt, e); CAM.fov = lerp(CAM.from.fov, f.fov, e); }
     else { const k = 1 - Math.exp(-dt * 7); CAM.pos.lerp(f.pos, k); CAM.tgt.lerp(f.tgt, 1 - Math.exp(-dt * 10)); CAM.fov = f.fov; } }
   else if (CAM.to) { CAM.t = Math.min(1, CAM.t + dt / CAM.dur); const e = Ease.inOut(CAM.t); CAM.pos.lerpVectors(CAM.from.pos, CAM.to.pos, e); CAM.tgt.lerpVectors(CAM.from.tgt, CAM.to.tgt, e); CAM.fov = lerp(CAM.from.fov, CAM.to.fov, e); if (CAM.t >= 1) CAM.to = null; }
-  const close = CAM.name === "face" ? 0.35 : CAM.name === "siege" ? 0.1 : 1, n = 0.014 * close, s = CAM.shake * 0.06; CAM.shake = Math.max(0, CAM.shake - rdt * 2.5);
+  const close = CAM.name === "face" ? 0.35 : CAM.name === "siege" ? 0.1 : 1, n = 0.014 * close, s = CAM.shake * 0.06 * (STATE.reduceMotion ? 0.25 : 1); CAM.shake = Math.max(0, CAM.shake - rdt * 2.5);
   if (CAM.flash > 0) { CAM.flash = Math.max(0, CAM.flash - rdt * 0.9); R.grade.uniforms.flash.value = CAM.flash * CAM.flash / 0.38; }
   if (CAM.kv || CAM.ky) { const h = Math.min(rdt, 1 / 30); CAM.kv += (-CAM.ky * 110 - CAM.kv * 10) * h; CAM.ky += CAM.kv * h; if (Math.abs(CAM.ky) < 2e-4 && Math.abs(CAM.kv) < 2e-3) CAM.ky = CAM.kv = 0; } // a jolt: dips and springs back
   R.camera.position.set(CAM.pos.x + Math.sin(t * 0.7) * n + (Math.random() - 0.5) * s, CAM.pos.y + CAM.ky + Math.sin(t * 0.9 + 1) * n * 0.7 + (Math.random() - 0.5) * s, CAM.pos.z + Math.sin(t * 0.5 + 2) * n);
@@ -55,10 +55,10 @@ function updateCamera(rdt, t, sdt) { // sdt: scene time, so camera moves keep pa
   // soft key light for face close-ups (the sun is behind him)
   const want = CAM.name === "face" || CAM.name === "noose" || CAM.name === "hang" ? 1 : 0; CAM.key += (want - CAM.key) * Math.min(1, dt * 3);
   if (R.post) { // shallow focus on the condemned man's face in close-ups; ambient occlusion everywhere else
-    const D = R.post.uniforms, close = CAM.name === "face" || CAM.name === "noose", k = Math.min(1, dt * 4);
+    const D = R.post.uniforms, close = CAM.name === "face" || CAM.name === "noose", cineDof = CAM.name === "chase" && CAM.dof && R.tier !== "low", k = Math.min(1, dt * 4); // (cineDof: a filmed shot that sets its own focus, 12i)
     // shallow focus only on the face close-ups; everything else stays sharp
-    D.amount.value += ((close && R.tier !== "low" ? 1 : 0) - D.amount.value) * k;
-    if (D.amount.value > 0.02) { MAN.ch.eyes[0].getWorldPosition(A1); D.focus.value = A1.distanceTo(R.camera.position); }
+    D.amount.value += ((close && R.tier !== "low" || cineDof ? 1 : 0) - D.amount.value) * k;
+    if (cineDof) { D.focus.value = CAM.dof.focus; D.aperture.value = CAM.dof.ap; } else { D.aperture.value = 2.0; if (D.amount.value > 0.02) { MAN.ch.eyes[0].getWorldPosition(A1); D.focus.value = A1.distanceTo(R.camera.position); } }
     D.near.value = R.camera.near; D.far.value = R.camera.far;
     if (R.ao) { const cd = CAM.pos.distanceTo(CAM.tgt), far = smoothstep(2.5, 6.0, cd); R.ao.strength += ((close || R.lite || !TIERS[R.tier].ao ? 0 : 0.8 * far) - R.ao.strength) * k; R.ao.enabled = R.ao.strength > 0.02; D.aoStrength.value = R.ao.enabled ? R.ao.strength : 0;
       R.ao.aoMat.uniforms.radius.value = 0.6 * clamp(cd / 8, 0.35, 1); }
