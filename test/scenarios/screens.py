@@ -80,7 +80,7 @@ def phone():
 
 
 def getaway():
-    """the getaway, at phone size: the ride, the fight (a lasso man spinning his loop), and horse and rider off the cliff"""
+    """the getaway, at phone size: the run, the fight (a lasso man spinning his loop), and horse and rider off the cliff, letterboxed"""
     import os
     steps = []
     E = lambda js: steps.append(["eval", js])
@@ -100,6 +100,7 @@ def getaway():
     E("""(async () => { const C = CHASE; let g = 0; while (C.state === 'combat' && g++ < 400) { C.hp = 3; if (C.rounds <= 0 || C.reloadT > 0) { if (C.reloadT <= 0) { C.reloads = Math.max(C.reloads, 1); chaseReload(); } await __go(110, () => C.reloadT <= 0); continue; }
         const a = C.riders.filter(r => r.alive && r.state !== 'wait').sort((x, y) => x.d - y.d); if (a[0]) __fireAt(a[0]); await __go(20, () => C.state !== 'combat'); }
       await __go(900, () => C.cine && C.cine.phase === 'fall' && C.cine.ft > 0.78); return JSON.stringify({ state: C.state, errs: __errs }); })()""")
+    steps.append(["wait", 1400])  # (the letterbox slides in and the top bar fades on real time: let them finish)
     shot("11-getaway-cliff")
     return steps
 

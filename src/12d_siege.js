@@ -742,7 +742,7 @@ function showSiegeUI(mode) {
   const pad = mode === "fight" || mode === "dead";
   $("pad").hidden = !pad; $("kb").classList.toggle("siege", mode !== "off"); $("hp").hidden = $("reloads").hidden = !(pad || mode === "end"); if (mode === "off") gunHud.key = null;
   $("left").hidden = mode !== "off"; $("hud").classList.toggle("siege", mode !== "off"); // in the shootout the cylinder alone shows what's loaded: no number beside it
-  $("hintBtn").style.display = mode === "off" ? "" : "none"; $("siegeTip").hidden = mode !== "fight"; // (out of the bar altogether, so the count of gunmen left has room) $("padAim").classList.remove("on", "nudge");
+  $("hintBtn").style.display = mode === "off" ? "" : "none"; $("siegeTip").hidden = mode !== "fight"; $("padAim").classList.remove("on", "nudge"); // (the hint button: out of the bar altogether, so the count of gunmen left has room)
   if (mode === "fight") { $("siegeTip").textContent = SIEGE_TIP; SIEGE.tip = 5; SIEGE.tipNext = SIEGE_TIP2 = `Six in the gun, one reload · ${siegeMen()} gunmen, two on the roofs`; $("kb").classList.add("up"); }
 }
 const NUM_WORDS = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve"];
@@ -761,17 +761,18 @@ function heartsHud(hp) {
 }
 // the gun in the top bar, the same in the shootout and the getaway: the cylinder (gold chambers loaded; while it reloads they fill one by
 // one, reloadK 0 → 1, else -1), and beside it the spare speedloader, there while you've a reload left. Redrawn only when something shows different
-function gunHud(loaded, reloads, reloadK, hp) {
-  const n = GUN.rounds, shown = reloadK >= 0 ? Math.min(n, Math.floor(reloadK * (n + 1))) : loaded, key = `${shown}|${reloads}|${reloadK >= 0}`;
+function gunHud(loaded, reloads, reloadK, hp, total = GUN.reloads) { // (total: the reloads this section started with: a speedloader for each, gold while it's still there)
+  const n = GUN.rounds, shown = reloadK >= 0 ? Math.min(n, Math.floor(reloadK * (n + 1))) : loaded, key = `${shown}|${reloads}|${reloadK >= 0}|${total}`;
   if (gunHud.key !== key) { gunHud.key = key;
     let s = `<circle r="46" fill="#3a3430" stroke="#14110f" stroke-width="3"/><circle r="40" fill="none" stroke="#5b524a" stroke-width="1.5"/><g style="transform:rotate(${-(n - shown) * 360 / n}deg)">`;
     for (let i = 0; i < n; i++) { const a = i / n * TAU - Math.PI / 2, x = (Math.cos(a) * 25).toFixed(1), y = (Math.sin(a) * 25).toFixed(1), f = i < shown;
       s += `<circle cx="${x}" cy="${y}" r="10" fill="${f ? "#d8a246" : "#0e0b09"}" stroke="#6b5a45" stroke-width="2"/>` + (f ? `<circle cx="${x}" cy="${y}" r="3.6" fill="#9c6f22"/>` : ""); }
     $("cyl").innerHTML = s + `</g><circle r="7" fill="#262120"/>`;
-    const rb = $("reloads"), spare = reloads > 0; let d = ""; for (let i = 0; i < n; i++) { const a = i / n * TAU - Math.PI / 2; d += `<circle cx="${(12 + Math.cos(a) * 6).toFixed(1)}" cy="${(12 + Math.sin(a) * 6).toFixed(1)}" r="2.5"/>`; }
-    rb.innerHTML = `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#3a3430" stroke="#14110f" stroke-width="1.5"/><g fill="${spare ? "#d8a246" : "#0e0b09"}" stroke="#6b5a45" stroke-width=".8">${d}</g></svg>`;
-    rb.classList.toggle("used", !spare); rb.title = spare ? `${reloads} reload left` : "No reloads left"; rb.setAttribute("aria-label", rb.title);
-    $("gun").title = reloadK >= 0 ? "Reloading" : `${loaded} round${loaded === 1 ? "" : "s"} loaded, ${spare ? "one reload left" : "no reloads left"}`; $("gun").setAttribute("aria-label", $("gun").title); }
+    const rb = $("reloads"), spare = reloads > 0, left = reloads === 1 ? "one reload left" : `${reloads} reloads left`; let d = ""; for (let i = 0; i < n; i++) { const a = i / n * TAU - Math.PI / 2; d += `<circle cx="${(12 + Math.cos(a) * 6).toFixed(1)}" cy="${(12 + Math.sin(a) * 6).toFixed(1)}" r="2.5"/>`; }
+    const px = total > 1 ? 18 : 22; rb.classList.toggle("many", total > 1);
+    rb.innerHTML = Array.from({ length: Math.max(1, total) }, (_, i) => `<svg viewBox="0 0 24 24" width="${px}" height="${px}" aria-hidden="true" class="${i < reloads ? "full" : "spent"}"><circle cx="12" cy="12" r="10.5" fill="#3a3430" stroke="#14110f" stroke-width="1.5"/><g fill="${i < reloads ? "#d8a246" : "#0e0b09"}" stroke="#6b5a45" stroke-width=".8">${d}</g></svg>`).join("");
+    rb.classList.toggle("used", !spare); rb.title = spare ? left[0].toUpperCase() + left.slice(1) : "No reloads left"; rb.setAttribute("aria-label", rb.title);
+    $("gun").title = reloadK >= 0 ? "Reloading" : `${loaded} round${loaded === 1 ? "" : "s"} loaded, ${spare ? left : "no reloads left"}`; $("gun").setAttribute("aria-label", $("gun").title); }
   $("gun").classList.toggle("reloading", reloadK >= 0); // (the cylinder spins while it refills)
   heartsHud(hp);
 }

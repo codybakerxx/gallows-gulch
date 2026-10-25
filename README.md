@@ -73,7 +73,7 @@ two on the rooftops, behind the false fronts of the sheriff's office and the gen
 
 <table>
   <tr>
-    <td align="center" width="33%"><img src="docs/screenshots/09-getaway-ride.png" alt="Riding out across the desert, the horse's head and ears in front, rocks and a wagon ahead, the posse's distance shown at the top" width="100%"><br><sub>The ride</sub></td>
+    <td align="center" width="33%"><img src="docs/screenshots/09-getaway-ride.png" alt="Galloping down a three-lane trail across the desert, the horse's head and mane in front, a boulder and a wagon ahead, the posse's distance shown at the top" width="100%"><br><sub>The run</sub></td>
     <td align="center" width="33%"><img src="docs/screenshots/10-getaway-fight.png" alt="Turned round in the saddle with the revolver, a lasso man spinning his rope as the posse rides up through the dust" width="100%"><br><sub>The fight</sub></td>
     <td align="center" width="33%"><img src="docs/screenshots/11-getaway-cliff.png" alt="Horse and rider in mid-air off the edge of a canyon at sunset" width="100%"><br><sub>Should've watched the road</sub></td>
   </tr>
@@ -87,20 +87,28 @@ counts. Then:
   Ring it then and you ride.
 - **Lose, having rung it.** Nothing happens. A new shootout starts the bell over.
 
-**First half, the ride.** The horse gallops on its own and you steer by swiping or dragging left and right anywhere on
-the screen. The horse moves straight across the trail to where your finger takes it. On a keyboard, hold **A / D** or
-**← / →**. Rocks, cactus, wagons and broken fences come at you in rows, closer together as you go,
-and there's always a way through. Hit something and you slow down and the posse gains on you. The bar at the top
-shows how close they are, and their hoofbeats get louder. Let them catch you and you're captured.
+**First half, the run.** Three lanes down the trail, and nothing on the screen to press.
+- **Swipe left or right** anywhere to change lane, one lane per swipe. **Swipe up** to jump. On a keyboard: **← / →**
+  or **A / D** for a lane, **↑**, **W** or **Space** to jump.
+- Boulders, stands of saguaro, stacked freight and wagons (a wagon fills its lane for a while) have to be gone round.
+  Logs, hay bales, troughs and fences can be jumped; sometimes a fence runs right across the trail. Every row has a
+  way through.
+- It starts at a gallop and gets faster, and the rows come quicker and harder to read. The edges of the view blur
+  with the speed.
+- Ride into something and the horse shies off it into an open lane; trip over something low and you stumble; clip
+  something changing lane and you're bounced back. Each costs ground, and the posse gains.
+- The bar at the top shows how close they are. Once they're close they shoot at you (dirt kicks up ahead) and the
+  screen's edges pulse red. Let them catch you and you're captured.
 
 **The turn.** Halfway, a shot whistles past your shoulder. You twist round in the saddle and draw. The horse goes on
 the same way, keeping to the trail, and nobody can hurt you while you turn.
 
 **Second half, the fight.**
-- It's the same gun and the same hearts as the shootout: 6 rounds, one automatic reload, 5 hearts.
+- It's the same gun and the same hearts as the shootout, 6 rounds and 5 hearts, but out here you get two automatic
+  reloads instead of one: 18 rounds in all. A speedloader for each sits beside the cylinder.
 - Aim with the mouse, by dragging the **Aim** pad (as in the shootout) or by dragging on the view. Any of these works
   while another finger holds **Fire**. **Click** or **Fire** shoots.
-- When the cylinder empties it reloads by itself, once. Run dry with riders still coming and they ride in and finish
+- When the cylinder empties it reloads by itself, twice. Run dry with riders still coming and they ride in and finish
   you.
 - The horse swerves round things on its own. Each swerve pulls your aim to one side, so watch the reticle and fire in
   the steady spells. Shots go exactly where the reticle is.
@@ -110,12 +118,14 @@ the same way, keeping to the trail, and nobody can hurt you while you turn.
   while he winds up and he loses the attack.
 - Lose all five hearts and you're captured.
 
-**The end.** Drop the last rider and you've won. What happens next is a short scene you can't control. You can skip
-it after the first time. Then **Retry chase** (straight back in the saddle) or **Return to Hangman**.
+**The end.** Drop the last rider and you've won. What happens next is a short, letterboxed scene you can't control,
+filmed in a few shots. You can skip it after the first time. Then **Retry chase** (straight back in the saddle) or
+**Return to Hangman**.
 
-The ride takes about 40 seconds and the fight about 20–40, depending on your shooting. Every number (speeds, row
-spacing, the posse's pace, sway, attack timings, damage, the ending's timing) is in `CHASE_CFG` at the top of
-`src/12g_chase.js`. The gun and the hearts are in `GUN` at the top of `src/12d_siege.js`, shared by both.
+The run takes about 55 seconds and the fight about 20–40, depending on your shooting. The run's numbers (lanes,
+speeds, jumps, the course, what a hit costs) are in `RUN` at the top of `src/12h_runner.js`; the fight's and the
+posse's in `CHASE_CFG` at the top of `src/12g_chase.js`; the canyon and the shots of the end in `CANYON` and `CINE` in
+`src/12i_canyon.js`. The gun and the hearts are in `GUN` at the top of `src/12d_siege.js`.
 
 </details>
 
@@ -168,7 +178,7 @@ public repository.
 
 ```
 build.py                 builds dist/ from src/ and assets/ (standard library only)
-src/                     the game: one HTML shell and 24 JavaScript modules, loaded in the order build.py lists
+src/                     the game: one HTML shell and 27 JavaScript modules, loaded in the order build.py lists
   00_head.html           page markup and all CSS: HUD, keyboard, menu poster, end sign, Word Book, the getaway's HUD
   01_util.js             helpers, seeded noise
   02_textures.js         procedural material textures and sprites
@@ -184,6 +194,7 @@ src/                     the game: one HTML shell and 24 JavaScript modules, loa
   09_anim.js             walking, mocap blending, look-at, IK, the hanging body
   09b_ragdoll.js         ragdolls
   10_life.js             horse, vultures, tumbleweed, dust, townsfolk
+  10b_horse.js           horses up close: a smoother body, the back measured as it gallops, saddle, mane, tail, reins
   11_words.js            the word bank with clues, and the host's lines
   11b_defs.js            a plain-English meaning for every word
   12a_director.js        game state, camera, cutscenes
@@ -192,7 +203,9 @@ src/                     the game: one HTML shell and 24 JavaScript modules, loa
   12d_siege.js           the sword, the cut-down and the shootout
   12e_book.js            the Word Book
   12f_bell.js            the bell, and the cleared street after a win
-  12g_chase.js           the getaway: posse, horses, the ride, the fight, the canyon, the results
+  12g_chase.js           the getaway: posse, horses, the turn, the fight, the results
+  12h_runner.js          the getaway's run: three lanes, swipes and jumps, the course, the desert along the trail
+  12i_canyon.js          the canyon at the end and the filmed fall
   12c_boot.js            loading, menu, input, main loop
 assets/
   models/                Xbot.glb, LeePerrySmith.glb, Horse.glb, Stork.glb

@@ -1,4 +1,4 @@
-// shared by mk_s131.py and mk_s132.py: steps the game's clock without drawing, sets up a shootout, aims, rides and fights the getaway
+// shared by mk_s131.py, mk_s132.py, mk_s133.py and screens.py: steps the game's clock without drawing, sets up a shootout, aims, rides and fights the getaway
 window.__errs = window.__errs || [];
 window.__go = async (n, until) => { window.GULCH_PAUSE = true; const RF = window.renderFrame; window.renderFrame = () => {}; let t = performance.now(); last = t;
   try { for (let i = 0; i < n; i++) { t += 1000 / 60; tick(t); await null; await null; if (until && until()) break; } } finally { window.renderFrame = RF; } t += 16.7; tick(t); return 1; };
@@ -36,9 +36,17 @@ if (!window.__wrapped) { window.__wrapped = true;
   const w = (name, key) => { const f = window[name]; window[name] = function () { __cnt[key]++; return f.apply(this, arguments); }; };
   w('startGetaway', 'sg'); w('beginVictory', 'victory'); w('chaseResults', 'results'); w('chaseCapture', 'capture'); w('chaseBegin', 'begins');
   const tr = Sound.track; Sound.track = function (nm) { __cnt.tracks.push({ nm, muted: Sound.muted, master: Sound.masterGain, ready: Sound.ready }); return tr.apply(Sound, arguments); }; }
-// riding: steer for the middle of the next row's way through
-window.__auto = () => { const C = CHASE; const next = C.rows.find(r => r.s > C.s - 1.2); if (next) C.steerT = next.g; }; // (as a swipe would: the middle of the next way through)
-window.__steerTo = lat => { CHASE.steerKey = 0; CHASE.steerT = lat; };
+// the run (12h): ride the lanes as a player would. Read the next row (what's in each lane), go for an open lane, else a low thing to jump;
+// jump a low thing in your lane when it's close. One lane at a time, the way a swipe or a key does it
+window.__cells = () => { const C = CHASE, ahead = C.obs.filter(o => o.run && !o.hit && o.s - C.s > -0.5 && o.s - C.s < 34).sort((a, b) => a.s - b.s); if (!ahead.length) return null;
+  const s0 = ahead[0].s, row = ahead.filter(o => o.s - s0 < 3 + (o.kind === 'wagon' ? 2.5 : 0));
+  return { s0, cell: k => { const lat = RUN.lanes[k + 1], os = row.filter(o => Math.abs(o.lat - lat) < o.halfLat + 0.3); return os.some(o => !o.low) ? 'tall' : os.length ? 'low' : null; } }; };
+window.__auto = () => { const C = CHASE; if (C.state !== 'ride') return; const R0 = __cells(); if (!R0) return; const cur = C.lane, opts = [cur, cur - 1, cur + 1, cur - 2, cur + 2].filter(k => k >= -1 && k <= 1);
+  let tgt = opts.find(k => R0.cell(k) === null); if (tgt === undefined) tgt = opts.find(k => R0.cell(k) === 'low'); if (tgt === undefined) tgt = cur;
+  if (tgt !== cur && !C.shift) runLane(Math.sign(tgt - cur));
+  if (R0.cell(C.lane) === 'low' && !C.air && !C.shift) { const d = R0.s0 - C.s; if (d > 0 && d < C.speed * 0.36 + 1.5) runJump(); } };
+window.__laneOf = lat => RUN.lanes.reduce((b, l, i) => Math.abs(l - lat) < Math.abs(RUN.lanes[b] - lat) ? i : b, 0) - 1;
+window.__steerTo = lat => { const C = CHASE, k = __laneOf(lat); if (k !== C.lane && !C.shift) runLane(Math.sign(k - C.lane)); }; // (toward the lane that's nearest lat)
 // on screen now, with the view where it rests (no aim): how many of the riders still in the fight can you see?
 window.__inView = () => { const C = CHASE, cam = R.camera, out = []; for (const r of C.riders) { if (!r.alive) continue; const p = r.a.ch.bones.Spine2.getWorldPosition(V3()).project(cam); out.push(p.z < 1 && Math.abs(p.x) < 0.98 && Math.abs(p.y) < 0.98); } return out; };
 // the fight: point the gun (ay/ap, the way a drag or the mouse does) so that, with the drift the horse puts on it right now, it's on his chest

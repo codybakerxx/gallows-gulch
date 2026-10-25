@@ -45,7 +45,7 @@ function wireUI() {
     else if (e.key === " " && STATE.locked) STATE.ts = 6;
   });
   document.addEventListener("keyup", e => { if (CHASE.on) { chaseKey(e, false); return; } if (e.key === "Shift" || e.key === "a" || e.key === "A") SIEGE.keyAim = false; });
-  window.addEventListener("blur", () => { SIEGE.keyAim = false; CHASE.keyL = CHASE.keyR = false; CHASE.steerKey = 0; });
+  window.addEventListener("blur", () => { SIEGE.keyAim = false; CHASE.swipe = null; CHASE.drag = null; });
   $("motion").addEventListener("change", e => { STATE.reduceMotion = e.target.checked; savePrefs(); });
   document.addEventListener("visibilitychange", () => { if (document.hidden) Sound.pauseAll(); else Sound.wake(); });
 }
@@ -115,7 +115,8 @@ async function boot() {
   $("loading").hidden = true; openMenu(); shot("wide", 4);
   last = performance.now(); requestAnimationFrame(loop);
 }
-function onResize() { const st = $("stage"), w = st.clientWidth, h = st.clientHeight; if (!w || !h || !R.renderer) return; resizeRenderer(w, h); if (CAM && !CAM.to && CAM.name) shot(CAM.name, 0); }
+function onResize() { const st = $("stage"), w = st.clientWidth, h = st.clientHeight; if (!w || !h || !R.renderer) return; resizeRenderer(w, h); if (CAM && !CAM.to && CAM.name) shot(CAM.name, 0);
+  try { renderFrame(T); } catch (e) {} } // (draw straight away: a resized canvas is blank until the next frame, and the getaway's run changes the view's size)
 let last = 0, T = 0, perf = { n: 0, acc: 0, steps: 0 };
 // if frames run long while playing: 1) switch off AO, light shafts and skin scattering, 2) drop a quality tier, 3) lower the resolution a little
 function perfStep() {

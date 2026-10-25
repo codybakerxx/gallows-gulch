@@ -133,10 +133,18 @@ button:focus-visible,input:focus-visible+span,input[type=range]:focus-visible{ou
 #chasePad>div span{opacity:.85}
 #chasePad>div.on{transform:translateY(2px);filter:brightness(1.25)}
 #gun.reloading #cyl{animation:cylSpin .45s linear infinite}@keyframes cylSpin{to{transform:rotate(360deg)}}
-#reloads{display:inline-flex;line-height:0;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}#reloads.used{opacity:.5}
+#reloads{display:inline-flex;gap:2px;line-height:0;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}#reloads.used{opacity:.5}#reloads svg.spent{opacity:.55}#reloads.many{gap:0}#reloads.many svg+svg{margin-left:-4px}
 #hp{gap:1px}
-#padSteer{background:none!important;border:0!important;box-shadow:none!important;color:rgba(233,214,174,.42)!important;gap:8px!important;cursor:ew-resize!important;letter-spacing:.16em!important}
-#padSteer.on{transform:none!important;filter:none!important;color:rgba(233,214,174,.7)!important}
+/* the run (and the ride up to it, and the cliff): the view takes the whole screen; nothing to press, it takes swipes */
+#app.run #kb{display:none}
+#app.run #chaseTip{bottom:max(18px,env(safe-area-inset-bottom,0px))}
+/* the cliff: letterboxed, the top bar gone */
+#cineBars{position:absolute;inset:0;z-index:4;pointer-events:none}
+#cineBars::before,#cineBars::after{content:"";position:absolute;left:0;right:0;height:0;background:#000;transition:height 1.1s cubic-bezier(.3,.7,.2,1)}
+#cineBars::before{top:0}#cineBars::after{bottom:0}
+#app.cinema #cineBars::before,#app.cinema #cineBars::after{height:11vh}
+@media (min-aspect-ratio:1/1){#app.cinema #cineBars::before,#app.cinema #cineBars::after{height:max(8vh,calc((100vh - 100vw / 2.39) / 2))}}
+#app.cinema #hud,#app.cinema #pursuit{opacity:0;transition:opacity .6s}
 #padShoot{color:#f0b39f;background:radial-gradient(120% 100% at 50% 20%,#8a3a26 0%,#5c2215 60%,#3a140b 100%)!important;border-color:#a4482f!important}
 #chaseRes{z-index:11}
 #chaseRes .sign{animation-duration:1.1s}

@@ -2,6 +2,33 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v31
+- **The getaway's run is now a three-lane runner.**
+  - Swipe left or right to change lane and swipe up to jump; on a keyboard, ← / → or A / D, and ↑, W or Space. There
+    is nothing on screen to press, and the view takes the whole screen (no bottom panel) until the fight.
+  - Tall things (boulders, saguaro, stacked freight, wagons down a lane) have to be gone round; low ones (logs, hay
+    bales, troughs, fences, sometimes a fence right across the trail) can be jumped.
+  - It's faster (13 m/s rising to 19.5) and the rows come quicker and harder as it goes. Riding into something,
+    tripping or clipping something while changing lane each give the posse ground. Once they're close they shoot,
+    and the screen's edges pulse.
+  - Speed shows: the view widens and its edges blur, and sand blows past.
+- **The posse sit their horses.** The horses' backs are measured from the gallop every frame, so riders sit on them
+  instead of sinking in, with feet in the stirrups outside the horse.
+- **Horses up close:** a smoother body that shades properly as it gallops, a western saddle and blanket, a mane, a
+  tail of hair that streams out at the gallop, and reins to the bit.
+- **The fight:** a second automatic reload (18 rounds). The shootout keeps one.
+- **The desert along the trail:** sage, dry grass, broken boulders and cactus all the way out; weathered stone
+  instead of smooth orange lumps; three trodden paths down the trail.
+- **The canyon and the end:**
+  - The canyon is deeper and rebuilt: a wandering rim, walls stepped into cliffs, talus and benches, banded rock
+    with fine grain up close, a river at the bottom. At the end the sun's shadows cover the whole canyon.
+  - The end is letterboxed and filmed: the view stretches as the ground runs out, then a slow-motion shot of horse
+    and rider leaping off the edge with stones going over, a look straight down from the rim, and a long view down
+    the canyon with the dust rising from the bottom.
+- Fixes: the posse's loose horses no longer run out over the canyon; a statement in the shootout's UI that a comment
+  had swallowed now runs; resizing during the getaway no longer throws, and the view is redrawn at once.
+- `tools/check_build.py` now also fails when a comment put in the middle of a line has swallowed the code after it.
+
 ## v30
 - **The shootout:** you now have 5 hearts, and the revolver holds 6 rounds with one reload, 12 rounds in all. The
   reload is automatic when the cylinder empties, and you can't fire while it runs. A speedloader beside the cylinder

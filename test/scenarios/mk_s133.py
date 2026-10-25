@@ -1,8 +1,9 @@
-# builds test/s133.json: v30, the gun and the hearts, the same in the shootout and the getaway (run it at 390 x 844, and at 1280 x 720)
+# builds test/s133.json: the gun and the hearts (v30; v31 gives the getaway a second reload) (run it at 390 x 844, and at 1280 x 720)
 #  1) the shootout: five hearts, six in the gun and one reload shown beside it; the top bar fits; empty the cylinder and it reloads itself
 #     (you can't fire while it does, the spare goes); empty it again and you're out: they finish you, one heart a shot, five shots
-#  2) the getaway: the same gun and hearts in the ride and the fight; every rider still in the fight on screen (a phone held upright sees a
-#     narrow slice behind you), the last one too; empty, reload, empty again with riders left: out of bullets, and caught
+#  2) the getaway: the same gun and hearts, drawn the same way, with two reloads (two speedloaders) in the run and the fight; every rider still
+#     in the fight on screen (a phone held upright sees a narrow slice behind you), the last one too; down to the last reload, empty it,
+#     empty it again with riders left: out of bullets, and caught
 import json, os, sys
 pre = sys.argv[1] if len(sys.argv) > 1 else "g133"
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -14,7 +15,7 @@ steps.append(["click", "#startBtn"]); steps.append(["wait", 1500])
 E(open(os.path.join(HERE, "chase_helpers.js")).read())
 E("""window.__bar = () => { const g = document.getElementById('gun'), m = document.getElementById('meta'), hud = document.getElementById('hud');
   return { chambers: document.querySelectorAll('#cyl circle[r="10"]').length, loaded: document.querySelectorAll('#cyl circle[r="10"][fill="#d8a246"]').length, hearts: document.querySelectorAll('#hp svg').length, full: document.querySelectorAll('#hp svg:not(.gone)').length,
-    badge: __vis('reloads'), badgeUsed: document.getElementById('reloads').classList.contains('used'), meta: m.textContent, metaClipped: m.scrollWidth > m.clientWidth + 1, barOverflow: hud.scrollWidth > hud.clientWidth + 1, title: g.title }; }; 1""")
+    badge: __vis('reloads'), badges: document.querySelectorAll('#reloads svg').length, full: document.querySelectorAll('#reloads svg.full').length, badgeUsed: document.getElementById('reloads').classList.contains('used'), meta: m.textContent, metaClipped: m.scrollWidth > m.clientWidth + 1, barOverflow: hud.scrollWidth > hud.clientWidth + 1, title: g.title }; }; 1""")
 # ---- 1) the shootout ----
 E("""(async () => { try { await __siege(); const S = SIEGE, out = {}; await __go(30, () => { __calm(); return false; });
   out.start = { bullets: S.bullets, reloads: S.reloads, health: S.health, bar: __bar(), tip2: SIEGE_TIP2 };

@@ -44,12 +44,12 @@ function buildGround() {
   { // an apron under and beyond the plain, so out on the getaway trail (12g) the ground's far edge never shows sky below the horizon; the fog colours it
     const ap = new THREE.Mesh(new THREE.RingGeometry(560, 9000, 96, 1).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0x4a3020 })); ap.position.y = -10; ap.matrixAutoUpdate = false; ap.updateMatrix(); R.scene.add(ap); }
   m.onBeforeCompile = sh => {
-    sh.uniforms.macroMap = { value: TEX.macro }; sh.uniforms.canyonOn = WORLD.canyonU.on; sh.uniforms.canyonInv = WORLD.canyonU.inv;
+    sh.uniforms.macroMap = { value: TEX.macro }; sh.uniforms.canyonOn = WORLD.canyonU.on; sh.uniforms.canyonInv = WORLD.canyonU.inv; sh.uniforms.canyonSize = WORLD.canyonU.size;
     sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vGW;").replace("#include <project_vertex>", "#include <project_vertex>\nvGW = (modelMatrix * vec4(transformed, 1.0)).xyz;");
     sh.fragmentShader = sh.fragmentShader.replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>
-      if (canyonOn > 0.5) { vec3 cl = (canyonInv * vec4(vGW, 1.0)).xyz; if (abs(cl.x) < 1.0 && cl.z > 0.0 && cl.z < 1.0) discard; } // (the canyon at the end of the getaway cuts through the plain)`)
+      if (canyonOn > 0.5 && inCanyon(vGW, canyonInv, canyonSize)) discard; // (the canyon at the end of the getaway cuts through the plain: 12i)`)
       .replace("#include <common>", `#include <common>
-      varying vec3 vGW; uniform sampler2D macroMap; uniform float canyonOn; uniform mat4 canyonInv; float groundH = 0.0;
+      varying vec3 vGW; uniform sampler2D macroMap; uniform float canyonOn; uniform mat4 canyonInv; uniform vec2 canyonSize; float groundH = 0.0;` + CANYON_GLSL + `
       vec2 gh2(vec2 p) { return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }
       // prints: cells hold at most one oval dent, sized and turned per cell
       float prints(vec2 p, float cell, vec2 size, float keep) {

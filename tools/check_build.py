@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check a build: the bundled script parses, and every file the code asks for is in dist/.
+"""Check a build: the bundled script parses, every file the code asks for is in dist/, and no comment has swallowed code.
 
     python3 build.py && python3 tools/check_build.py
 
@@ -55,6 +55,23 @@ def main():
     missing = [n for n in need if not os.path.isfile(os.path.join(ROOT, "dist", n))]
     if missing:
         problems.append("missing from dist/: " + ", ".join(missing))
+
+    # 3) no line comment that swallows code after it: a "// (note)" put in the middle of a line turns the rest of the line into
+    #    comment. It still parses, so 1) can't see it. Flag a comment that ends like code or carries a statement after its note
+    swallowed = []
+    for name in sorted(os.listdir(os.path.join(ROOT, "src"))):
+        if not name.endswith(".js"):
+            continue
+        for n, line in enumerate(read("src/" + name).split("\n"), 1):
+            i = line.find(" // ")
+            if i < 0 or line.lstrip().startswith("//") or any(line[:i].count(q) % 2 for q in "\"'`"):
+                continue
+            c = line[i + 4:].rstrip()
+            if (re.search(r"\)\s*[A-Za-z_$][\w.\[\]]*\s*(=|\(|\+=|-=)", c) or (c.endswith(("}", ";", "{")) and not c.endswith(")"))
+                    or re.search(r";\s*(const|let|if|for|return)\b", c)):
+                swallowed.append(f"src/{name}:{n}: {c[:120]}")
+    if swallowed:
+        problems.append("a comment in the middle of a line has swallowed the code after it:\n  " + "\n  ".join(swallowed))
 
     print(f"script: {len(game):,} characters; files the code asks for: {len(need)}, missing: {len(missing)}")
     for p in problems:
