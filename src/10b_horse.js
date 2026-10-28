@@ -62,7 +62,15 @@ function prepHorseRig(g, M) { // where things attach, found once on the bind pos
   const A = HORSE.at; A.seat = attach(V3(0, 4, SEAT.z), down); A.fore = attach(V3(0, 4, SEAT.z + 0.45), down); A.rear = attach(V3(0, 4, SEAT.z - 0.5), down);
   A.dock = attach(V3(0, 4, -1.12), down);
   for (const e of [1, -1]) A[e > 0 ? "bitL" : "bitR"] = attach(V3(e * 1.5, 1.47, 1.42), V3(-e, 0, 0)) || attach(V3(e * 1.5, 1.52, 1.38), V3(-e, 0, 0));
-  HORSE.crest = []; for (let k = 0; k <= 8; k++) { const z = lerp(0.36, 1.08, k / 8), a = attach(V3(0, 4, z), down); if (a) HORSE.crest.push(a); }
+  HORSE.crest = []; for (let k = 0; k <= 10; k++) { const z = lerp(0.36, 1.12, k / 10), a = attach(V3(0, 4, z), down); if (a) HORSE.crest.push(a); }
+  // where the mane lies: for each point of the crest, points down the off side of the neck (+x) at three depths and the near side at
+  // two, each with the surface's normal there (bind pose, the horse's frame). Hair laid through them lies on the neck as it moves
+  const bind = at => { const o = V3(0, 0, 0); for (let k = 0; k < 3; k++) o.addScaledVector(V3(P.getX(at.i[k]), P.getY(at.i[k]), P.getZ(at.i[k])), at.w[k]); return o.applyMatrix4(M); };
+  const side = (ro, rd, fb) => { const r = horseRay(ro, rd, P, idx, M); if (!r) return { at: fb, n: V3(0, 1, 0) };
+    const v = [0, 1, 2].map(k => V3(P.getX(idx[r.f + k]), P.getY(idx[r.f + k]), P.getZ(idx[r.f + k])).applyMatrix4(M)), n = v[1].clone().sub(v[0]).cross(v[2].clone().sub(v[0])).normalize(); if (n.dot(rd) > 0) n.negate();
+    return { at: { i: [idx[r.f], idx[r.f + 1], idx[r.f + 2]], w: r.w }, n }; };
+  HORSE.maneSide = HORSE.crest.map((a, k) => { const c = bind(a), t = k / Math.max(1, HORSE.crest.length - 1);
+    return { off: [0.065, 0.13, 0.2].map(dy => side(V3(1.5, c.y - dy * (1 - 0.25 * t), c.z - 0.02), V3(-1, 0, 0), a)), near: [0.06, 0.13].map(dy => side(V3(-1.5, c.y - dy * (1 - 0.25 * t), c.z - 0.02), V3(1, 0, 0), a)) }; });
 }
 // the attached point now, in the horse's frame: its three vertices as the gallop has them this frame
 const _ha = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
@@ -74,13 +82,131 @@ function horsePt(H, at, out) {
   return out.applyMatrix4(HORSE.M);
 }
 
+// ---- the coat ----
+// Which part of the horse each vertex is, from the colours the model was painted with: eye, the ridge under the mane, lower leg, muzzle
+// and ear tips (aReg), and the blaze down the face (aAux.x). Taken on the welded mesh, before it's smoothed: each vertex to the
+// nearest of the model's colours, so the masks come out of subdivision with soft edges
+function horseRegions(g) {
+  const C = g.attributes.color, n = g.attributes.position.count, reg = new Float32Array(n * 4), aux = new Float32Array(n * 4);
+  const pal = [[0.04, 0.012, 0.009, 0], [0.047, 0.013, 0.009, 1], [0.1, 0.022, 0.01, 2], [0.107, 0.04, 0.036, 3], [0.38, 0.107, 0.04, -1], [0.523, 0.285, 0.147, 4]];
+  if (C) for (let i = 0; i < n; i++) { let best = null, bd = 0.02 * 0.02; const r = C.getX(i), gg = C.getY(i), b = C.getZ(i);
+    for (const c of pal) { const d = (r - c[0]) ** 2 + (gg - c[1]) ** 2 + (b - c[2]) ** 2; if (d < bd) { bd = d; best = c; } }
+    if (best && best[3] >= 0) { if (best[3] < 4) reg[i * 4 + best[3]] = 1; else aux[i * 4] = 1; } }
+  g.setAttribute("aReg", new THREE.BufferAttribute(reg, 4)); g.setAttribute("aAux", new THREE.BufferAttribute(aux, 4));
+}
+// after smoothing and folding (the horse's frame, M): aAux.y, the lowest the vertex ever gets in the gallop (metres: hooves ~0, fetlocks
+// ~0.25, knees ~0.5, the belly ~1), which finds the hooves, socks and legs whatever pose they're in; aAux.z, how hollow the surface is
+// there (between the neighbours and the normal, over the edge length, smoothed): the seams of the muscles and the creases at the
+// elbows and flanks, darkened like light that doesn't reach in
+function horseAux(g, M) {
+  const P = g.attributes.position, N = g.attributes.normal, mt = g.morphAttributes.position, n = P.count, aux = g.attributes.aAux.array, idx = g.index.array, s = M.elements[5], ty = M.elements[13];
+  for (let i = 0; i < n; i++) { let lo = 1e9; const y0 = P.getY(i); for (const m of mt) lo = Math.min(lo, g.morphTargetsRelative ? y0 + m.getY(i) : m.getY(i)); if (!mt.length) lo = y0; aux[i * 4 + 1] = lo * s + ty; }
+  const nb = Array.from({ length: n }, () => new Set()); for (let t = 0; t < idx.length; t += 3) for (let k = 0; k < 3; k++) { const a = idx[t + k], b = idx[t + (k + 1) % 3]; nb[a].add(b); nb[b].add(a); }
+  let cav = new Float32Array(n); const p = new THREE.Vector3(), q = new THREE.Vector3(), m = new THREE.Vector3();
+  for (let i = 0; i < n; i++) { if (!nb[i].size) continue; p.fromBufferAttribute(P, i); m.set(0, 0, 0); let el = 0;
+    for (const j of nb[i]) { q.fromBufferAttribute(P, j); m.add(q); el += q.distanceTo(p); } m.divideScalar(nb[i].size).sub(p); el /= nb[i].size;
+    cav[i] = el > 1e-9 ? (m.x * N.getX(i) + m.y * N.getY(i) + m.z * N.getZ(i)) / el : 0; }
+  for (let it = 0; it < 2; it++) { const c2 = new Float32Array(n); for (let i = 0; i < n; i++) { let a = cav[i], k = 1; for (const j of nb[i]) { a += cav[j]; k++; } c2[i] = a / k; } cav = c2; }
+  for (let i = 0; i < n; i++) aux[i * 4 + 2] = cav[i];
+  g.attributes.aAux.needsUpdate = true;
+}
+// The coat, painted in the horse's own frame (it rides with the gallop): the base colour, darker along the back and uneven; hair that lies
+// back along the body and down the legs, as fine streaks in colour and in the surface (faded out where they'd be finer than a pixel);
+// the points (legs, muzzle, ear tips, the crest under the mane) in their own colour; white socks and blaze; hooves, wet eyes, and the
+// hollows darker. Per horse: coat = { points: 0-1, pointCol, blaze: 0-1, dapple: 0-1, socks: [near fore, off fore, near hind, off hind] (m up the leg) }
+function horseCoatMat(color, coat) {
+  const m = new THREE.MeshPhysicalMaterial({ color, roughness: 0.46, sheen: 0.45, sheenRoughness: 0.4, sheenColor: new THREE.Color(color).multiplyScalar(1.6) });
+  m.userData.coat = Object.assign({ points: 1, pointCol: 0x0c0907, blaze: 0, dapple: 0, socks: [0, 0, 0, 0] }, coat);
+  m.onBeforeCompile = horseCoatCompile; m.customProgramCacheKey = () => "gulchHorse"; return m;
+}
+function horseCoatCompile(sh) {
+  const c = this.userData.coat || {}, S = HORSE.M.elements[5].toFixed(6), TY = HORSE.M.elements[13].toFixed(6);
+  sh.uniforms.uCoatA = { value: new THREE.Vector4(c.points ?? 1, c.blaze || 0, c.dapple || 0, 0) }; sh.uniforms.uSocks = { value: new THREE.Vector4(...(c.socks || [0, 0, 0, 0])) };
+  sh.uniforms.uPointCol = { value: new THREE.Color(c.pointCol ?? 0x0c0907).convertSRGBToLinear() }; // (as it should look: the coat's own colour is the game's usual, unconverted)
+  sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nattribute vec4 aReg; attribute vec4 aAux; varying vec3 vHp; varying vec4 vReg; varying vec4 vAux;")
+    .replace("#include <begin_vertex>", `#include <begin_vertex>\nvHp = position * ${S} + vec3(0.0, ${TY}, 0.0); vReg = aReg; vAux = aAux;`);
+  sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>
+    uniform vec4 uCoatA; uniform vec4 uSocks; uniform vec3 uPointCol; varying vec3 vHp; varying vec4 vReg; varying vec4 vAux;
+    float hh3(vec3 p) { p = fract(p * 0.1031); p += dot(p, p.zyx + 31.32); return fract((p.x + p.y) * p.z); }
+    float vn3(vec3 p) { vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+      return mix(mix(mix(hh3(i), hh3(i + vec3(1.0, 0.0, 0.0)), f.x), mix(hh3(i + vec3(0.0, 1.0, 0.0)), hh3(i + vec3(1.0, 1.0, 0.0)), f.x), f.y),
+                 mix(mix(hh3(i + vec3(0.0, 0.0, 1.0)), hh3(i + vec3(1.0, 0.0, 1.0)), f.x), mix(hh3(i + vec3(0.0, 1.0, 1.0)), hh3(i + vec3(1.0)), f.x), f.y), f.z); }
+    float cell3(vec3 p) { vec3 i = floor(p), f = fract(p); float d = 9.0;
+      for (int z = -1; z <= 1; z++) for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { vec3 o = vec3(float(x), float(y), float(z)), r = o + 0.15 + 0.7 * vec3(hh3(i + o), hh3(i + o + 17.1), hh3(i + o + 31.7)) - f; d = min(d, dot(r, r)); }
+      return sqrt(d); }`)
+    .replace("#include <map_fragment>", `#include <map_fragment>
+      vec3 hp = vHp; float low = vAux.y, cavK = smoothstep(0.015, 0.16, vAux.z), bumpK = smoothstep(-0.02, -0.14, vAux.z);
+      float eye = smoothstep(0.3, 0.65, vReg.x), ridge = vReg.y, face = vReg.w;
+      float m1 = vn3(hp * 3.1) + 0.5 * vn3(hp * 7.3 + 11.0), top = smoothstep(1.25, 1.75, hp.y) * smoothstep(1.0, 0.7, hp.z); // (uneven; the back)
+      vec3 coat = diffuseColor.rgb * (0.86 + 0.18 * m1) * (1.0 - 0.2 * top) * (1.0 + 0.1 * smoothstep(1.15, 0.95, hp.y) * smoothstep(0.75, 0.98, low));
+      if (uCoatA.z > 0.0) { float dp = smoothstep(0.3, 0.6, cell3(hp * vec3(10.0, 11.0, 9.0)) + (vn3(hp * 31.0) - 0.5) * 0.22) * smoothstep(0.65, 1.0, low) * smoothstep(1.35, 1.0, hp.z);
+        coat = mix(coat, coat * mix(1.14, 0.72, dp), uCoatA.z * smoothstep(0.6, 0.95, low)); }
+      float legness = smoothstep(1.0, 0.75, low); // (hair runs down the legs, back along the body; streaks 4 mm by 3 cm)
+      vec3 qs = hp * mix(vec3(240.0, 240.0, 34.0), vec3(240.0, 34.0, 240.0), legness);
+      float hf = clamp(1.7 - length(fwidth(qs)) * 1.2, 0.0, 1.0), strk = vn3(qs) * 0.65 + vn3(qs * 2.03 + 5.0) * 0.35 - 0.5;
+      coat *= 1.0 + strk * 0.26 * hf;
+      float pts = max(max(vReg.z, smoothstep(0.52, 0.3, low)), max(ridge, face * 0.9)) * uCoatA.x;
+      coat = mix(coat, uPointCol * (0.8 + 0.35 * m1) * (1.0 + strk * 0.3 * hf), pts);
+      float nearS = step(0.0, hp.x), fore = step(-0.1, hp.z), sockH = dot(vec4(nearS * fore, (1.0 - nearS) * fore, nearS * (1.0 - fore), (1.0 - nearS) * (1.0 - fore)), uSocks);
+      float hoof = smoothstep(0.1, 0.065, low), sock = sockH > 0.01 ? smoothstep(sockH + 0.025, sockH - 0.025, low + (vn3(hp * 38.0) - 0.5) * 0.06) * (1.0 - hoof) : 0.0;
+      vec3 white = vec3(0.64, 0.61, 0.56) * (0.94 + 0.08 * m1) * (1.0 + strk * 0.12 * hf);
+      coat = mix(coat, white, sock);
+      float blaze = smoothstep(0.25, 0.6, vAux.x + (vn3(hp * 30.0) - 0.5) * 0.35) * step(1.0, hp.z) * smoothstep(1.99, 1.92, hp.y) * uCoatA.y; coat = mix(coat, white, blaze); // (from between the eyes down)
+      coat = mix(coat, mix(vec3(0.075, 0.062, 0.05), vec3(0.32, 0.27, 0.2), step(0.01, sockH)) * (0.85 + 0.3 * vn3(hp * vec3(60.0, 6.0, 60.0))), hoof); // (hooves: horn, pale under a white sock)
+      coat = mix(coat, vec3(0.018, 0.011, 0.009), eye);
+      coat *= (1.0 - 0.38 * cavK) * (1.0 + 0.08 * bumpK);
+      diffuseColor.rgb = coat;`)
+    .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
+      roughnessFactor = clamp(roughnessFactor * (1.0 - 0.18 * strk * hf) + 0.14 * cavK, 0.0, 1.0); roughnessFactor = mix(roughnessFactor, 0.38, hoof); roughnessFactor = mix(roughnessFactor, 0.06, eye);`)
+    .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>
+      { float hb = strk * hf * 0.0005 * (1.0 - eye) + (vn3(hp * 9.0) - 0.5) * 0.0015;
+        vec3 sx = dFdx(-vViewPosition), sy = dFdy(-vViewPosition), r1 = cross(sy, normal), r2 = cross(normal, sx);
+        float fd = dot(sx, r1) * faceDirection; vec3 gr = sign(fd) * (dFdx(hb) * r1 + dFdy(hb) * r2); normal = normalize(abs(fd) * normal - gr); }`)
+    .replace("#include <lights_fragment_begin>", `#ifdef USE_SHEEN\nmaterial.sheenColor *= 1.0 - max(eye, hoof); material.sheenColor = mix(material.sheenColor, vec3(0.75), sock * 0.4 + blaze * 0.4);\n#endif\n#include <lights_fragment_begin>`);
+}
+
 // ---- the tack ----
-function hairTex(tail) { // strands, ragged at the tips (alpha). The tail's has two ribbons side by side (u 0-0.5, 0.5-1), each thinning to its edges
-  const key = tail ? "tailHair" : "hair"; if (TEX[key]) return TEX[key]; const c = document.createElement("canvas"); c.width = 256; c.height = 256; const g = c.getContext("2d"), r = rng(tail ? 37 : 31);
-  for (let i = 0; i < (tail ? 300 : 340); i++) { let x = r() * 256; if (tail) { const h = r() < 0.5 ? 0 : 128, e = r() - 0.5; x = h + 64 + e * Math.abs(e) * 2 * 118; }
-    const len = (tail ? 120 : 140) + r() * (tail ? 136 : 116), l = 60 + r() * 110 | 0, a = 0.5 + r() * 0.5; g.strokeStyle = `rgba(${l},${l * 0.88 | 0},${l * 0.78 | 0},${a})`; g.lineWidth = 0.7 + r() * 1.6;
-    g.beginPath(); g.moveTo(x, 0); g.bezierCurveTo(x + (r() - 0.5) * 10, len * 0.4, x + (r() - 0.5) * 18, len * 0.75, x + (r() - 0.5) * 22, len); g.stroke(); }
+function hairTex(tail) { // locks of hair: strands that share a sweep and part at the ends, ragged tips (alpha). v: 1 at the roots, 0 at the tips.
+  // The tail's has two ribbons side by side (u 0-0.5, 0.5-1), each thinning to its edges
+  const key = tail ? "tailHair" : "hair"; if (TEX[key]) return TEX[key]; const S = 512, c = document.createElement("canvas"); c.width = c.height = S; const g = c.getContext("2d"), r = rng(tail ? 37 : 31);
+  g.lineCap = "round";
+  const lockX = () => { if (!tail) return r() * S; const h = r() < 0.5 ? 0 : S / 2, e = r() - 0.5; return h + S / 4 + e * Math.abs(e) * 2 * (S / 4 - 10); };
+  for (let i = 0; i < 260; i++) { const x = lockX(), l = 30 + r() * 50, t = 110 + r() * 60; g.strokeStyle = `rgba(${t | 0},${t * 0.86 | 0},${t * 0.74 | 0},0.9)`; g.lineWidth = 1 + r() * 1.6; // (thick at the roots)
+    g.beginPath(); g.moveTo(x, 0); g.lineTo(x + (r() - 0.5) * 6, l); g.stroke(); }
+  for (let L = 0; L < (tail ? 80 : 110); L++) { const x0 = lockX(), len = S * (tail ? 0.5 + r() * 0.5 : 0.55 + r() * 0.45), b1 = (r() - 0.5) * 34, b2 = (r() - 0.5) * 60, wid = 5 + r() * 16, tone = 100 + r() * 90, n = 9 + (r() * 12 | 0);
+    for (let k = 0; k < n; k++) { const off = (r() - 0.5) * wid, l = len * (0.7 + r() * 0.3), lt = tone + (r() - 0.5) * 50 + (r() < 0.07 ? 50 : 0);
+      g.strokeStyle = `rgba(${clamp(lt, 0, 255) | 0},${clamp(lt * 0.86, 0, 255) | 0},${clamp(lt * 0.74, 0, 255) | 0},${0.55 + r() * 0.45})`; g.lineWidth = 0.7 + r() * 1.3;
+      g.beginPath(); g.moveTo(x0 + off, 0); g.bezierCurveTo(x0 + off + b1 * 0.3, l * 0.35, x0 + off * 1.3 + b1, l * 0.7, x0 + off * 1.7 + b2, l); g.stroke(); } }
   const t = canvasTex(c); t.wrapS = THREE.RepeatWrapping; TEX[key] = t; return t;
+}
+// a lock of mane: four of them side by side (u 0-0.25, ...), each strands gathered at the root (v 1) and parting toward ragged tips (v 0),
+// thinning out to nothing at its sides so a narrow strip of it has no hard edge
+function lockTex() {
+  if (TEX.lock) return TEX.lock; const S = 512, c = document.createElement("canvas"); c.width = c.height = S; const g = c.getContext("2d"), r = rng(41); g.lineCap = "round";
+  for (let L = 0; L < 4; L++) { const x0 = L * 128 + 64, sweep = (r() - 0.5) * 30;
+    for (let k = 0; k < 170; k++) { const e = r() - 0.5, xr = x0 + e * 64 * (0.35 + 0.65 * r()), len = S * (0.5 + 0.5 * Math.pow(r(), 0.55)), xt = xr + e * 26 + sweep + (r() - 0.5) * 18;
+      const lt = 95 + r() * 95 + (r() < 0.06 ? 45 : 0); g.strokeStyle = `rgba(${Math.min(255, lt) | 0},${Math.min(255, lt * 0.87) | 0},${Math.min(255, lt * 0.76) | 0},${0.5 + 0.5 * r()})`; g.lineWidth = 0.8 + r() * 1.5;
+      g.beginPath(); g.moveTo(xr, 0); g.bezierCurveTo(xr + sweep * 0.2, len * 0.35, xt - sweep * 0.3, len * 0.7, xt, len); g.stroke(); } }
+  const t = canvasTex(c); TEX.lock = t; return t;
+}
+// hair: alpha kept up as it's mipped down (thin strands otherwise vanish at a distance), and a highlight that runs across the strands
+// (Kajiya-Kay), along aDir: the way the hair lies
+function hairMat(color, tex) {
+  const m = new THREE.MeshPhysicalMaterial({ color, map: tex, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.6, specularIntensity: 0.3, envMapIntensity: 0.5 });
+  m.onBeforeCompile = sh => {
+    sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nattribute vec3 aDir; varying vec3 vDirV;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvDirV = normalize(mat3(modelViewMatrix) * aDir);");
+    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vDirV;")
+      .replace("#include <map_fragment>", `#include <map_fragment>
+        { vec2 tu = vUv * 512.0; float md = max(dot(dFdx(tu), dFdx(tu)), dot(dFdy(tu), dFdy(tu))); diffuseColor.a *= 1.0 + 0.28 * max(0.0, 0.5 * log2(md)); }`)
+      .replace("#include <output_fragment>", `
+        #if NUM_DIR_LIGHTS > 0
+        { vec3 T = normalize(vDirV), Vv = normalize(vViewPosition);
+          for (int i = 0; i < NUM_DIR_LIGHTS; i++) { vec3 Hh = normalize(directionalLights[i].direction + Vv); float th = dot(T, Hh), sn = sqrt(max(0.0, 1.0 - th * th));
+            float th2 = dot(T, normalize(Hh + T * 0.25)), sn2 = sqrt(max(0.0, 1.0 - th2 * th2));
+            outgoingLight += directionalLights[i].color * (pow(sn, 80.0) * 0.015 + pow(sn2, 16.0) * 0.3 * diffuseColor.rgb) * max(0.0, dot(normal, directionalLights[i].direction) * 0.5 + 0.5); } }
+        #endif
+        #include <output_fragment>`); };
+  m.customProgramCacheKey = () => "gulchHair"; return m;
 }
 function blanketTex() { // a Navajo-style saddle blanket: bands and a stepped diamond, worn and dusty
   if (TEX.blanket) return TEX.blanket; const c = document.createElement("canvas"); c.width = 256; c.height = 256; const g = c.getContext("2d"), r = rng(57);
@@ -123,26 +249,35 @@ function tackMats() {
   if (HORSE.mats) return HORSE.mats;
   const leather = new THREE.MeshStandardMaterial({ color: 0x7a4a2a, map: TEX.leather.map, normalMap: TEX.leather.normalMap, roughnessMap: TEX.leather.orm, roughness: 0.75, normalScale: new THREE.Vector2(0.6, 0.6) });
   const blanket = new THREE.MeshStandardMaterial({ map: blanketTex(), normalMap: TEX.fabric.normalMap, roughness: 0.95, side: THREE.DoubleSide });
-  const wood = MAT.woodDark, hair = new THREE.MeshStandardMaterial({ color: 0x2a1c12, map: hairTex(), alphaTest: 0.42, side: THREE.DoubleSide, roughness: 0.62 }),
-    tail = new THREE.MeshStandardMaterial({ color: 0x2e2016, map: hairTex(true), alphaTest: 0.38, side: THREE.DoubleSide, roughness: 0.62 });
+  const wood = MAT.woodDark, hair = hairMat(0x2a1c12, lockTex()), sheet = hairMat(0x2a1c12, hairTex()), tail = hairMat(0x2e2016, hairTex(true));
   const strap = new THREE.MeshStandardMaterial({ color: 0x3a2414, roughness: 0.7, map: TEX.leather.map });
-  HORSE.mats = { saddle: [blanket, leather, wood], hair, tail, strap }; return HORSE.mats;
+  HORSE.mats = { saddle: [blanket, leather, wood], hair, sheet, tail, strap }; return HORSE.mats;
 }
 // put the tack on a horse made by chaseHorse (12g) or the loose one in town: opt.saddle, opt.reins (a function giving the hand point, world)
 function horseTack(H, opt = {}) {
-  const M = tackMats(); H.tack = { opt, back: { y: 1.65, pitch: 0, y0: null }, pts: {} };
+  const M = Object.assign({}, tackMats()); H.tack = { opt, back: { y: 1.65, pitch: 0, y0: null }, pts: {} };
+  if (opt.hair !== undefined) { const hm = HORSE.hairMats || (HORSE.hairMats = {}), k = opt.hair; if (!hm[k]) hm[k] = { hair: hairMat(k, lockTex()), sheet: hairMat(k, hairTex()), tail: hairMat(k, hairTex(true)) }; M.hair = hm[k].hair; M.sheet = hm[k].sheet; M.tail = hm[k].tail; } // (the mane and tail in the horse's own colour)
   if (opt.saddle !== false) { if (!HORSE.saddleGeo) HORSE.saddleGeo = saddleGeo(); const s = new THREE.Mesh(HORSE.saddleGeo, M.saddle); s.castShadow = s.receiveShadow = true; s.userData.dyn = true; H.grp.add(s); H.tack.saddle = s; }
-  { const n = HORSE.crest.length, g = new THREE.BufferGeometry(), pos = new Float32Array(n * 4 * 3), uv = new Float32Array(n * 4 * 2), ix = [];
-    for (let k = 0; k < n; k++) { for (let c = 0; c < 4; c++) { uv[(k * 4 + c) * 2] = k * 0.35 + (c > 1 ? 0.5 : 0); uv[(k * 4 + c) * 2 + 1] = c % 2 ? 0 : 1; } // (v: 1 at the roots, 0 at the ragged tips)
-      if (k < n - 1) for (const c of [0, 2]) { const a = k * 4 + c, b = a + 4; ix.push(a, a + 1, b, a + 1, b + 1, b); } }
-    g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); g.setAttribute("uv", new THREE.BufferAttribute(uv, 2)); g.setIndex(ix);
-    const m = new THREE.Mesh(g, M.hair); m.frustumCulled = false; m.userData.dyn = true; H.grp.add(m); H.tack.mane = m; }
-  { const N = 7, g = new THREE.BufferGeometry(), pos = new Float32Array(N * 4 * 3), uv = new Float32Array(N * 4 * 2), ix = [];
-    for (let k = 0; k < N; k++) { for (let c = 0; c < 4; c++) { uv[(k * 4 + c) * 2] = c % 2 ? 0.95 : 0.05 + (c > 1 ? 0.5 : 0); uv[(k * 4 + c) * 2 + 1] = 1 - k / (N - 1); } // (two crossed ribbons: u across, v root → tip)
-      if (k < N - 1) for (const c of [0, 2]) { const a = k * 4 + c, b = a + 4; ix.push(a, a + 1, b, a + 1, b + 1, b); } }
-    for (let k = 0; k < N; k++) { uv[(k * 4) * 2] = 0.05; uv[(k * 4 + 1) * 2] = 0.45; uv[(k * 4 + 2) * 2] = 0.55; uv[(k * 4 + 3) * 2] = 0.95; }
-    g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); g.setAttribute("uv", new THREE.BufferAttribute(uv, 2)); g.setIndex(ix);
-    const m = new THREE.Mesh(g, M.tail); m.frustumCulled = false; m.userData.dyn = true; R.scene.add(m); m.visible = false; H.tack.tail = m; H.tack.chain = null; }
+  { // the mane: a sheet of hair lying down the off side of the neck from the crest, and over it locks of hair, narrow strips laid the same
+    // way, some longer and lifting in the gallop (lay() can lay locks to the near side too)
+    const n = HORSE.crest.length, r = rng(71), locks = [], add = (side, cnt, len, lay, w) => { for (let i = 0; i < cnt; i++) locks.push({ f: clamp((i + 0.15 + r() * 0.7) / cnt, 0, 1), side, len: len * (0.8 + r() * 0.4), lay, w: w * (0.7 + r() * 0.6), u0: (r() * 4 | 0) * 0.25, tw: (r() - 0.5) * 0.6, ph: r() * TAU, off: r() }); };
+    add(1, 44, 1, 0, 0.034); add(1, 22, 1.25, 1, 0.038); // (all of it falls to the off side: locks across the near side read as stripes from the saddle)
+    const NL = locks.length, NV = NL * 10, g = new THREE.BufferGeometry(), pos = new Float32Array(NV * 3), uv = new Float32Array(NV * 2), dir = new Float32Array(NV * 3), ix = [];
+    locks.forEach((L, i) => { for (let j = 0; j < 5; j++) { const a = i * 10 + j * 2; uv[a * 2] = L.u0 + 0.025; uv[a * 2 + 2] = L.u0 + 0.225; uv[a * 2 + 1] = uv[a * 2 + 3] = 1 - j / 4; if (j < 4) ix.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); } });
+    g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); g.setAttribute("uv", new THREE.BufferAttribute(uv, 2)); g.setAttribute("aDir", new THREE.BufferAttribute(dir, 3)); g.setIndex(ix);
+    g.setAttribute("normal", new THREE.BufferAttribute(new Float32Array(NV * 3).fill(0.577), 3)); // (set as the hair is laid: the neck's own normal under it, so it shades like the neck it lies on)
+    const m = new THREE.Mesh(g, M.hair); m.frustumCulled = false; m.userData.dyn = true; m.castShadow = true; H.grp.add(m); H.tack.mane = m; H.tack.locks = locks;
+    const g2 = new THREE.BufferGeometry(), NB = n * 5, p2 = new Float32Array(NB * 3), u2 = new Float32Array(NB * 2), d2 = new Float32Array(NB * 3), i2 = []; // (the sheet: five rows per crest point)
+    for (let k = 0; k < n; k++) for (let j = 0; j < 5; j++) { const a = k * 5 + j; u2[a * 2] = k * 0.27; u2[a * 2 + 1] = 1 - j / 4; if (k < n - 1 && j < 4) i2.push(a, a + 5, a + 1, a + 1, a + 5, a + 6); }
+    g2.setAttribute("position", new THREE.BufferAttribute(p2, 3)); g2.setAttribute("uv", new THREE.BufferAttribute(u2, 2)); g2.setAttribute("aDir", new THREE.BufferAttribute(d2, 3)); g2.setIndex(i2); g2.setAttribute("normal", new THREE.BufferAttribute(new Float32Array(NB * 3).fill(0.577), 3));
+    const m2 = new THREE.Mesh(g2, M.sheet); m2.frustumCulled = false; m2.userData.dyn = true; m2.castShadow = true; H.grp.add(m2); H.tack.sheet = m2;
+    H.tack.cp = HORSE.crest.map(() => ({ c: new THREE.Vector3(), off: [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()], near: [new THREE.Vector3(), new THREE.Vector3()] })); }
+  { // the tail: a chain of points from the dock; round each, three ribbons at 60° to each other, so it's full from any side
+    const N = 8, g = new THREE.BufferGeometry(), pos = new Float32Array(N * 6 * 3), uv = new Float32Array(N * 6 * 2), dir = new Float32Array(N * 6 * 3), ix = [];
+    for (let k = 0; k < N; k++) for (let rb = 0; rb < 3; rb++) { const a = k * 6 + rb * 2, u0 = rb === 1 ? 0.55 : 0.05, v = 1 - k / (N - 1); uv[a * 2] = u0; uv[a * 2 + 1] = v; uv[a * 2 + 2] = u0 + 0.4; uv[a * 2 + 3] = v;
+      if (k < N - 1) { const b = a + 6; ix.push(a, a + 1, b, a + 1, b + 1, b); } }
+    g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); g.setAttribute("uv", new THREE.BufferAttribute(uv, 2)); g.setAttribute("aDir", new THREE.BufferAttribute(dir, 3)); g.setIndex(ix);
+    const m = new THREE.Mesh(g, M.tail); m.frustumCulled = false; m.userData.dyn = true; m.castShadow = true; R.scene.add(m); m.visible = false; H.tack.tail = m; H.tack.chain = null; }
   if (opt.reins) { const g = new THREE.BufferGeometry(), S = 10, pos = new Float32Array((S + 1) * 2 * 2 * 3), ix = []; // two straps, each a flat ribbon of S segments
     for (let r = 0; r < 2; r++) for (let k = 0; k < S; k++) { const a = (r * (S + 1) + k) * 2, b = a + 2; ix.push(a, a + 1, b, a + 1, b + 1, b); }
     g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); g.setIndex(ix); const m = new THREE.Mesh(g, M.strap); m.frustumCulled = false; m.userData.dyn = true; m.material.side = THREE.DoubleSide; R.scene.add(m); m.visible = false; H.tack.reins = m; }
@@ -150,22 +285,42 @@ function horseTack(H, opt = {}) {
 }
 function horseTackShow(H, on) { const T = H.tack; if (!T) return; if (T.tail) { T.tail.visible = on; T.chain = null; } if (T.reins) T.reins.visible = on; }
 // each frame, after the gallop has moved the horse: measure the back, and set the saddle, the mane, the tail and the reins on it
-const _ht = new THREE.Vector3(), _ht2 = new THREE.Vector3(), _ht3 = new THREE.Vector3(), _ht4 = new THREE.Vector3();
+const _ht = new THREE.Vector3(), _ht2 = new THREE.Vector3(), _ht3 = new THREE.Vector3(), _ht4 = new THREE.Vector3(), _ht5 = new THREE.Vector3(), _ht6 = new THREE.Vector3(), _ht7 = new THREE.Vector3(), _ht8 = new THREE.Vector3(), _ht9 = new THREE.Vector3(), _ht10 = new THREE.Vector3();
 function horseTackUpdate(H, dt) {
   const T = H.tack; if (!T || !H.grp.visible) return; const A = HORSE.at, B = T.back;
   if (A.seat) { const s = horsePt(H, A.seat, _ht), f = horsePt(H, A.fore, _ht2), r = horsePt(H, A.rear, _ht3);
     B.y = s.y; B.z = s.z; B.pitch = Math.atan2(f.y - r.y, f.z - r.z); if (B.y0 === null) B.y0 = B.y; B.y0 += (B.y - B.y0) * Math.min(1, dt * 1.5); }
   if (T.saddle) { T.saddle.position.set(0, B.y, SEAT.z); T.saddle.rotation.set(-B.pitch * 0.85, 0, 0); }
-  // the mane: hair falling from the crest to the off side, a shorter layer to the near side
-  if (T.mane) { const P = T.mane.geometry.attributes.position, n = HORSE.crest.length, c = _ht, nx = _ht2;
-    T.ph = (T.ph || 0) + dt * 6;
-    for (let k = 0; k < n; k++) { horsePt(H, HORSE.crest[k], c); const t = k / (n - 1), L = lerp(0.17, 0.12, t) * (k === 0 ? 0.6 : 1), sw = 0.015 * Math.sin(T.ph + k * 0.9);
-      const j = k * 4; P.setXYZ(j, c.x - 0.02, c.y + 0.03, c.z); P.setXYZ(j + 1, c.x + L * 0.45 + sw, c.y - L * 0.9, c.z - 0.06); // (lying on the off side, close to the neck)
-      P.setXYZ(j + 2, c.x - 0.03, c.y + 0.028, c.z); P.setXYZ(j + 3, c.x + L * 0.1 - sw, c.y - L * 0.25, c.z - 0.03); }
-    P.needsUpdate = true; T.mane.geometry.computeVertexNormals(); }
+  // the mane: the sheet and each lock laid through the points down the neck (just off the surface), past the last to hang free; in the
+  // gallop the outer locks lift off the neck and the ends flick with the stride
+  if (T.mane) { const P = T.mane.geometry.attributes.position, D = T.mane.geometry.attributes.aDir, n = HORSE.crest.length, c = _ht, tip = _ht2, d = _ht3;
+    const ph = H.act.time / H.act.getClip().duration % 1, spd = clamp(H.act.timeScale * 4.4 / 12, 0, 1), cp = T.cp, MS = HORSE.maneSide;
+    for (let k = 0; k < n; k++) { const q = cp[k]; horsePt(H, HORSE.crest[k], q.c); q.c.y += 0.012; for (let j = 0; j < 3; j++) horsePt(H, MS[k].off[j].at, q.off[j]); for (let j = 0; j < 2; j++) horsePt(H, MS[k].near[j].at, q.near[j]); }
+    // rows of a strand at crest fraction f on a side: the crest, the points down the neck lifted off it by `up` (more toward the end), and the free end
+    const rows = T.rows || (T.rows = Array.from({ length: 5 }, () => new THREE.Vector3())), rn = T.rn || (T.rn = Array.from({ length: 5 }, () => new THREE.Vector3())), nrm = _ht4;
+    const lay = (f, side, up, lift, len, sw) => { const kf = f * (n - 1), k0 = Math.min(n - 2, kf | 0), a = kf - k0, A0 = cp[k0], A1 = cp[k0 + 1], S0 = MS[k0], S1 = MS[k0 + 1];
+      rows[0].lerpVectors(A0.c, A1.c, a); const pts = side > 0 ? 3 : 2;
+      for (let j = 0; j < pts; j++) { const t = (j + 1) / (pts + 1), P0 = side > 0 ? A0.off[j] : A0.near[j], P1 = side > 0 ? A1.off[j] : A1.near[j];
+        nrm.lerpVectors(side > 0 ? S0.off[j].n : S0.near[j].n, side > 0 ? S1.off[j].n : S1.near[j].n, a).normalize();
+        rows[j + 1].lerpVectors(P0, P1, a).addScaledVector(nrm, up * (0.6 + 0.6 * t) + lift * t * t * 0.12); rows[j + 1].z -= lift * t * 0.04 - sw * t; rn[j + 1].copy(nrm); }
+      rn[0].copy(rn[1]).add(V_UP).normalize(); rn[4].copy(nrm); if (pts === 2) rn[3].copy(nrm);
+      const last = rows[pts], prv = rows[pts - 1]; // (the free end: on past the last point, falling away from the neck)
+      rows[4].copy(last).sub(prv).multiplyScalar(len * 1.6).add(last).addScaledVector(nrm, up * 0.8 + lift * 0.15); if (pts === 2) rows[3].lerpVectors(rows[2], rows[4], 0.5); };
+    { const P2 = T.sheet.geometry.attributes.position, D2 = T.sheet.geometry.attributes.aDir, N2 = T.sheet.geometry.attributes.normal; // (the sheet)
+      for (let k = 0; k < n; k++) { lay(k / (n - 1), 1, 0.008, spd * 0.06, (k === 0 ? 0.3 : 0.7), 0);
+        for (let j = 0; j < 5; j++) { P2.setXYZ(k * 5 + j, rows[j].x, rows[j].y, rows[j].z); N2.setXYZ(k * 5 + j, rn[j].x, rn[j].y, rn[j].z); d.subVectors(rows[Math.min(4, j + 1)], rows[Math.max(0, j - (j === 4 ? 1 : 0))]).normalize(); D2.setXYZ(k * 5 + j, d.x, d.y, d.z); } }
+      P2.needsUpdate = true; D2.needsUpdate = true; N2.needsUpdate = true; }
+    const w = _ht5, q = _ht6, along = _ht7, NN = T.mane.geometry.attributes.normal;
+    T.locks.forEach((L, i) => { const lift = spd * (L.lay ? 0.42 : 0.16) * (0.7 + 0.6 * Math.sin(ph * TAU * 2 - L.f * 4 + L.ph)), sw = 0.02 * spd * Math.sin(ph * TAU + L.ph);
+      lay(L.f, L.side, 0.016 + L.lay * 0.012 + L.off * 0.01, lift, L.len * (L.side > 0 ? 0.75 : 0.5), sw);
+      const kf = L.f * (n - 1), k0 = Math.min(n - 2, kf | 0); along.subVectors(cp[k0 + 1].c, cp[k0].c).normalize();
+      for (let j = 0; j < 5; j++) { const k = i * 10 + j * 2, wt = (1 - 0.35 * j / 4) * L.w * 0.5; q.copy(rows[j]);
+        d.subVectors(rows[Math.min(4, j + 1)], rows[Math.max(0, j - 1)]).normalize(); w.copy(along).addScaledVector(d, L.tw * 0.3).normalize().multiplyScalar(wt);
+        P.setXYZ(k, q.x - w.x, q.y - w.y, q.z - w.z); P.setXYZ(k + 1, q.x + w.x, q.y + w.y, q.z + w.z); D.setXYZ(k, d.x, d.y, d.z); D.setXYZ(k + 1, d.x, d.y, d.z); NN.setXYZ(k, rn[j].x, rn[j].y, rn[j].z); NN.setXYZ(k + 1, rn[j].x, rn[j].y, rn[j].z); } });
+    P.needsUpdate = true; D.needsUpdate = true; NN.needsUpdate = true; }
   // the tail: hair from the dock, its shape set by the pace (hanging at a walk, streaming back and down at a gallop), swinging with the stride,
   // each point following its place with a little lag
-  if (T.tail && T.tail.visible && A.dock) { const dock = horsePt(H, A.dock, _ht), N = 7, seg = 0.135, spd = T.spd = lerp(T.spd ?? 0, H.act.timeScale * 4.4, Math.min(1, dt * 3)), air = clamp(spd / 12, 0, 1);
+  if (T.tail && T.tail.visible && A.dock) { const dock = horsePt(H, A.dock, _ht), N = 8, seg = 0.13, spd = T.spd = lerp(T.spd ?? 0, H.act.timeScale * 4.4, Math.min(1, dt * 3)), air = clamp(spd / 12, 0, 1);
     const ph = H.act.time / H.act.getClip().duration % 1, flick = Math.sin(ph * TAU * 2) * 0.05 * air, sway = Math.sin(ph * TAU + 1.3) * 0.05 * air;
     if (!T.chain) T.chain = Array.from({ length: N }, () => ({ p: new THREE.Vector3(), l: new THREE.Vector3(), init: true }));
     const ch = T.chain, k8 = Math.min(1, dt * 14), at = _ht2, dir = _ht3;
@@ -174,11 +329,14 @@ function horseTackUpdate(H, dt) {
       if (k) { dir.set(sway * u * 2, lerp(-0.45, -0.95, u) + lerp(0.35, 0.18, u) * air + flick * (1 - u), lerp(-0.9, -0.35, u) - 0.55 * air * (1 - u * 0.4)).normalize(); at.addScaledVector(dir, seg); }
       const q = ch[k]; if (q.init || !k) { q.l.copy(at); q.init = false; } else q.l.lerp(at, k8 * (1 - u * 0.45)); // (the lag is the hair's own, in the horse's frame: going fast doesn't stretch it)
       q.p.copy(q.l); H.grp.localToWorld(q.p); }
-    const P = T.tail.geometry.attributes.position, side = _ht4.set(1, 0, 0).transformDirection(H.grp.matrixWorld);
-    for (let k = 0; k < N; k++) { const p = ch[k].p, w = lerp(0.04, 0.085, Math.sin(k / (N - 1) * Math.PI * 0.8)), j = k * 4;
-      P.setXYZ(j, p.x - side.x * w, p.y - side.y * w, p.z - side.z * w); P.setXYZ(j + 1, p.x + side.x * w, p.y + side.y * w, p.z + side.z * w);
-      P.setXYZ(j + 2, p.x, p.y + w * 0.8, p.z); P.setXYZ(j + 3, p.x, p.y - w * 0.8, p.z); }
-    P.needsUpdate = true; T.tail.geometry.computeVertexNormals(); T.tail.geometry.computeBoundingSphere(); }
+    const P = T.tail.geometry.attributes.position, D = T.tail.geometry.attributes.aDir, t = _ht2, u1 = _ht3, u2 = _ht4;
+    for (let k = 0; k < N; k++) { const p = ch[k].p; t.copy(ch[Math.min(N - 1, k + 1)].p).sub(ch[Math.max(0, k - 1)].p).normalize(); // (along the tail here; then two directions across it)
+      u1.crossVectors(t, V_UP); if (u1.lengthSq() < 1e-6) u1.set(1, 0, 0); u1.normalize(); u2.crossVectors(u1, t).normalize();
+      const w = lerp(0.06, 0.14, Math.sin(Math.min(1, k / (N - 1) * 1.15) * Math.PI * 0.85)) * (k === 0 ? 0.6 : 1);
+      for (let rb = 0; rb < 3; rb++) { const a = rb * Math.PI / 3, cx = Math.cos(a) * w, cy = Math.sin(a) * w, j = k * 6 + rb * 2;
+        P.setXYZ(j, p.x - u1.x * cx - u2.x * cy, p.y - u1.y * cx - u2.y * cy, p.z - u1.z * cx - u2.z * cy); P.setXYZ(j + 1, p.x + u1.x * cx + u2.x * cy, p.y + u1.y * cx + u2.y * cy, p.z + u1.z * cx + u2.z * cy);
+        D.setXYZ(j, t.x, t.y, t.z); D.setXYZ(j + 1, t.x, t.y, t.z); } }
+    P.needsUpdate = true; D.needsUpdate = true; T.tail.geometry.computeVertexNormals(); T.tail.geometry.computeBoundingSphere(); }
   // the reins: from the hands (or where they'd be) to the bit, sagging a little
   if (T.reins && T.reins.visible && A.bitL && A.bitR) { const hand = T.opt.reins(_ht4), P = T.reins.geometry.attributes.position, S = 10;
     for (let r = 0; r < 2; r++) { const bit = H.grp.localToWorld(horsePt(H, r ? A.bitR : A.bitL, _ht)), sd = _ht2.set(1, 0, 0).transformDirection(H.grp.matrixWorld).multiplyScalar(r ? -0.06 : 0.06); // (the two straps part at the hands)

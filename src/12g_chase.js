@@ -46,21 +46,21 @@ const CHASE_CLIPS = ["shout0", "shout1", "shout2", "shout3", "shout4", "shout5",
 
 // ---- the posse ----
 const POSSE = [
-  { kind: "gun", name: "posse0", horse: 0x2a1f19, spec: { body: { coat: true }, shirt: 0x8a7a5e, trousers: 0x2e2822, coat: 0x3a2e22, skin: { tint: 0xd4a888, hair: 0x2a1c12, stubble: 0.8 }, hat: { color: 0x2a221a, y: 2.93 } } },
-  { kind: "lasso", name: "posse1", horse: 0x7a3e1e, spec: { body: { vest: true, kerchief: true }, shirt: 0xb0a080, trousers: 0x4a3c30, vest: 0x5a3a24, kerchief: 0x8a2a1a, skin: { tint: 0xc89676, stubble: 0.6 }, hat: { color: 0x9a7a52, y: 2.95 } } },
-  { kind: "gun", name: "posse2", horse: 0x8a8478, spec: { body: { kerchief: true }, shirt: 0x5a4a3a, trousers: 0x2a2622, kerchief: 0x2a3a4a, skin: { tint: 0xe0b89c, hair: 0x6a4a2a, stubble: 0.4 }, hat: { color: 0x4a3a2a, y: 2.93 } } },
-  { kind: "lasso", name: "posse3", horse: 0x5a3a26, spec: { body: { vest: true }, shirt: 0xcab89a, trousers: 0x3a3028, vest: 0x2a1e16, skin: { tint: 0xd8ac8c, hair: 0x2a1a10, stubble: 0.9 }, hat: { color: 0x6a5238, y: 2.94, tilt: 0.05 } } },
-  { kind: "last", name: "posse4", horse: 0x141110, spec: { body: { coat: true, kerchief: true }, shirt: 0x6a5a48, trousers: 0x1e1c1a, coat: 0x161412, kerchief: 0x1a1a1a, skin: { tint: 0xd0a080, hair: 0x101010, stubble: 1.0 }, hat: { color: 0x0e0d0c, y: 2.97 } } }];
+  { kind: "gun", name: "posse0", horse: 0x3c2216, coat: { pointCol: 0x0a0807, hair: 0x16100b }, spec: { body: { coat: true }, shirt: 0x8a7a5e, trousers: 0x2e2822, coat: 0x3a2e22, skin: { tint: 0xd4a888, hair: 0x2a1c12, stubble: 0.8 }, hat: { color: 0x2a221a, y: 2.93 } } },
+  { kind: "lasso", name: "posse1", horse: 0x6c3218, coat: { points: 0.35, pointCol: 0x4a2412, blaze: 1, socks: [0.3, 0, 0.36, 0.22], hair: 0x8a5a34 }, spec: { body: { vest: true, kerchief: true }, shirt: 0xb0a080, trousers: 0x4a3c30, vest: 0x5a3a24, kerchief: 0x8a2a1a, skin: { tint: 0xc89676, stubble: 0.6 }, hat: { color: 0x9a7a52, y: 2.95 } } },
+  { kind: "gun", name: "posse2", horse: 0x8a8680, coat: { points: 0.8, pointCol: 0x45413c, dapple: 1, hair: 0x4a4744 }, spec: { body: { kerchief: true }, shirt: 0x5a4a3a, trousers: 0x2a2622, kerchief: 0x2a3a4a, skin: { tint: 0xe0b89c, hair: 0x6a4a2a, stubble: 0.4 }, hat: { color: 0x4a3a2a, y: 2.93 } } },
+  { kind: "lasso", name: "posse3", horse: 0x4a2c1c, coat: { points: 0.85, pointCol: 0x1c120c, socks: [0, 0, 0, 0.27], hair: 0x1a110b }, spec: { body: { vest: true }, shirt: 0xcab89a, trousers: 0x3a3028, vest: 0x2a1e16, skin: { tint: 0xd8ac8c, hair: 0x2a1a10, stubble: 0.9 }, hat: { color: 0x6a5238, y: 2.94, tilt: 0.05 } } },
+  { kind: "last", name: "posse4", horse: 0x16120f, coat: { points: 0.5, pointCol: 0x080706, hair: 0x0c0a08 }, spec: { body: { coat: true, kerchief: true }, shirt: 0x6a5a48, trousers: 0x1e1c1a, coat: 0x161412, kerchief: 0x1a1a1a, skin: { tint: 0xd0a080, hair: 0x101010, stubble: 1.0 }, hat: { color: 0x0e0d0c, y: 2.97 } } }];
 const SEAT = { y: 1.8, z: -0.25, eye: 2.48, hip: 0.17, eyeUp: 0.82, stirrup: [0.4, -0.6, 0.07] }; // on the horse (its own frame, metres): where the saddle sits along the back; the hips above the back (the
 // back itself is measured every frame from the gallop, 10b), the eye above the back, the stirrups in the saddle's frame
 
-function chaseHorse(color, reins) {
+function chaseHorse(color, reins, coat) {
   const src = LIFE.horse, grp = THREE.SkeletonUtils.clone(src.grp); grp.visible = false; R.scene.add(grp);
-  let mesh; grp.traverse(o => { if (o.isMesh) mesh = o; }); const m0 = mesh.material; if (!m0.customProgramCacheKey || m0.customProgramCacheKey() !== "gulchHorse") m0.customProgramCacheKey = () => "gulchHorse";
-  const m = m0.clone(); m.onBeforeCompile = m0.onBeforeCompile; m.customProgramCacheKey = () => "gulchHorse"; m.color.setHex(color); m.sheen = 0.32; m.sheenColor = new THREE.Color(color).multiplyScalar(1.5); mesh.material = m; mesh.frustumCulled = false;
+  let mesh; grp.traverse(o => { if (o.isMesh) mesh = o; }); const m = horseCoatMat(color, coat); m.sheen = 0.36; mesh.material = m; mesh.frustumCulled = false; // (its own coat: 10b)
+  coat = coat || {};
   for (const c of [...grp.children]) if (c.userData.tack) grp.remove(c);
   const mixer = new THREE.AnimationMixer(grp.children[0]), act = mixer.clipAction(src.act.getClip()); act.play(); act.time = Math.random() * 1.5;
-  const H = { grp, mesh, mixer, act, phase: Math.random(), pitch: 0, yaw: 0, roll: 0 }; horseTack(H, { reins: reins || (out => out.set(0, -99, 0)) }); horseTackShow(H, false); return H;
+  const H = { grp, mesh, mixer, act, phase: Math.random(), pitch: 0, yaw: 0, roll: 0 }; horseTack(H, { reins: reins || (out => out.set(0, -99, 0)), hair: coat.hair ?? 0x1a120c }); horseTackShow(H, false); return H;
 }
 // the saddle's frame on a horse this frame (its back measured from the gallop): a point given in it, in the world
 function saddlePt(H, x, y, z, out) { const B = H.tack ? H.tack.back : { y: 1.65, pitch: 0 }, p = -B.pitch * 0.85, c = Math.cos(p), sn = Math.sin(p);
@@ -79,9 +79,9 @@ function seatRider(a, H, opt) {
 }
 function buildChase() {
   if (CHASE.built || !LIFE.horse) return; CHASE.built = true;
-  CHASE.horse = chaseHorse(0x3b2416, out => MAN.root.visible && MAN.ride ? MAN.ch.bones.LeftHand.getWorldPosition(out) : saddlePt(CHASE.horse, 0.0, 0.36, 0.5, out)); // (your hands, just over the horn: you never see them, but the reins run from there)
+  CHASE.horse = chaseHorse(0x3a2014, out => MAN.root.visible && MAN.ride ? MAN.ch.bones.LeftHand.getWorldPosition(out) : saddlePt(CHASE.horse, 0.0, 0.36, 0.5, out), { pointCol: 0x0a0807, blaze: 1, socks: [0.26, 0, 0, 0], hair: 0x140e0a }); // (a dark bay with a blaze; your hands, just over the horn: you never see them, but the reins run from there)
   CHASE.riders = POSSE.map((P, i) => { const a = new Actor(Object.assign({ boots: 0x2e2016, gloves: 0x6a5038, lod: true }, P.spec), P.name); a.root.visible = false; a.ride = true;
-    const H = chaseHorse(P.horse, out => a.ch.bones.LeftHand.getWorldPosition(out)), gun = revolver(false); gun.visible = false; R.scene.add(gun); const R0 = { i, P, kind: P.kind, a, H, gun, alive: true, state: "idle", d: 30, l: 0, dl: 0, t: 0 };
+    const H = chaseHorse(P.horse, out => a.ch.bones.LeftHand.getWorldPosition(out), P.coat), gun = revolver(false); gun.visible = false; R.scene.add(gun); const R0 = { i, P, kind: P.kind, a, H, gun, alive: true, state: "idle", d: 30, l: 0, dl: 0, t: 0 };
     a.pre = (actor, dt) => riderPose(R0, dt); return R0; });
   // the lasso: a loop of rope and the length of it back to the hand
   const ropeMat = new THREE.MeshStandardMaterial({ color: 0xcaa874, roughness: 0.85, emissive: 0x2a1c0c });
@@ -92,22 +92,29 @@ function buildChase() {
 }
 
 // ---- the trail and what's on it ----
-function buildTrailRibbon() { // a worn dirt track along the trail (hidden beyond the canyon's edge at the end, like the ground)
-  const T = TRAIL; if (!T.x) buildTrail(); const step = 4, n = Math.floor(T.len / step), cols = [], pos = [], col = [], idx = [];
-  for (let c = -6.5; c <= 6.51; c += 0.5) cols.push(c); // (a worn track, darker down the three lanes the horses keep to: RUN.lanes, 12h)
-  const wear = c => clamp(0.3 * smoothstep(6.3, 4.2, Math.abs(c)) + 0.75 * Math.max(...RUN.lanes.map(l => Math.exp(-Math.pow((c - l) / 0.62, 2)))), 0, 1);
-  for (let i = 0; i <= n; i++) { const p = trailAt(i * step, 0, _tA);
-    cols.forEach((c, j) => { const x = p.x + p.nx * c, z = p.z + p.nz * c; pos.push(x, groundVis(x, z) + 0.05, z); const a = wear(c); col.push(a, a, a); });
-    if (i < n) for (let j = 0; j < cols.length - 1; j++) { const a = i * cols.length + j, b = a + cols.length; idx.push(a, b, a + 1, a + 1, b, b + 1); } }
-  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute("color", new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals();
-  const m = new THREE.MeshStandardMaterial({ color: 0x8a6a4c, roughness: 1, vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
-  m.onBeforeCompile = sh => { sh.uniforms.canyonOn = WORLD.canyonU.on; sh.uniforms.canyonInv = WORLD.canyonU.inv; sh.uniforms.canyonSize = WORLD.canyonU.size;
-    sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vTW; varying float vTA;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvTA = color.r;").replace("#include <project_vertex>", "#include <project_vertex>\nvTW = (modelMatrix * vec4(transformed, 1.0)).xyz;");
-    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vTW; varying float vTA; uniform float canyonOn; uniform mat4 canyonInv; uniform vec2 canyonSize;" + CANYON_GLSL)
+function buildTrailRibbon() { // three horse trails down the three lanes the horses keep to (RUN.lanes, 12h): each a strip of packed, hoof-cut dirt
+  // (trailTex) sunk a little down the middle with low banks either side, its edges ragged; dry grass between (12h). In chunks along the
+  // trail, shown by distance like the scenery, and hidden beyond the canyon's edge at the end, like the ground
+  const T = TRAIL; if (!T.x) buildTrail(); const step = 2, chunk = 160, cols = [-0.75, -0.62, -0.5, -0.38, -0.25, -0.12, 0, 0.12, 0.25, 0.38, 0.5, 0.62, 0.75], grp = new THREE.Group();
+  const prof = c => 0.045 - 0.022 * Math.exp(-Math.pow(c / 0.3, 2)) + 0.016 * Math.exp(-Math.pow((Math.abs(c) - 0.52) / 0.1, 2)); // (above the ground everywhere: the middle 2 cm lower than the banks)
+  const set = trailTex(), m = new THREE.MeshStandardMaterial({ map: set.map, normalMap: set.normalMap, normalScale: new THREE.Vector2(1.3, 1.3), roughnessMap: set.orm, roughness: 1, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  m.onBeforeCompile = sh => { sh.uniforms.canyonOn = WORLD.canyonU.on; sh.uniforms.canyonInv = WORLD.canyonU.inv; sh.uniforms.canyonSize = WORLD.canyonU.size; sh.uniforms.macroMap = { value: TEX.macro };
+    sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vTW;").replace("#include <project_vertex>", "#include <project_vertex>\nvTW = (modelMatrix * vec4(transformed, 1.0)).xyz;");
+    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vTW; uniform sampler2D macroMap; uniform float canyonOn; uniform mat4 canyonInv; uniform vec2 canyonSize;" + CANYON_GLSL)
       .replace("#include <clipping_planes_fragment>", "#include <clipping_planes_fragment>\nif (canyonOn > 0.5 && inCanyon(vTW, canyonInv, canyonSize)) discard;")
-      .replace("#include <color_fragment>", "float ruts = 0.82 + 0.18 * sin(vTW.x * 2.7 + vTW.z * 1.9) * sin(vTW.z * 3.1 - vTW.x * 0.7);")
-      .replace("#include <alphamap_fragment>", "#include <alphamap_fragment>\ndiffuseColor.a *= vTA * 0.55; diffuseColor.rgb *= ruts;"); };
-  m.customProgramCacheKey = () => "gulchTrail"; const mesh = new THREE.Mesh(g, m); mesh.receiveShadow = true; mesh.visible = false; mesh.renderOrder = 1; R.scene.add(mesh); CHASE.ribbon = mesh;
+      .replace("#include <map_fragment>", `#include <map_fragment>
+        vec4 mac = texture2D(macroMap, vTW.xz * 0.011), mac2 = texture2D(macroMap, vTW.xz * 0.0019 + 0.37); diffuseColor.rgb *= 0.86 + 0.3 * (mac.r * 0.7 + mac2.g * 0.7 - 0.7); // (the ground's own variation, so it sits in it)
+        float ec = abs(vUv.x * 2.0 - 1.0) + (texture2D(macroMap, vTW.xz * 0.33).g - 0.5) * 0.4 + (texture2D(macroMap, vTW.xz * 1.7 + 0.5).r - 0.5) * 0.14;
+        diffuseColor.a = smoothstep(0.98, 0.7, ec);`); };
+  m.customProgramCacheKey = () => "gulchTrail2";
+  for (let s0 = 0; s0 < T.len; s0 += chunk) { const pos = [], uv = [], idx = [], n = Math.ceil(Math.min(chunk, T.len - s0) / step);
+    RUN.lanes.forEach((L, li) => { const base = pos.length / 3;
+      for (let i = 0; i <= n; i++) { const s = s0 + i * step, p = trailAt(s, 0, _tA);
+        cols.forEach(c => { const x = p.x + p.nx * (L + c), z = p.z + p.nz * (L + c); pos.push(x, groundVis(x, z) + prof(c), z); uv.push((c + 0.75) / 1.5, s / 3 + li * 0.37); });
+        if (i < n) for (let j = 0; j < cols.length - 1; j++) { const a = base + i * cols.length + j, b = a + cols.length; idx.push(a, a + 1, b, a + 1, b + 1, b); } } }); // (wound to face up)
+    const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
+    const mesh = new THREE.Mesh(g, m); mesh.receiveShadow = true; mesh.renderOrder = 1; mesh.frustumCulled = false; mesh.userData.s0 = s0; grp.add(mesh); }
+  grp.visible = false; R.scene.add(grp); CHASE.ribbon = grp;
 }
 // the things in the way: rocks, cactus, wagons and broken fences, kept in a pool and set out row by row ahead of you
 function buildObstacles() { // rocks and cactus at the edges of the trail, and what the horse swerves round in the fight (the run's own things to hit are in 12h)

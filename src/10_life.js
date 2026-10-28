@@ -14,26 +14,17 @@ function weldMorph(g) {
 }
 function prepHorse(gltf) {
   let mesh; gltf.scene.traverse(o => { if (o.isMesh) mesh = o; });
-  let g = subdivideMorph(weldMorph(mesh.geometry), 0.75); // (a smoother body: one level of Loop subdivision, morph targets and all; 10b)
+  const g0 = weldMorph(mesh.geometry); horseRegions(g0); // (what part of the horse each vertex is, from the model's paint; 10b)
+  let g = subdivideMorph(g0, 0.75); // (a smoother body: one level of Loop subdivision, morph targets and all; 10b)
   const bb = baseBox(g), h = bb.max.y - bb.min.y, s = 2.2 / h; // ~2.2 m to the top of the head
   { // the horse's own frame (metres, on the ground): fold the paddle of a tail into the dock, normals for every pose, and where the tack attaches
     const M = new THREE.Matrix4().makeScale(s, s, s).premultiply(new THREE.Matrix4().makeTranslation(0, -bb.min.y * s, 0)), P = g.attributes.position, v = new THREE.Vector3();
     const isTail = q => q.z < -1.27 && q.y > 1.15; let dockI = 0, dBest = 1e9;
     for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(M); if (isTail(v)) continue; const d = v.distanceToSquared(_v1.set(0, 1.62, -1.18)); if (d < dBest) { dBest = d; dockI = i; } }
-    foldTail(g, M, isTail, dockI); g.computeVertexNormals(); morphNormals(g); HORSE.geo = g; HORSE.M = M; HORSE.s = s; prepHorseRig(g, M); }
+    foldTail(g, M, isTail, dockI); g.computeVertexNormals(); morphNormals(g); HORSE.geo = g; HORSE.M = M; HORSE.s = s; horseAux(g, M); prepHorseRig(g, M); }
   mesh.geometry = g; mesh.updateMorphTargets();
-  // a bay: warm brown coat with a soft sheen, darker legs, mane and tail (from the bind pose, so it rides with the gallop)
-  const m = new THREE.MeshPhysicalMaterial({ color: 0x6a3f24, roughness: 0.55, sheen: 0.6, sheenRoughness: 0.45, sheenColor: new THREE.Color(0x8a5a3a) });
-  const y0 = bb.min.y.toFixed(1), y1 = bb.max.y.toFixed(1), z0 = bb.min.z.toFixed(1), z1 = bb.max.z.toFixed(1);
-  m.onBeforeCompile = sh => {
-    sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vBind;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvBind = position;");
-    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vBind;").replace("#include <map_fragment>", `#include <map_fragment>
-      float hy = (vBind.y - ${y0}) / (${y1} - ${y0}), hz = (vBind.z - ${z0}) / (${z1} - ${z0});
-      float legs = 1.0 - smoothstep(0.18, 0.34, hy), mane = smoothstep(0.78, 0.9, hy) * smoothstep(0.55, 0.75, hz), tail = smoothstep(0.25, 0.08, hz) * smoothstep(0.35, 0.5, hy);
-      float dk = max(legs * 0.85, max(mane, tail));
-      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.045, 0.032, 0.025), dk);
-      diffuseColor.rgb *= 0.92 + 0.08 * sin(vBind.x * 0.3) * sin(vBind.z * 0.21);`);
-  };
+  // a bay: a warm brown coat with black points, a soft sheen and hair you can see up close (10b)
+  const m = horseCoatMat(0x6a3f24, { points: 1, pointCol: 0x0d0a08 });
   mesh.material = m; mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false;
   const grp = new THREE.Group(); grp.add(gltf.scene); gltf.scene.scale.setScalar(s); gltf.scene.position.y = -bb.min.y * s; grp.visible = false;
   R.scene.add(grp);

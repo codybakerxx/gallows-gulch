@@ -87,12 +87,14 @@ counts. Then:
   Ring it then and you ride.
 - **Lose, having rung it.** Nothing happens. A new shootout starts the bell over.
 
-**First half, the run.** Three lanes down the trail, and nothing on the screen to press.
+**First half, the run.** Three horse trails side by side, worn into the dirt and cut up with old hoofprints, with dry
+grass between them. Nothing on the screen to press.
 - **Swipe left or right** anywhere to change lane, one lane per swipe. **Swipe up** to jump. On a keyboard: **← / →**
   or **A / D** for a lane, **↑**, **W** or **Space** to jump.
 - Boulders, stands of saguaro, stacked freight and wagons (a wagon fills its lane for a while) have to be gone round.
   Logs, hay bales, troughs and fences can be jumped; sometimes a fence runs right across the trail. Every row has a
-  way through.
+  way through, and every course can be ridden clean: `test/scenarios/mk_s134.py` searches 300 of them frame by frame
+  to prove it.
 - It starts at a gallop and gets faster, and the rows come quicker and harder to read. The edges of the view blur
   with the speed.
 - Ride into something and the horse shies off it into an open lane; trip over something low and you stumble; clip
@@ -194,7 +196,8 @@ src/                     the game: one HTML shell and 27 JavaScript modules, loa
   09_anim.js             walking, mocap blending, look-at, IK, the hanging body
   09b_ragdoll.js         ragdolls
   10_life.js             horse, vultures, tumbleweed, dust, townsfolk
-  10b_horse.js           horses up close: a smoother body, the back measured as it gallops, saddle, mane, tail, reins
+  10b_horse.js           horses up close: a smoother body, the back measured as it gallops, the coat (hair, points,
+                         socks, blaze, dapples), saddle, a mane of hair that lies on the neck, tail, reins
   11_words.js            the word bank with clues, and the host's lines
   11b_defs.js            a plain-English meaning for every word
   12a_director.js        game state, camera, cutscenes

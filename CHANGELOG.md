@@ -2,6 +2,29 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v32
+- **The course is checked.** Every run of the getaway can be ridden without a hit: 300 courses from the game's own
+  generator were searched frame by frame for a clean way through, also with a horse 12 cm wider and 40 cm longer,
+  and with lane changes and jumps only every 0.1 or 0.15 s. All 300 passed every time.
+  - Two things were tightened along the way. A zig-zag pattern (a row, then a second row soon after) could, at top
+    speed and with the slowest inputs, leave too little time to get from one gap to the next; the second row now
+    comes at least 0.7 s later, however fast you're going. And the pools of obstacles kept for the run were made big
+    enough for the busiest stretch of any course.
+- **Three horse trails.** The run's three lanes are now three trails worn into the desert: packed dirt sunk a little
+  down the middle, low banks of loose dirt and pebbles at the sides, ragged edges, and hoofprints old and new, some
+  skidded. Dry grass grows between them. (The worn track that was meant to show the lanes in v31 never drew: its
+  triangles faced down.)
+- **Horses with hair and a real coat.**
+  - The coat has fine hair lying back along the body and down the legs, in its colour and its surface, uneven colour
+    with a darker back, dark points (legs, muzzle, ear tips), hooves, wet eyes, and the hollows between the muscles
+    shaded.
+  - Each horse is different: you ride a dark bay with a blaze and one sock. The posse ride a bay, a chestnut with a
+    blaze, white socks and a flaxen mane, a dapple grey, a brown with one sock and a black.
+  - The mane is hair: a layer lying down the far side of the neck and locks over it that lift and flick in the
+    gallop. From the saddle you see it fall over the neck.
+  - The tail is fuller (three layers of hair round it), and hair has a soft sheen along the strands instead of
+    reflecting the sky.
+
 ## v31
 - **The getaway's run is now a three-lane runner.**
   - Swipe left or right to change lane and swipe up to jump; on a keyboard, ← / → or A / D, and ↑, W or Space. There

@@ -13,9 +13,9 @@ const RUN = {
 };
 // what can be in a lane: tall things you go round, low things you jump (low: their height), long ones that fill a lane for a while
 const RUN_KINDS = {
-  boulder: { tall: true, half: 1.0, depth: 0.85, n: 10 }, cactus: { tall: true, half: 0.95, depth: 0.55, n: 8 }, crates: { tall: true, half: 1.0, depth: 0.6, n: 6 },
-  wagon: { tall: true, half: 0.85, depth: 2.1, n: 4 }, log: { low: 0.66, half: 1.15, depth: 0.32, n: 10 }, bales: { low: 0.98, half: 1.1, depth: 0.42, n: 6 },
-  fence: { low: 1.08, half: 1.15, depth: 0.14, n: 12 }, trough: { low: 0.76, half: 1.0, depth: 0.34, n: 4 } };
+  boulder: { tall: true, half: 1.0, depth: 0.85, n: 17 }, cactus: { tall: true, half: 0.95, depth: 0.55, n: 15 }, crates: { tall: true, half: 1.0, depth: 0.6, n: 11 },
+  wagon: { tall: true, half: 0.85, depth: 2.1, n: 7 }, log: { low: 0.66, half: 1.15, depth: 0.32, n: 15 }, bales: { low: 0.98, half: 1.1, depth: 0.42, n: 9 },
+  fence: { low: 1.08, half: 1.15, depth: 0.14, n: 15 }, trough: { low: 0.76, half: 1.0, depth: 0.34, n: 9 } }; // (n: how many of each are kept: the most a course ever has out at once, 30 m behind to 170 m ahead, over 300 courses, plus two: mk_s134)
 
 // ---- building them (each merged into a mesh or two per material, so a row costs a handful of draw calls) ----
 function mergeLocal(g) { // a group of meshes → the same, merged by material, in the group's own frame
@@ -72,13 +72,13 @@ function buildRunScenery() {
   const grassMat = swayMat(new THREE.MeshStandardMaterial({ map: TEX.grass, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.95, color: 0xd8c79a }), 0.32);
   const cross = new THREE.PlaneGeometry(1, 1); cross.translate(0, 0.5, 0); const c2 = cross.clone(); c2.rotateY(Math.PI / 2); const bush = mergeGeos([{ geo: cross.toNonIndexed() }, { geo: c2.toNonIndexed() }]); bush.clearGroups();
   const cMat = runCactusMat(), rMat = runRockMat();
-  const kinds = [{ geo: bush, mat: sageMat, n: 55, lat: [5.6, 70], s: [0.4, 1.05], shadow: false }, { geo: bush, mat: grassMat, n: 170, lat: [5.0, 45], s: [0.35, 0.8], shadow: false },
+  const kinds = [{ geo: bush, mat: sageMat, n: 55, lat: [5.6, 70], s: [0.4, 1.05], shadow: false }, { geo: bush, mat: grassMat, n: 170, lat: [5.0, 45], s: [0.35, 0.8], shadow: false, more: [{ n: 90, lat: [0.85, 1.45], s: [0.15, 0.32] }, { n: 70, lat: [3.15, 5.0], s: [0.18, 0.42] }] }, // (and low tufts between the three trails, and along their outer edges)
     { geo: boulderGeo(41), mat: rMat, n: 26, lat: [6, 90], s: [0.2, 1.3], shadow: true, sink: 0.12 }, { geo: boulderGeo(43), mat: rMat, n: 18, lat: [6.5, 90], s: [0.3, 2.2], shadow: true, sink: 0.15 },
     { geo: cactusGeo(53), mat: cMat, n: 5, lat: [7, 80], s: [0.7, 1.15], shadow: true }, { geo: cactusGeo(59), mat: cMat, n: 4, lat: [7, 80], s: [0.7, 1.1], shadow: true }];
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
   for (let s0 = 40; s0 < T.len; s0 += chunk) for (const K of kinds) {
-    const pts = []; for (let i = 0; i < K.n; i++) { const s = s0 + r() * chunk, side = r() < 0.5 ? -1 : 1, lat = side * lerp(K.lat[0], K.lat[1], Math.pow(r(), 1.6)), p = trailAt(s, lat, {});
-      if (inPlayArea(p.x, p.z) && s < 140) continue; pts.push([p.x, p.z, lerp(K.s[0], K.s[1], Math.pow(r(), 2)), r() * TAU]); }
+    const pts = []; for (const B of [K, ...(K.more || [])]) for (let i = 0; i < B.n; i++) { const s = s0 + r() * chunk, side = r() < 0.5 ? -1 : 1, lat = side * lerp(B.lat[0], B.lat[1], Math.pow(r(), 1.6)), p = trailAt(s, lat, {});
+      if (inPlayArea(p.x, p.z) && s < 140) continue; pts.push([p.x, p.z, lerp(B.s[0], B.s[1], Math.pow(r(), 2)), r() * TAU]); }
     if (!pts.length) continue; const im = new THREE.InstancedMesh(K.geo, K.mat, pts.length);
     pts.forEach(([x, z, sc, a], i) => { q.setFromEuler(e.set(0, a, 0)); m4.compose(V3(x, groundVis(x, z) - (K.sink || 0.05) * sc, z), q, V3(sc * (K.geo === bush ? 1.3 : 1), sc, sc * (K.geo === bush ? 1.3 : 1))); im.setMatrixAt(i, m4); });
     im.castShadow = K.shadow; im.receiveShadow = true; im.frustumCulled = false; im.userData.s0 = s0; im.visible = false; R.scene.add(im); out.push(im); } // (three culls an instanced mesh by its one geometry: these go by distance along the trail instead)
@@ -95,10 +95,36 @@ function stoneTex() {
     const dk = 1 - 0.55 * crack - 0.4 * pit; o.r *= dk; o.g *= dk; o.b *= dk; o.ro = 0.92 - 0.1 * lich; o.ao = 1 - 0.6 * crack; }, 2.4);
   return TEX.stone;
 }
+// a horse trail, 1.5 m across (u) by 3 m along (v, repeating): dirt packed hard down the middle, cut up with hoofprints old and new (a
+// dished print with the shoe's rim pressed in round the toe, the heels open, and the dirt it threw back behind it), scuffed along its
+// length, with loose dirt and pebbles kicked up into low banks at the sides
+function trailTex() {
+  if (TEX.trail) return TEX.trail; const W = 256, Hh = 512, px = 1.5 / W, r = rng(161), dent = new Float32Array(W * Hh), lip = new Float32Array(W * Hh);
+  const gauss = () => (r() + r() + r() - 1.5) / 1.5;
+  for (let k = 0; k < 72; k++) { const cx = clamp(0.5 + gauss() * 0.3, 0.22, 0.78) * W, cy = r() * Hh, a = (r() - 0.5) * 0.7, sz = 0.85 + r() * 0.32, dep = 0.22 + 0.78 * Math.pow(r(), 1.8), slide = r() < 0.2 ? 1.3 + r() * 0.5 : 1; // (most of them old and trodden soft; now and then one skidded)
+    const A = 0.058 * sz / px, B = 0.066 * sz * slide / px, R = Math.ceil(B * 1.7), ca = Math.cos(a), sa = Math.sin(a), sharp = 0.05 + 0.2 * (1 - dep);
+    for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) { const x = Math.round(cx + dx); if (x < 0 || x >= W) continue; const y = ((Math.round(cy + dy) % Hh) + Hh) % Hh, i = y * W + x;
+      const lx = dx * ca - dy * sa, ly = dx * sa + dy * ca, d = Math.hypot(lx / A, ly / B), toe = smoothstep(-0.6, -0.15, ly / B); // (ly: along the trail, the toe ahead)
+      const dish = smoothstep(1.0, 0.82 - sharp, d) * 0.55, rim = smoothstep(0.13 + sharp, 0.0, Math.abs(d - 0.83)) * toe * 0.55;
+      const kick = smoothstep(0.98, 1.1, d) * smoothstep(1.7, 1.15, d) * smoothstep(0.1, -0.7, ly / B); // (thrown back, behind the print)
+      dent[i] = Math.max(dent[i], (dish + rim) * dep); lip[i] = Math.max(lip[i], kick * dep * 0.8); } }
+  TEX.trail = buildSet(W, Hh, (u, v, o) => {
+    const i = Math.min(Hh - 1, (v * Hh) | 0) * W + Math.min(W - 1, (u * W) | 0), c = (u - 0.5) * 1.5, ac = Math.abs(c);
+    const base = fbm(u * 3, v * 6, 3, 6, 4, 163), det = fbm(u * 24, v * 48, 24, 48, 2, 165), scuff = fbm(u * 40, v * 3, 40, 3, 3, 167); // (scuffs: long along the trail)
+    const pack = Math.exp(-Math.pow(c / 0.36, 2)), bank = smoothstep(0.33, 0.52, ac) * smoothstep(0.78, 0.58, ac), dn = dent[i], lp = lip[i];
+    const w = worley(u * 20, v * 40, 20, 40, 169), pk = (w.id & 255) / 255, peb = pk > 0.8 - 0.3 * bank ? smoothstep(0.32, 0.12, w.f1) * (0.35 + 0.65 * bank) : 0;
+    o.h = 0.22 * base + det * (0.06 + 0.16 * bank) + 0.08 * scuff * pack - 0.95 * dn + 0.42 * lp + 0.35 * bank * (0.5 + 0.5 * det) + 0.55 * peb;
+    const t = 0.5 + 0.5 * base, lt = 1 + 0.1 * lp + 0.12 * bank + 0.05 * scuff * pack - 0.26 * dn;
+    o.r = lerp(0.43, 0.55, t) * lt; o.g = lerp(0.305, 0.39, t) * lt; o.b = lerp(0.21, 0.27, t) * lt; // (darker and redder than the sand around: packed, and the prints keep a little damp)
+    const loose = bank * 0.6 + lp * 0.4; o.r = lerp(o.r, 0.62 + 0.06 * det, loose * 0.55); o.g = lerp(o.g, 0.47 + 0.05 * det, loose * 0.55); o.b = lerp(o.b, 0.34 + 0.04 * det, loose * 0.55);
+    if (peb > 0.05) { const pc = 0.4 + 0.22 * ((w.id >>> 8) & 255) / 255; o.r = lerp(o.r, pc * 1.04, peb); o.g = lerp(o.g, pc * 0.95, peb); o.b = lerp(o.b, pc * 0.85, peb); }
+    o.ro = 0.96 - 0.14 * pack + 0.04 * bank - 0.06 * peb; o.ao = 1 - 0.55 * dn; }, 3.2);
+  return TEX.trail;
+}
 function runRockMat() { return RUN.rockMat || (RUN.rockMat = stdMat(stoneTex(), 0xffffff, [1.6, 1.6], { normalScale: new THREE.Vector2(1.2, 1.2) })); }
 function runSceneryShow(on) { CHASE.sceneryOn = on; for (const m of CHASE.scenery || []) m.visible = on && runSceneryNear(m); }
 const runSceneryNear = m => { const C = CHASE, d = m.userData.s0 - C.s, back = C.state === "ride" || C.state === "mount" ? 60 : 420; return d > -back - 160 && d < 520; }; // (a chunk is 160 m long; facing back in the fight, the trail behind shows)
-function runSceneryUpdate() { if (!CHASE.sceneryOn) return; for (const m of CHASE.scenery || []) m.visible = runSceneryNear(m); }
+function runSceneryUpdate() { if (!CHASE.sceneryOn) return; for (const m of CHASE.scenery || []) m.visible = runSceneryNear(m); for (const m of CHASE.ribbon ? CHASE.ribbon.children : []) m.visible = runSceneryNear(m); } // (the trails too: 12g)
 
 // ---- the course: rows across the three lanes, every one with a way through ----
 // a row is three cells, one per lane: null (open), "tall", "low" or "long". The patterns come in harder as the course goes on
@@ -128,7 +154,7 @@ function runRow(s, f) {
   const C = CHASE, r = C.rng, first = C.rowsLaid || 0; let p = runPick(f);
   if (first === 0) p = RUN_PATTERNS[0]; else if (first === 2) p = RUN_PATTERNS[2]; // (the first row is easy; the third teaches the jump)
   const got = p.cells(r), cells = Array.isArray(got) ? got : got.c; let len = runCells(cells, s, p.full);
-  if (got.then) { const s2 = s + 7 + r() * 2; runCells(got.then, s2, false); len += s2 - s; }
+  if (got.then) { const s2 = s + Math.max(7, lerp(RUN.speed0, RUN.speed1, f) * 0.7) + r() * 2; runCells(got.then, s2, false); len += s2 - s; } // (the zag comes 0.7 s after the zig at least, however fast: time to get across, and a bit)
   C.rowsLaid = first + 1; C.rows.push({ s, cells, len, jump: !!p.jump });
   // dressing at the edges of the trail: nothing you can hit, just what's out there
   if (r() < 0.55) { const side = r() < 0.5 ? -1 : 1, k = r() < 0.6 ? "rock" : "cactus"; placeObstacle(k, s + (r() - 0.5) * 6, side * (4.6 + r() * 1.6), r() * 6, 0.7 + r() * 0.5); }
