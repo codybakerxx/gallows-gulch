@@ -251,6 +251,33 @@ const Sound = (() => {
         am.type = "square"; am.frequency.value = 58; ag.gain.value = 0.35; am.connect(ag); ag.connect(v.gain); v.gain.setValueAtTime(0, t); v.gain.linearRampToValueAtTime(0.45, t + 0.03); v.gain.linearRampToValueAtTime(0, t + 0.32);
         const b1 = ctx.createBiquadFilter(); b1.type = "bandpass"; b1.frequency.value = 1350; b1.Q.value = 3; const b2 = ctx.createBiquadFilter(); b2.type = "bandpass"; b2.frequency.value = 2600; b2.Q.value = 4;
         o.connect(b1); o.connect(b2); b1.connect(v); b2.connect(v); v.connect(d); o.start(t); am.start(t); o.stop(t + 0.35); am.stop(t + 0.35); } },
+    // a brass bell: the strike, then the hum, prime, tierce, quint and nominal ringing on, each at its own rate
+    bell(pos, k = 1) { if (!ctx || k <= 0.01) return; const t = now(), d = at(pos, 0.55, 7), f = 392;
+      noise(t, 0.045, 0.6 * k, "bandpass", 3400, 1.3, d); noise(t, 0.02, 0.4 * k, "highpass", 5200, 0.8, d);
+      modes(t, [[f * 0.5, 0.2 * k, 5.5], [f, 0.32 * k, 3.6], [f * 1.183, 0.17 * k, 2.6], [f * 1.506, 0.11 * k, 2.1], [f * 2.0, 0.24 * k, 2.4], [f * 2.514, 0.08 * k, 1.5], [f * 3.011, 0.06 * k, 1.2], [f * 4.166, 0.035 * k, 0.8]], d); },
+    // one hoof of a galloping horse: the rider's own (pos null: close, dry, felt as much as heard) or a pursuer's out on the plain
+    gallop(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, pos ? 0.18 : 0.05, 5);
+      noise(t, 0.09, 0.42 * k, "lowpass", 420, 0.9, d); drum(t, 120, 48, 0.12, 0.38 * k, d); noise(t + 0.004, 0.03, 0.1 * k, "bandpass", 1500, 1.2, d); },
+    // a lasso going round: a swish that rises and falls with each turn of the loop
+    swish(pos, k = 1, dur = 0.34) { if (!ctx) return; const t = now(), d = at(pos, 0.12, 4), s = ctx.createBufferSource(); s.buffer = NOISE;
+      const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 2.2; f.frequency.setValueAtTime(700, t); f.frequency.exponentialRampToValueAtTime(2300, t + dur * 0.55); f.frequency.exponentialRampToValueAtTime(900, t + dur);
+      const v = ctx.createGain(); v.gain.setValueAtTime(0.0001, t); v.gain.linearRampToValueAtTime(0.32 * k, t + dur * 0.5); v.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      s.connect(f); f.connect(v); v.connect(d); s.start(t, Math.random() * 1.5); s.stop(t + dur + 0.05); },
+    // wind rushing past at a gallop (a loop, its level set every frame; 0 stops it)
+    rush(k) { if (!ctx) return; if (!api._rush) { const s = ctx.createBufferSource(); s.buffer = NOISE; s.loop = true; const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 520; f.Q.value = 0.5;
+        const g = ctx.createGain(); g.gain.value = 0; s.connect(f); f.connect(g); g.connect(sfx); s.start(); api._rush = { s, f, g }; }
+      const R0 = api._rush; R0.g.gain.setTargetAtTime(Math.max(0, k) * 0.16, now(), 0.15); R0.f.frequency.setTargetAtTime(380 + k * 380, now(), 0.3); },
+    // a recorded sound that moves (a man falling away from you): returns a handle to move it each frame and to stop it. Through the same
+    // output as everything else, so mute and the volume slider apply
+    track(nm, gain = 1, ref = 4, wet = 0.3) { const h = { p: null, src: null, g: null, done: false, last: null,
+        set(pos) { h.last = pos.clone ? pos.clone() : pos; const p = h.p; if (!p) return; if (p.positionX) { p.positionX.value = pos.x; p.positionY.value = pos.y; p.positionZ.value = pos.z; } else p.setPosition(pos.x, pos.y, pos.z); },
+        level(k) { if (h.g && ctx) h.g.gain.setTargetAtTime(gain * k, now(), 0.12); }, // (a scream that fades as he drops away)
+        stop(f = 0.3) { h.done = true; if (h.g && ctx) h.g.gain.setTargetAtTime(0.0001, now(), f / 3); if (h.src) { try { h.src.stop(now() + f + 0.1); } catch (e) {} } } };
+      if (!ctx) return h;
+      clipBuffer(nm).then(b => { if (!b || !ctx || h.done) return; const s = ctx.createBufferSource(); s.buffer = b; const g = ctx.createGain(); g.gain.value = gain;
+        const p = ctx.createPanner(); p.panningModel = HRTF ? "HRTF" : "equalpower"; p.distanceModel = "inverse"; p.refDistance = ref; p.rolloffFactor = 1.15; p.maxDistance = 2000;
+        s.connect(g); g.connect(p); p.connect(sfx); const w = ctx.createGain(); w.gain.value = wet; g.connect(w); w.connect(verbFar); s.start(); h.src = s; h.g = g; h.p = p; if (h.last) h.set(h.last); });
+      return h; },
     hoof(pos) { if (!ctx) return; const t = now(), d = at(pos, 0.25, 4); for (let k = 0; k < 2; k++) { const tt = t + k * 0.11; noise(tt, 0.07, 0.4, "lowpass", 520, 1, d); modes(tt, [[255, 0.12, 0.08], [690, 0.06, 0.05]], d); } },
     horseSnort(pos) { if (!ctx) return; const t = now(), d = at(pos, 0.3, 4), s = ctx.createBufferSource(); s.buffer = NOISE; const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 850; f.Q.value = 0.9;
       const v = ctx.createGain(), fl = ctx.createOscillator(), fg = ctx.createGain(); fl.frequency.value = 32; fg.gain.value = 0.25; fl.connect(fg); fg.connect(v.gain);
@@ -285,7 +312,7 @@ const Sound = (() => {
     pauseAll() { if (silentEl) silentEl.pause(); suspend(); },
     wake() { resume(); if (silentEl && !muted && silentEl.paused) silentEl.play().catch(() => {}); },
     setVolume(v) { volume = v; if (ctx && !muted) master.gain.setTargetAtTime(v, now(), 0.05); },
-    get muted() { return muted; }, get playing() { return playing; }, get ready() { return !!ctx; }, get songReady() { return !!song.buf; }, get songPlaying() { return !!song.src; }
+    get muted() { return muted; }, get masterGain() { return master ? master.gain.value : null; }, /* (what everything, music, voices and effects, finally goes out through) */ get playing() { return playing; }, get ready() { return !!ctx; }, get songReady() { return !!song.buf; }, get songPlaying() { return !!song.src; }
   };
   return api;
 })();

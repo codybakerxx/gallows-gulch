@@ -30,6 +30,7 @@ function wireUI() {
   $("gfx").addEventListener("change", e => { setQuality(e.target.value === "auto" ? pickTier() : e.target.value); savePrefs(); });
   $("stage").addEventListener("pointerdown", e => {
     if (e.target.closest("button,#hintBox")) return;
+    if (chaseTap(e)) return; // the getaway: a drag steers or aims, a click fires (12g)
     if (siegeTap(e)) return; // the sword, and the shootout that follows (12d)
     if (PLAY.on) { playDown(e); return; } // once he hangs, touches handle the body instead of skipping
     if (STATE.locked) STATE.ts = 6; });
@@ -38,12 +39,14 @@ function wireUI() {
   document.addEventListener("keydown", e => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === "Escape") { if (!$("book").hidden) { bookClose(); return; } if ($("menu").hidden) openMenu(); else if (!STATE.over || siegeLive()) { $("menu").hidden = true; Sound.resume(); } return; }
+    if (CHASE.on) { chaseKey(e, true); return; } // (the getaway's own keys: 12g)
     if (SIEGE.on && $("menu").hidden) { if (e.key === " " || e.key === "Enter") { e.preventDefault(); if (!e.repeat) fireTap(); } else if (e.key === "Shift" || e.key === "a" || e.key === "A") SIEGE.keyAim = true; return; } // (hold Shift or A to come up)
     if (/^[a-zA-Z]$/.test(e.key) && $("menu").hidden && $("sign").hidden) { e.preventDefault(); guess(e.key.toUpperCase()); }
     else if (e.key === " " && STATE.locked) STATE.ts = 6;
   });
-  document.addEventListener("keyup", e => { if (e.key === "Shift" || e.key === "a" || e.key === "A") SIEGE.keyAim = false; });
-  window.addEventListener("blur", () => { SIEGE.keyAim = false; });
+  document.addEventListener("keyup", e => { if (CHASE.on) { chaseKey(e, false); return; } if (e.key === "Shift" || e.key === "a" || e.key === "A") SIEGE.keyAim = false; });
+  window.addEventListener("blur", () => { SIEGE.keyAim = false; CHASE.swipe = null; CHASE.drag = null; });
+  $("motion").addEventListener("change", e => { STATE.reduceMotion = e.target.checked; savePrefs(); });
   document.addEventListener("visibilitychange", () => { if (document.hidden) Sound.pauseAll(); else Sound.wake(); });
 }
 // the end sign's button: Try Again after a loss, Play Again after a win
@@ -77,6 +80,8 @@ async function boot() {
   if (typeof prefs.vol === "number") { $("vol").value = prefs.vol; Sound.setVolume(prefs.vol / 100); }
   if (prefs.muted) { Sound.setMuted(true); $("muteBtn").innerHTML = soundIcon(false); $("muteBtn").setAttribute("aria-pressed", "false"); $("soundBtn").textContent = "Sound: Off"; $("soundBtn").setAttribute("aria-pressed", "false"); }
   if (prefs.gfx) $("gfx").value = prefs.gfx;
+  STATE.reduceMotion = typeof prefs.motion === "boolean" ? prefs.motion : matchMedia("(prefers-reduced-motion: reduce)").matches; $("motion").checked = STATE.reduceMotion;
+  STATE.cliffSeen = !!prefs.cliff; STATE.bestRide = prefs.ride | 0; STATE.rides = prefs.rides | 0;
   buildKeyboard(); wireUI(); bookInit(); hud();
   const forced = new URLSearchParams(location.search).get("tier");
   const tier = pickTier(forced || ($("gfx").value === "auto" ? null : $("gfx").value)); TEXQ = TIERS[tier].tex;
@@ -102,7 +107,7 @@ async function boot() {
   HOST.onStep = stepSnd(true); MAN.onStep = stepSnd(false, 1.25); EXEC.onStep = stepSnd(false, 0.9);
   MAN.onBreath = (a, p) => { if (p > 0.35) Sound.breath(a.ch.bones.Head.getWorldPosition(new THREE.Vector3()), p); };
   KEY_LIGHT = new THREE.PointLight(0xffd9b8, 0, 3.5, 2); R.scene.add(KEY_LIGHT);
-  buildCrowd(); prepHorse(horse); prepBirds(stork); buildSiege();
+  buildCrowd(); prepHorse(horse); prepBirds(stork); buildSiege(); buildBell(); buildChase();
   setProgress(0.95, "Saddling up…"); shot("intro", 0); resetScene(); boardDraw();
   await nextFrame(); siegePrecompile(true); try { R.renderer.compile(R.scene, R.camera); } catch (e) { console.warn("precompile", e); } siegePrecompile(false);
   Sound.preloadClips(SIEGE_CLIPS);
@@ -110,7 +115,8 @@ async function boot() {
   $("loading").hidden = true; openMenu(); shot("wide", 4);
   last = performance.now(); requestAnimationFrame(loop);
 }
-function onResize() { const st = $("stage"), w = st.clientWidth, h = st.clientHeight; if (!w || !h || !R.renderer) return; resizeRenderer(w, h); if (CAM && !CAM.to && CAM.name) shot(CAM.name, 0); }
+function onResize() { const st = $("stage"), w = st.clientWidth, h = st.clientHeight; if (!w || !h || !R.renderer) return; resizeRenderer(w, h); if (CAM && !CAM.to && CAM.name) shot(CAM.name, 0);
+  try { renderFrame(T); } catch (e) {} } // (draw straight away: a resized canvas is blank until the next frame, and the getaway's run changes the view's size)
 let last = 0, T = 0, perf = { n: 0, acc: 0, steps: 0 };
 // if frames run long while playing: 1) switch off AO, light shafts and skin scattering, 2) drop a quality tier, 3) lower the resolution a little
 function perfStep() {
@@ -131,7 +137,7 @@ function tick(now) {
   updateWind(dt); updateCrowd(dt, STATE.mood); updatePanic(dt); setTrapOpen(dt, STATE.trap); updateRopeState(T, dt); updateLanterns(dt);
   if (MAN.hang && MAN.hang.caught && MAN.hang.t - MAN.hang.tCatch > 2.5 && Math.random() < dt * 0.3) Sound.ropeCreak(GAL.anchor, 0.35); // the odd creak once he hangs still
   updateHorse(dt); updateBirds(dt); updateWeed(dt); updateDust(rdt, T); updatePuffs(dt); updateFlag(dt); updateSmoke(dt);
-  updateSiege(rdt, dt); updateCamera(rdt, T, dt); siegeLate(rdt); updateSky(T, R.camera); Sound.setListener(R.camera); updateBubble(rdt); updatePlay(rdt);
+  updateSiege(rdt, dt); updateBell(rdt, dt); updateChase(rdt, dt); updateCamera(rdt, T, dt); siegeLate(rdt); chaseLate(rdt); updateSky(T, R.camera); Sound.setListener(R.camera); updateBubble(rdt); updatePlay(rdt);
   renderFrame(T);
   if (perf.steps < 5 && $("menu").hidden && $("gfx").value === "auto" && !window.GULCH_PAUSE) { perf.n++; perf.acc += rdt;
     if (perf.n === 150) { const avg = perf.acc / perf.n; perf.n = 0; perf.acc = 0; if (avg > 1 / 27) perfStep(); } }
