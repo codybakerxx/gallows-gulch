@@ -114,6 +114,8 @@ def voice_texts():
     for key, clip in re.findall(r"SIEGE_LINES\.(\w+)\] = \[\"(siege\d)\"", words):
         out[clip] = siege[key]
         SIEGE_WHEN[clip] = SIEGE_WHEN.get(key, "the shootout")
+    m = re.search(r'const MYSTERY_LINE = "((?:[^"\\]|\\.)*)"; VOICE_LINES\[MYSTERY_LINE\] = \["(\w+)"', words)
+    if m: out[m.group(2)] = m.group(1)
     return out
 
 
@@ -126,7 +128,7 @@ def taunt_texts():
 
 SIEGE_WHEN = {"start": "the rope is cut and the shootout starts", "lose": "the gunmen shoot you down"}
 VOICE_KIND = {"intro": "a round starts", "hit": "a right letter", "miss": "a wrong letter", "hint": "one guess left (points you to the hint)",
-              "lose": "the man hangs", "win": "the word is solved", "siege": "the shootout"}
+              "lose": "the man hangs", "win": "the word is solved", "siege": "the shootout", "mystery": "the first round after the game loads, before the intro"}
 SFX = {
     "shot": "Your revolver firing, close up",
     "far": "A gunman's shot from across the street",

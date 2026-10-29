@@ -2,6 +2,21 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v34
+- **The host's first words.** The first round after the game loads, he opens with "There's more to this game than you
+  think. Find the mystery." before his usual line. Recorded in his voice like the rest.
+- **The bell shines.** Polished brass: a band of light slides down it every couple of seconds, it glows warm
+  at its edges, a big glint crosses it every 1.4–2.6 s (it was every 4–7 s), and small sparkles pop on its lip and
+  shoulder.
+- **The word board is old newsprint**: a yellowed, warm off-white sheet with darker edges, fibres, a few foxing spots and
+  the ghost of the print on its back, matte instead of glossy white.
+- **A harder run.**
+  - Flat out from the start: 19.5 m/s the whole way, the speed it used to reach only at the end.
+  - No free rides: every row blocks every lane you could have come through the row before without touching anything,
+    so every row needs a swipe or a jump. The first row blocks the middle lane you start in.
+  - Still always possible: 300 courses searched frame by frame came out clean in all five tests (as the game has it,
+    a bigger horse, slower inputs, both, and both slower still), with no free row in 7,486.
+
 ## v33
 - **More detail everywhere.**
   - **A new Ultra graphics tier**: textures at twice the resolution, a sun shadow map four times the size, more grass,

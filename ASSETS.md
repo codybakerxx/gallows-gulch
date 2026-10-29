@@ -102,6 +102,7 @@ The host, who runs the hanging and calls every letter. The subtitle shown on scr
 | `miss9.mp3` | 2.82 s | 44,100 Hz | mono | 64 kb/s | 22.3 KB | a wrong letter | “Crowd's lovin' this.” |
 | `miss10.mp3` | 2.69 s | 44,100 Hz | mono | 64 kb/s | 21.3 KB | a wrong letter | “Ooh, that'll cost him.” |
 | `miss11.mp3` | 2.53 s | 44,100 Hz | mono | 64 kb/s | 20.0 KB | a wrong letter | “Not even close, stranger.” |
+| `mystery0.mp3` | 3.87 s | 44,100 Hz | mono | 64 kb/s | 30.5 KB | the first round after the game loads, before the intro | “There's more to this game than you think. Find the mystery.” |
 | `siege0.mp3` | 2.77 s | 44,100 Hz | mono | 64 kb/s | 21.9 KB | the rope is cut and the shootout starts | “He cut him down! Shoot that stranger!” |
 | `siege2.mp3` | 3.21 s | 44,100 Hz | mono | 64 kb/s | 25.3 KB | the gunmen shoot you down | “Should've minded your own business, stranger.” |
 | `win0.mp3` | 3.55 s | 44,100 Hz | mono | 64 kb/s | 28.0 KB | the word is solved | “Go on, git. Before I change my mind.” |
@@ -183,16 +184,19 @@ Most of the world has no asset file: it is generated when the page loads, sized 
 
 | File | Pixels | Bytes |
 |---|---:|---:|
-| `00-wide.png` | 1920×1080 | 2.09 MB |
-| `01-title.png` | 780×1688 | 657.0 KB |
-| `02-round.png` | 780×1688 | 1.42 MB |
+| `00-wide.png` | 1920×1080 | 2.21 MB |
+| `01-title.png` | 780×1688 | 700.0 KB |
+| `02-round.png` | 780×1688 | 1.49 MB |
 | `03-solved.png` | 780×1688 | 1.33 MB |
-| `04-sword.png` | 780×1688 | 1.49 MB |
-| `05-shootout.png` | 780×1688 | 1.50 MB |
-| `06-game-over.png` | 780×1688 | 1.33 MB |
-| `07-word-book.png` | 780×1688 | 518.7 KB |
-| `08-rooftops.png` | 780×1688 | 1.44 MB |
+| `04-sword.png` | 780×1688 | 1.57 MB |
+| `05-shootout.png` | 780×1688 | 1.61 MB |
+| `06-game-over.png` | 780×1688 | 1.43 MB |
+| `07-word-book.png` | 780×1688 | 575.2 KB |
+| `08-rooftops.png` | 780×1688 | 1.51 MB |
+| `09-getaway-ride.png` | 780×1688 | 1.81 MB |
+| `10-getaway-fight.png` | 780×1688 | 1.19 MB |
+| `11-getaway-cliff.png` | 780×1688 | 1.02 MB |
 
 ## Totals
 
-99 asset files: models 3.43 MB, textures 349.9 KB, audio 3.97 MB (together 7.74 MB).
+100 asset files: models 3.43 MB, textures 349.9 KB, audio 4.00 MB (together 7.77 MB).

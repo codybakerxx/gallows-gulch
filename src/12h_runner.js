@@ -3,7 +3,8 @@
 // together and harder to read, and the posse behind gains on you every time you hit something. Nothing on screen to press. ----------
 const RUN = {
   lanes: [-2.3, 0, 2.3], shift: 0.19,                  // lane centres across the trail (m); seconds to change lane
-  speed0: 13, speed1: 19.5, first: 70, course: 760,     // m/s at the start and the end of the course; where the first row is; how long the course runs
+  speed0: 19.5, speed1: 19.5, fx0: 13, first: 70, course: 760, // m/s at the start and the end of the course (v34: flat out the whole way); the speed the view's
+                                                        // stretch and blur count up from; where the first row is; how long the course runs
   jump: { up: 1.5, dur: 0.76 },                         // how high (m) and how long (s) a jump is
   react: [1.45, 0.85], spread: 0.3,                     // seconds between rows at the start and the end (plus up to this share more, at random)
   horse: { half: 0.42, front: 1.45, back: 1.15 },       // the horse for collisions: half its width; nose and rump from the saddle (m)
@@ -13,9 +14,9 @@ const RUN = {
 };
 // what can be in a lane: tall things you go round, low things you jump (low: their height), long ones that fill a lane for a while
 const RUN_KINDS = {
-  boulder: { tall: true, half: 1.0, depth: 0.85, n: 17 }, cactus: { tall: true, half: 0.95, depth: 0.55, n: 15 }, crates: { tall: true, half: 1.0, depth: 0.6, n: 11 },
-  wagon: { tall: true, half: 0.85, depth: 2.1, n: 7 }, log: { low: 0.66, half: 1.15, depth: 0.32, n: 15 }, bales: { low: 0.98, half: 1.1, depth: 0.42, n: 9 },
-  fence: { low: 1.08, half: 1.15, depth: 0.14, n: 15 }, trough: { low: 0.76, half: 1.0, depth: 0.34, n: 9 } }; // (n: how many of each are kept: the most a course ever has out at once, 30 m behind to 170 m ahead, over 300 courses, plus two: mk_s134)
+  boulder: { tall: true, half: 1.0, depth: 0.85, n: 18 }, cactus: { tall: true, half: 0.95, depth: 0.55, n: 15 }, crates: { tall: true, half: 1.0, depth: 0.6, n: 11 },
+  wagon: { tall: true, half: 0.85, depth: 2.1, n: 7 }, log: { low: 0.66, half: 1.15, depth: 0.32, n: 18 }, bales: { low: 0.98, half: 1.1, depth: 0.42, n: 12 },
+  fence: { low: 1.08, half: 1.15, depth: 0.14, n: 18 }, trough: { low: 0.76, half: 1.0, depth: 0.34, n: 12 } }; // (n: how many of each are kept: the most a course ever has out at once, 30 m behind to 170 m ahead, over 300 courses, plus two: mk_s134)
 
 // ---- building them (each merged into a mesh or two per material, so a row costs a handful of draw calls) ----
 function mergeLocal(g) { // a group of meshes → the same, merged by material, in the group's own frame
@@ -180,15 +181,27 @@ function runCells(cells, s, full) {
     else if (cell === "long") { placeObstacle("wagon", s + 2.0, lat, r() < 0.5 ? 0 : Math.PI, 1, true); len = 4.5; } });
   return len;
 }
+// no free rides (v34): every row blocks each lane a rider could have come through the row before (C.reach) by sitting still, so every row
+// takes a swipe or a jump. An open cell there becomes a tall thing (when there's another open lane to swipe to) or a low one to jump; and a
+// row always keeps a way through
+function runForce(cells) {
+  const C = CHASE, r = C.rng, reach = C.reach || [true, true, true], c = cells.slice();
+  const shut = [0, 1, 2].filter(i => reach[i] && c[i] === null), away = c.some((x, j) => x === null && !reach[j]); let low = c.includes("low");
+  for (const i of r() < 0.5 ? shut : shut.reverse()) { if (away || low) c[i] = r() < (away ? 0.7 : 0.55) ? "tall" : "low"; else { c[i] = "low"; low = true; } } // (one low at least if the only ways through are here)
+  if (!c.some(x => x === null || x === "low")) c[reach.indexOf(true)] = "low";
+  C.reach = c.map(x => x === null || x === "low"); return c;
+}
 function runRow(s, f) {
   const C = CHASE, r = C.rng, first = C.rowsLaid || 0; let p = runPick(f);
-  if (first === 0) p = RUN_PATTERNS[0]; else if (first === 2) p = RUN_PATTERNS[2]; // (the first row is easy; the third teaches the jump)
-  const got = p.cells(r), cells = Array.isArray(got) ? got : got.c; let len = runCells(cells, s, p.full);
-  if (got.then) { const s2 = s + Math.max(7, lerp(RUN.speed0, RUN.speed1, f) * 0.7) + r() * 2; runCells(got.then, s2, false); len += s2 - s; } // (the zag comes 0.7 s after the zig at least, however fast: time to get across, and a bit)
-  C.rowsLaid = first + 1; C.rows.push({ s, cells, len, jump: !!p.jump });
+  if (first === 0) { p = RUN_PATTERNS[0]; C.reach = [false, true, false]; } else if (first === 2) p = RUN_PATTERNS[2]; // (you start in the middle lane: the first row blocks it; the third teaches the jump)
+  const got = first === 0 ? [null, "tall", null] : p.cells(r), cells = runForce(Array.isArray(got) ? got : got.c); let len = runCells(cells, s, cells.every(x => x === "low")), jump = cells.includes("low");
+  C.rows.push({ s, cells, len, jump });
+  if (got.then) { const zag = runForce(got.then), zj = zag.includes("low"), s2 = s + Math.max(7, lerp(RUN.speed0, RUN.speed1, f) * (zj ? 0.95 : 0.7)) + r() * 2; // (the zag comes 0.7 s after the zig
+    runCells(zag, s2, false); C.rows.push({ s: s2, cells: zag, len: 1, jump: zj, zag: true }); len += s2 - s; jump = zj; } //  at least, however fast; more if it has to be jumped)
+  C.rowsLaid = first + 1;
   // dressing at the edges of the trail: nothing you can hit, just what's out there
   if (r() < 0.55) { const side = r() < 0.5 ? -1 : 1, k = r() < 0.6 ? "rock" : "cactus"; placeObstacle(k, s + (r() - 0.5) * 6, side * (4.6 + r() * 1.6), r() * 6, 0.7 + r() * 0.5); }
-  const react = lerp(RUN.react[0], RUN.react[1], f) * (1 + r() * RUN.spread) * (p.jump ? 1.35 : 1), v = lerp(RUN.speed0, RUN.speed1, f);
+  const react = lerp(RUN.react[0], RUN.react[1], f) * (1 + r() * RUN.spread) * (jump ? 1.35 : 1), v = lerp(RUN.speed0, RUN.speed1, f);
   return len + react * v;
 }
 
@@ -213,7 +226,7 @@ function runBegin() { // (from the mount, and on a retry)
 }
 function updateRide(dt) {
   const C = CHASE, K = CHASE_CFG, f = clamp((C.s - RUN.first) / RUN.course, 0, 1);
-  // speed: faster as the course goes on; checked by a hit, and back up to speed after it
+  // speed: flat out from the start (RUN.speed0 = speed1); checked by a hit, and back up to speed after it
   C.hitT += dt; C.ghostT -= dt; const back = C.hitT < RUN.recover ? lerp(C.slowK, 1, Ease.inOut(C.hitT / RUN.recover)) : 1;
   const want = lerp(RUN.speed0, RUN.speed1, f) * back; C.speed += (want - C.speed) * Math.min(1, dt * 2.6);
   // across: a quick, straight sidestep from lane to lane

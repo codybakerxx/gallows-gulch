@@ -95,8 +95,9 @@ grass between them. Nothing on the screen to press.
   Logs, hay bales, troughs and fences can be jumped; sometimes a fence runs right across the trail. Every row has a
   way through, and every course can be ridden clean: `test/scenarios/mk_s134.py` searches 300 of them frame by frame
   to prove it.
-- It starts at a gallop and gets faster, and the rows come quicker and harder to read. The edges of the view blur
-  with the speed.
+- It's flat out from the first stride, and the rows come quicker and harder to read as it goes. The edges of the view
+  blur with the speed.
+- No free rides: no lane stays open from one row to the next, so every row makes you swipe or jump.
 - Ride into something and the horse shies off it into an open lane; trip over something low and you stumble; clip
   something changing lane and you're bounced back. Each costs ground, and the posse gains.
 - The bar at the top shows how close they are. Once they're close they shoot at you (dirt kicks up ahead) and the
@@ -148,7 +149,7 @@ or **Play Again** after one ends.
   horseshoes. Close up, the ground has grit and little stones and the timber has fibres and splinters.
 - Townsfolk built from one motion-captured body and a 3D head scan. Clothes, hats, hair and faces are fitted in
   code, and the bodies turn into ragdolls when they fall.
-- A spoken host: 41 recorded lines, with matching subtitles, that react to every letter. Plus gunmen's taunts and
+- A spoken host: 42 recorded lines, with matching subtitles, that react to every letter. Plus gunmen's taunts and
   positional sound effects.
 - A looping soundtrack that brightens as the noose gets closer. Footsteps, wind and a crowd murmur are synthesized
   live.
@@ -219,7 +220,7 @@ src/                     the game: one HTML shell and 27 JavaScript modules, loa
 assets/
   models/                Xbot.glb, LeePerrySmith.glb, Horse.glb, Stork.glb
   textures/              the head scan's colour, normal and specular maps
-  audio/                 soundtrack.mp3, silence.mp3, voice/ (41 host lines), sfx/ (49 effects, taunts and shouts)
+  audio/                 soundtrack.mp3, silence.mp3, voice/ (42 host lines), sfx/ (49 effects, taunts and shouts)
 vendor/three-r147/       the nine three.js r147 files the game uses, for offline tests (MIT)
 tools/
   check_build.py         checks the bundled script parses and every file the code asks for is in dist/

@@ -37,6 +37,8 @@ def phone():
     shot("01-title")
     steps.append(["click", "#startBtn"])
     steps.append(["wait", 1500])
+    E("document.getElementById('kb').classList.add('up'); 1")  # (the game adds this a frame after the round starts; a slow headless frame can miss the wait)
+    steps.append(["wait", 900])
     E(GO)
     E(ROUND)
     shot("02-round")

@@ -4,10 +4,10 @@
 // win the fight and the getaway starts (12g). Win without it and the street stays yours, gun in hand, for as long as you like; ring it
 // then and the getaway starts on the spot. Nothing on screen says any of this.
 const BELL = { pivot: null, ang: 0, angV: 0, ext: 0, gT: 4, glint: null, unlocked: false, pending: false, L: 0.24, r: 0.215, at: new THREE.Vector3(), lastDir: 0, strikes: 0 };
-const BELL_CFG = { swingKick: 3.2, damp: 0.35, wind: 0.05, glintEvery: [4, 7], ringAgain: 0.12 }; // (rad/s a hit gives it, how fast the swing dies, the breeze, a glint every 4-7 s, how big a swing still rings)
+const BELL_CFG = { swingKick: 3.2, damp: 0.35, wind: 0.05, glintEvery: [1.4, 2.6], ringAgain: 0.12 }; // (rad/s a hit gives it, how fast the swing dies, the breeze, a big glint every 1.4-2.6 s, how big a swing still rings)
 function buildBell() {
   const x = LAY.postX[1], z = LAY.plat.z, top = LAY.beamY + 0.35, arm = 0.62, iron = MAT.iron;
-  const brass = new THREE.MeshStandardMaterial({ color: 0xb48a3a, metalness: 1, roughness: 0.3 }), dark = new THREE.MeshStandardMaterial({ color: 0x3a2a14, metalness: 0.8, roughness: 0.5 });
+  const brass = bellBrass(), dark = new THREE.MeshStandardMaterial({ color: 0x3a2a14, metalness: 0.8, roughness: 0.5 });
   const base = new THREE.Group(); base.position.set(x, top - 0.08, z); R.scene.add(base);
   const add = (m, px, py, pz, p = base) => { m.position.set(px, py, pz); m.castShadow = true; m.receiveShadow = true; m.userData.dyn = true; p.add(m); return m; };
   // the bracket: a flat iron arm out from the post toward the stairs side, a diagonal stay under it, a strap round the post
@@ -22,9 +22,25 @@ function buildBell() {
   add(new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.012, 6, 14), iron), 0, -0.02, 0, pivot);
   add(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.08, 0.03), dark), 0, -0.06, 0, pivot);
   add(new THREE.Mesh(new THREE.SphereGeometry(0.035, 12, 8), dark), 0, -BELL.L - 0.07 - 0.03, 0, pivot);
-  // a glint that moves over the brass every few seconds (the same star the sword uses)
-  const g = new THREE.Sprite(new THREE.SpriteMaterial({ fog: false, map: starTex(), color: new THREE.Color(1.3, 1.2, 0.95), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 }));
-  g.visible = false; g.renderOrder = 5; R.scene.add(g); BELL.glint = { s: g, t: 1, ox: 0, oy: 0 };
+  // a big glint that moves over the brass every couple of seconds (the same star the sword uses), and small twinkles round its lip and shoulder
+  const star = starTex(), spr = (c, o) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ fog: false, map: star, color: c, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 }));
+    s.visible = false; s.renderOrder = 5; R.scene.add(s); return s; };
+  BELL.glint = { s: spr(new THREE.Color(1.5, 1.35, 1.0)), t: 1, ox: 0, oy: 0 };
+  BELL.twinkles = Array.from({ length: 3 }, () => ({ s: spr(new THREE.Color(1.4, 1.25, 0.9)), t: 1, wait: Math.random(), x: 0, y: 0, life: 0.4 }));
+}
+// polished brass: mirror-bright under a clear lacquer, a band of light that slides down it every couple of seconds, and a warm rim where
+// it turns away from you, so it catches the eye from anywhere in the street
+function bellBrass() {
+  const m = new THREE.MeshPhysicalMaterial({ color: 0xf4a030, metalness: 1, roughness: 0.18, envMapIntensity: 1.35, specularColor: new THREE.Color(1, 0.85, 0.55) });
+  BELL.shine = { t: { value: 0 } };
+  m.onBeforeCompile = sh => { sh.uniforms.bellT = BELL.shine.t;
+    sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vBellP;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvBellP = position;");
+    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vBellP; uniform float bellT;")
+      .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
+        { float ph = fract(bellT / 2.2) * 1.6 - 0.25, y = (0.3 - vBellP.y) / 0.36 + vBellP.x * 0.4; // (0 at the crown, 1 at the lip, tilted)
+          float band = smoothstep(0.07, 0.0, abs(y - ph)) * step(ph, 1.15), rim = pow(1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), 2.5);
+          totalEmissiveRadiance += vec3(1.0, 0.66, 0.26) * (band * 0.9 + rim * 0.45 + 0.1); }`); };
+  m.customProgramCacheKey = () => "gulchBell"; return m;
 }
 function bellCentre(out = BELL.at) { return BELL.pivot.localToWorld(out.set(0, -BELL.L - 0.02, 0)); }
 // a shot at it: the distance along the ray to the bell, or -1
@@ -48,8 +64,13 @@ function updateBell(rdt, dt) {
   if (dir) B.lastDir = dir;
   // the glint: brief, now and then, somewhere on the bell's face
   const G = B.glint; B.gT -= rdt; if (B.gT <= 0) { B.gT = rnd(C.glintEvery[0], C.glintEvery[1]); G.t = 0; G.ox = rnd(-0.12, 0.12); G.oy = rnd(-0.12, 0.05); G.s.visible = true; }
-  if (G.t < 1) { G.t = Math.min(1, G.t + rdt / 0.7); const k = Math.sin(G.t * Math.PI); G.s.material.opacity = k * 0.9; G.s.scale.setScalar(0.12 + 0.22 * k); G.s.material.rotation = G.t * 1.5;
+  if (G.t < 1) { G.t = Math.min(1, G.t + rdt / 0.8); const k = Math.sin(G.t * Math.PI); G.s.material.opacity = k; G.s.scale.setScalar(0.16 + 0.36 * k); G.s.material.rotation = G.t * 1.5;
     G.s.position.copy(B.pivot.localToWorld(_s1.set(G.ox, -B.L - 0.07 + G.oy, 0.2))); if (G.t >= 1) G.s.visible = false; }
+  if (B.shine) B.shine.t.value += rdt;
+  for (const p of B.twinkles || []) { // (small sparkles popping on the lip and shoulder now and then)
+    if (p.t < 1) { p.t = Math.min(1, p.t + rdt / p.life); const k = Math.sin(p.t * Math.PI); p.s.material.opacity = k * 0.9; p.s.scale.setScalar(0.04 + 0.12 * k); p.s.material.rotation += rdt * 2.5;
+      p.s.position.copy(B.pivot.localToWorld(_s1.set(p.x, p.y, 0.19))); if (p.t >= 1) { p.s.visible = false; p.wait = rnd(0.25, 1.1); } }
+    else if ((p.wait -= rdt) <= 0) { const lip = Math.random() < 0.6; p.t = 0; p.life = rnd(0.25, 0.5); p.x = rnd(-0.17, 0.17) * (lip ? 1 : 0.55); p.y = -B.L - 0.07 + (lip ? rnd(-0.06, -0.02) : rnd(0.12, 0.24)); p.s.visible = true; } }
 }
 // a new shootout: the bell's mark is cleared (and any getaway it had queued)
 function bellReset() { BELL.unlocked = false; BELL.pending = false; }

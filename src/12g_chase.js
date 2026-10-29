@@ -585,7 +585,7 @@ function placeChaseCamera(rdt, hold) {
   const shake = CAM.shake * 0.05 * (reduceMotion() ? 0.25 : 1); if (shake > 0) { cam.position.x += (Math.random() - 0.5) * shake; cam.position.y += (Math.random() - 0.5) * shake; } // (it dies away in updateCamera)
   cam.position.y += (CAM.ky || 0) * (reduceMotion() ? 0.3 : 1); // a jolt (a collision, a hit), sprung in updateCamera
   const vt = C.state === "victory" && C.cine ? C.cine.t - KC.celebrate - KC.turn : -1; // (the realization: the view stretches as the ground ahead runs out, a dolly zoom)
-  const fast = C.state === "ride" ? clamp((C.speed - RUN.speed0) / (RUN.speed1 - RUN.speed0), 0, 1) : 0; // (in the run, the view widens and its edges smear as the speed builds)
+  const fast = C.state === "ride" ? clamp((C.speed - RUN.fx0) / (RUN.speed1 - RUN.fx0), 0, 1) : 0; // (in the run, the view widens and its edges smear as the speed builds)
   setFov(vt > 0 ? lerp(60, 88, Ease.inOut(clamp(vt / 1.1, 0, 1))) : C.state === "ride" ? lerp(63, 71, fast) + (C.air ? 2 : 0) : 64);
   R.grade.uniforms.zoomBlur.value = reduceMotion() ? 0 : C.state === "ride" ? 0.25 + 0.75 * fast + (C.hitT < 0.4 ? 0.6 : 0) : 0; cam.updateMatrixWorld(); syncCam(); C.camP = cam.position.clone(); C.camQ = cam.quaternion.clone();
 }

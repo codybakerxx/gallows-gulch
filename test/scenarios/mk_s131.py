@@ -65,9 +65,9 @@ E("""(async () => { try { const C = CHASE, out = {}; await __go(30);
   out.scroll = [window.scrollY, document.scrollingElement.scrollTop, getComputedStyle(document.getElementById('stage')).touchAction];
   // one collision: ride straight at the next tall thing in your lane's way
   const next = () => C.obs.filter(o => o.run && !o.low && !o.hit && o.s > C.s + 14).sort((a, b) => a.s - b.s)[0];
-  await __go(600, () => { __auto(); return !!next(); }); const ob = next(), g0 = C.gap;
-  await __go(400, () => { __steerTo(ob.lat); return C.stats.bumps > 0 || C.s > ob.s + 3; }); out.target = [ob.kind, __r(ob.lat), __r(ob.halfLat)];
-  out.bump = { bumps: C.stats.bumps, gapBefore: __r(g0), gapAfter: __r(C.gap), speed: __r(C.speed), state: C.state, lane: C.lane, msg: document.getElementById('chaseMsg').textContent };
+  await __go(600, () => { __auto(); return !!next() && C.ghostT <= 0; }); const ob = next(), g0 = C.gap, b0 = C.stats.bumps; // (v34: every row needs an action, so the autopilot may have clipped something on the way: count from here)
+  await __go(400, () => { __steerTo(ob.lat); return C.stats.bumps > b0 || C.s > ob.s + 3; }); out.target = [ob.kind, __r(ob.lat), __r(ob.halfLat)];
+  out.bump = { bumps: C.stats.bumps - b0, gapBefore: __r(g0), gapAfter: __r(C.gap), speed: __r(C.speed), state: C.state, lane: C.lane, msg: document.getElementById('chaseMsg').textContent };
   // and a low one jumped clean
   const low = () => C.obs.filter(o => o.run && o.low && !o.hit && o.s > C.s + 16).sort((a, b) => a.s - b.s)[0]; await __go(1200, () => { __auto(); return !!low() && C.ghostT <= 0; }); const lo = low(), b1 = C.stats.bumps;
   await __go(600, () => { if (!C.shift) __steerTo(lo.lat); if (!C.air && !C.shift && lo.s - C.s < C.speed * 0.36 + 1.5 && __laneOf(lo.lat) === C.lane) runJump(); return C.s > lo.s + 3; });
@@ -183,6 +183,7 @@ E("""(async () => { try { const C = CHASE, out = {}; await __go(200, () => C.sta
   await __go(400, () => C.state === 'combat' && C.safeT <= 0); const v0 = __cnt.victory; let guard = 0;
   while (C.state === 'combat' && guard++ < 400) { C.hp = 3; if (C.rounds <= 0 || C.reloadT > 0) { if (C.reloadT <= 0) { C.reloads = Math.max(C.reloads, 1); chaseReload(); } await __go(110, () => C.reloadT <= 0); continue; } const alive = C.riders.filter(r => r.alive && r.state !== 'wait').sort((a, b) => a.d - b.d); if (alive[0]) __fireAt(alive[0]); await __go(20, () => C.state !== 'combat'); }
   await __go(30); out.skip = { state: C.state, shown: __vis('chaseSkip'), cliffSeen: STATE.cliffSeen, victory: __cnt.victory - v0 }; return JSON.stringify(out); } catch (e) { return 'ERR ' + e.stack; } })()""")
+steps.append(["wait", 600])  # (a real moment for the button to settle: Playwright clicks only a button that has stopped moving)
 steps.append(["click", "#chaseSkip"])
 E("""(async () => { const C = CHASE; await __go(5); return JSON.stringify({ state: C.state, title: document.getElementById('resTitle').textContent, scream: !!C.scream, victory: __cnt.victory, rides: STATE.rides, errs: __errs }); })()""")
 steps.append(["click", "#resHome"])
