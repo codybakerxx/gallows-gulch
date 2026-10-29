@@ -33,12 +33,14 @@ material texture.
 | Files | What they are | Source | Terms |
 |---|---|---|---|
 | `assets/audio/soundtrack.mp3` | "Eagle's Caw", the soundtrack | Made with [Suno](https://suno.com) (credited in the file as *musicmaiker*). Provided by the repository owner, re-encoded to 128 kb/s with a seamless loop region | Suno's terms for the plan it was made on decide whether it can be used commercially (free-plan songs have been limited to non-commercial use) |
-| `assets/audio/voice/*.mp3` (41 files) | The host's lines | [ElevenLabs](https://elevenlabs.io) text-to-speech, voice "John Morgan". Each line was picked from two takes, checked against its script by speech recognition, trimmed and level-matched | ElevenLabs' terms for the account they were made on (paid plans include a commercial licence for generated audio) |
+| `assets/audio/voice/*.mp3` (42 files) | The host's lines | [ElevenLabs](https://elevenlabs.io) text-to-speech, voice "John Morgan". Each line was picked from two takes, checked against its script by speech recognition, trimmed and level-matched | ElevenLabs' terms for the account they were made on (paid plans include a commercial licence for generated audio) |
 | `assets/audio/sfx/taunt0–6.mp3` | The gunmen's taunts | ElevenLabs text-to-speech, voices "Rusty Wade" (townsmen) and "Matthew Schmitz, Old Outlaw" (the executioner) | As above |
+| `assets/audio/sfx/shout0–5.mp3` | The posse's shouts in the getaway | ElevenLabs text-to-speech (Eleven v4), voices "Rusty Wade" (shout0–3, shout5) and "Matthew Schmitz, Old Outlaw" (shout4, the last rider). Each picked from two takes, checked by speech recognition, trimmed and level-matched | As above |
+| `assets/audio/sfx/scream0.mp3`, `canyon0.mp3` | The scream over the cliff, and the impact far below | ElevenLabs sound-effect generation (picked from four takes each), trimmed and level-matched | As above |
 | `assets/audio/sfx/` (the other 34 files) | Gunshots, ricochets into wood, bullet whizzes, pain cries, coughs, sword, rope cut, hammer cock, dry fire | ElevenLabs sound-effect generation, trimmed and level-matched for the game | As above |
 | `assets/audio/silence.mp3` | One second of silence, used to unlock audio on iPhones | Made with FFmpeg | No restrictions |
 
-Footsteps, wind, the crowd's murmur, the horse's snort and the fallback music are synthesized live with Web Audio.
+Footsteps, wind, the crowd's murmur, the horse's snort, hoofbeats, the lasso's swish, the wind of the gallop, the bell and the fallback music are synthesized live with Web Audio.
 
 ## Fonts
 
