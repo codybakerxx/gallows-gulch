@@ -44,12 +44,12 @@ function buildGround() {
   { // an apron under and beyond the plain, so out on the getaway trail (12g) the ground's far edge never shows sky below the horizon; the fog colours it
     const ap = new THREE.Mesh(new THREE.RingGeometry(560, 9000, 96, 1).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0x4a3020 })); ap.position.y = -10; ap.matrixAutoUpdate = false; ap.updateMatrix(); R.scene.add(ap); }
   m.onBeforeCompile = sh => {
-    sh.uniforms.macroMap = { value: TEX.macro }; sh.uniforms.canyonOn = WORLD.canyonU.on; sh.uniforms.canyonInv = WORLD.canyonU.inv; sh.uniforms.canyonSize = WORLD.canyonU.size;
+    sh.uniforms.macroMap = { value: TEX.macro }; sh.uniforms.gritMap = { value: TEX.grit || TEX.white }; sh.uniforms.canyonOn = WORLD.canyonU.on; sh.uniforms.canyonInv = WORLD.canyonU.inv; sh.uniforms.canyonSize = WORLD.canyonU.size;
     sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vGW;").replace("#include <project_vertex>", "#include <project_vertex>\nvGW = (modelMatrix * vec4(transformed, 1.0)).xyz;");
     sh.fragmentShader = sh.fragmentShader.replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>
       if (canyonOn > 0.5 && inCanyon(vGW, canyonInv, canyonSize)) discard; // (the canyon at the end of the getaway cuts through the plain: 12i)`)
       .replace("#include <common>", `#include <common>
-      varying vec3 vGW; uniform sampler2D macroMap; uniform float canyonOn; uniform mat4 canyonInv; uniform vec2 canyonSize; float groundH = 0.0;` + CANYON_GLSL + `
+      varying vec3 vGW; uniform sampler2D macroMap; uniform sampler2D gritMap; uniform float canyonOn; uniform mat4 canyonInv; uniform vec2 canyonSize; float groundH = 0.0;` + CANYON_GLSL + `
       vec2 gh2(vec2 p) { return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }
       // prints: cells hold at most one oval dent, sized and turned per cell
       float prints(vec2 p, float cell, vec2 size, float keep) {
@@ -72,7 +72,8 @@ function buildGround() {
         float hoof = prints(vGW.xz, 0.55, vec2(0.075, 0.06), 0.35) * street;
         float boot = prints(vGW.xz + 7.3, 0.42, vec2(0.13, 0.05), 0.4) * trod;
         diffuseColor.rgb *= 1.0 - 0.22 * hoof - 0.16 * boot;
-        groundH = -0.02 * rut - 0.012 * hoof - 0.008 * boot;`)
+        groundH = -0.02 * rut - 0.012 * hoof - 0.008 * boot;` + (TEX.grit ? `
+        { float dh = 0.0; ` + DETAIL_GLSL("gritMap", "vGW.xz * 2.0", 0.0035, 0.42, 5.0, 26.0) + ` groundH += dh; } // (close up: sand grains, grit, little stones)` : ""))
       .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>
         { vec3 sx = dFdx(-vViewPosition), sy = dFdy(-vViewPosition), r1 = cross(sy, normal), r2 = cross(normal, sx);
           float fd = dot(sx, r1) * faceDirection; vec3 gr = sign(fd) * (dFdx(groundH) * r1 + dFdy(groundH) * r2); normal = normalize(abs(fd) * normal - gr); }`);
@@ -283,6 +284,7 @@ function building(x, z, ry, w, h, d, name, opt = {}) {
   deck.material = MAT.plank;
   if (opt.rail !== false) { for (const e of [-1, 1]) { const hp = woodBox(0.12, 1.0, 0.12, MAT.woodDark); hp.position.set(e * w * 0.3, 0.5, d / 2 + pd + 1.0); add(hp); }
     const hr = woodBox(w * 0.6 + 0.3, 0.09, 0.09, MAT.wood, true); hr.position.set(0, 0.95, d / 2 + pd + 1.0); add(hr); }
+  buildingProps(grp, w, h, d, pd, name, opt); // (lanterns, a step, shutters, a bench, things on the porch, posters: 07c)
   grp.position.set(x, groundHeight(x, z), z); grp.rotation.y = ry; (WORLD.town || R.scene).add(grp);
   if (grp.userData.smokeAt) { grp.updateMatrixWorld(true); (WORLD.chimneys = WORLD.chimneys || []).push(grp.localToWorld(grp.userData.smokeAt.clone())); }
   return grp;
@@ -359,8 +361,9 @@ function buildTown() {
     [37, -1, 7, 5, 8, "BARBER", { hang: "BATHS 25c" }], [45.5, -1, 8, 6, 9, "UNDERTAKER"],
     [11, 1, 8, 6, 9, "GENERAL STORE", { smoke: true, hang: "DRY GOODS", roofGun: true }], [20, 1, 7, 5.5, 8, "BANK", { signBg: "#2b2a28", signFg: "#d8b264", brick: true }], [29, 1, 9, 6, 9, "ASSAY OFFICE", { mat: MAT.woodRed, hang: "GUNSMITH" }], [38.5, 1, 8, 5.5, 9, "LIVERY"]
   ];
-  for (const [along, side, w, h, d, name, opt] of B) { const [x, z] = streetPt(along, side * (11.5 + d / 2)), ry = side < 0 ? yawL : yawR; building(x, z, ry, w, h, d, name, opt);
-    if (opt && opt.roofGun) WORLD.roofs.push(roofInfo(x, z, ry, w, h, d, name, opt)); }
+  B.forEach(([along, side, w, h, d, name, opt], bi) => { const [x, z] = streetPt(along, side * (11.5 + d / 2)), ry = side < 0 ? yawL : yawR; const grp = building(x, z, ry, w, h, d, name, opt);
+    if (bi % 3 !== 1) buildingAd(grp, x, z, ry, w, h, d, bi); // (a faded painted advertisement on the side wall that faces up the street: 07c)
+    if (opt && opt.roofGun) WORLD.roofs.push(roofInfo(x, z, ry, w, h, d, name, opt)); });
   // church with steeple
   const ch = new THREE.Group(), cb = woodBox(8, 6, 14, MAT.wood); cb.position.y = 3; ch.add(cb);
   const roofG = new THREE.CylinderGeometry(0.01, 6.2, 3.5, 4, 1); roofG.rotateY(Math.PI / 4); const roof = new THREE.Mesh(roofG, MAT.woodDark); roof.scale.set(0.95, 1, 1.7); roof.position.y = 7.7; roof.castShadow = true; ch.add(roof);

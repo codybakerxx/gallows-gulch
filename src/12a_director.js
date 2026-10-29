@@ -63,7 +63,7 @@ function updateCamera(rdt, t, sdt) { // sdt: scene time, so camera moves keep pa
     if (R.ao) { const cd = CAM.pos.distanceTo(CAM.tgt), far = smoothstep(2.5, 6.0, cd); R.ao.strength += ((close || R.lite || !TIERS[R.tier].ao ? 0 : 0.8 * far) - R.ao.strength) * k; R.ao.enabled = R.ao.strength > 0.02; D.aoStrength.value = R.ao.enabled ? R.ao.strength : 0;
       R.ao.aoMat.uniforms.radius.value = 0.6 * clamp(cd / 8, 0.35, 1); }
     const sh = updateShafts(SKY.dusk);
-    D.sssAmt.value = TIERS[R.tier].sss && !R.lite ? (R.tier === "high" ? 0.7 : 0.55) : 0; D.projScale.value = D.res.value.y / (2 * Math.tan(THREE.MathUtils.degToRad(R.camera.fov) / 2));
+    D.sssAmt.value = TIERS[R.tier].sss && !R.lite ? (tierAtLeast("high") ? 0.7 : 0.55) : 0; D.projScale.value = D.res.value.y / (2 * Math.tan(THREE.MathUtils.degToRad(R.camera.fov) / 2));
     R.post.enabled = D.amount.value > 0.02 || D.aoStrength.value > 0.001 || sh > 0.001 || D.sssAmt.value > 0; }
   if (MAN && MAN.ch.shells) MAN.ch.shells.visible = MAN.ch.bones.Head.getWorldPosition(A2).distanceTo(R.camera.position) < 5.5; // hair shells only where they can be seen
   if (KEY_LIGHT && !SIEGE.on) { KEY_LIGHT.intensity = CAM.key * 1.1; _kl.set(0.65, 0.45, 0.1).applyQuaternion(R.camera.quaternion); KEY_LIGHT.position.copy(R.camera.position).add(_kl); }

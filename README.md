@@ -141,8 +141,11 @@ or **Play Again** after one ends.
 ## Features
 
 - A whole frontier town at golden hour: false-front buildings, a church spire, mesas, a working gallows with a
-  simulated rope, trapdoor and lever, dust, tumbleweed, circling vultures and a horse that sometimes bolts down the
+  simulated rope, trapdoor and lever, dust, tumbleweeds, circling vultures and a horse that sometimes bolts down the
   street.
+- Lived-in detail: porches with lanterns that light at dusk, benches, shutters, crates, sacks and barrels, wanted
+  posters with their own faces and prices, and the street littered with stones, broken boards, bottles, cans and
+  horseshoes. Close up, the ground has grit and little stones and the timber has fibres and splinters.
 - Townsfolk built from one motion-captured body and a 3D head scan. Clothes, hats, hair and faces are fitted in
   code, and the bodies turn into ragdolls when they fall.
 - A spoken host: 41 recorded lines, with matching subtitles, that react to every letter. Plus gunmen's taunts and
@@ -150,8 +153,10 @@ or **Play Again** after one ends.
 - A looping soundtrack that brightens as the noose gets closer. Footsteps, wind and a crowd murmur are synthesized
   live.
 - 382 vocabulary words, each with a definition written for the game.
-- Graphics tiers (Low, Medium, High, or Auto) for older and newer phones. High adds the most bloom, soft shadows,
-  ambient occlusion, light shafts and skin shading.
+- Graphics tiers (Fast, Balanced, High, Ultra, or Auto). Auto starts phones on High and computers on Ultra, and steps
+  down by itself if frames run long. High adds bloom, soft shadows, ambient occlusion, light shafts, volumetric light,
+  skin shading and close-up detail textures; Ultra doubles the texture resolution and the sun's shadow map and adds
+  more of everything.
 - Built for touch, with safe-area insets for notched phones, sound that plays even with an iPhone's ring/silent
   switch on (there's a mute button), and keyboard play on desktop. A **Reduce motion** setting cuts camera shake.
 - Something hidden, for anyone who rings the bell.
@@ -189,6 +194,7 @@ src/                     the game: one HTML shell and 27 JavaScript modules, loa
   05_sky.js              physically based sky and sun
   06_world.js            desert terrain, mesas, rocks, cacti, scrub and the frontier town
   07_props.js            the gallows (trapdoor, lever, rope and noose), the word board, set dressing
+  07c_dressing.js        porch props, wanted posters, the street's litter, tumbleweeds rolling through
   07b_physics.js         wind, the rope simulation, the swinging trapdoor leaves and lanterns
   08a_bodygeo.js         clothing built around the mocap skeleton
   08b_chars.js           character assembly: rig, clothes, scanned head, hats, hood, mask

@@ -71,10 +71,18 @@ function buildRunScenery() {
   const sageMat = swayMat(new THREE.MeshStandardMaterial({ map: TEX.sage, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.95, color: 0xc8c2a8 }), 0.16);
   const grassMat = swayMat(new THREE.MeshStandardMaterial({ map: TEX.grass, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.95, color: 0xd8c79a }), 0.32);
   const cross = new THREE.PlaneGeometry(1, 1); cross.translate(0, 0.5, 0); const c2 = cross.clone(); c2.rotateY(Math.PI / 2); const bush = mergeGeos([{ geo: cross.toNonIndexed() }, { geo: c2.toNonIndexed() }]); bush.clearGroups();
-  const cMat = runCactusMat(), rMat = runRockMat();
+  const cMat = runCactusMat(), rMat = runRockMat(), KC = TIERS[R.tier].clutter;
+  const snagMat = weatherWood(stdMat(TEX.wood, 0xb8b0a4, null, { normalScale: new THREE.Vector2(1.2, 1.2) })), ocoMat = new THREE.MeshStandardMaterial({ color: 0x6a6448, roughness: 0.85, normalMap: TEX.fabric.normalMap, normalScale: new THREE.Vector2(0.6, 0.6) });
+  const pebble = new THREE.IcosahedronGeometry(1, 0); { const p = pebble.attributes.position; for (let i = 0; i < p.count; i++) p.setY(i, p.getY(i) * 0.55); pebble.computeVertexNormals(); }
+  const slab = boulderGeo(47); slab.scale(1.6, 0.32, 1.1); // (a flat ledge of rock breaking the surface)
   const kinds = [{ geo: bush, mat: sageMat, n: 55, lat: [5.6, 70], s: [0.4, 1.05], shadow: false }, { geo: bush, mat: grassMat, n: 170, lat: [5.0, 45], s: [0.35, 0.8], shadow: false, more: [{ n: 90, lat: [0.85, 1.45], s: [0.15, 0.32] }, { n: 70, lat: [3.15, 5.0], s: [0.18, 0.42] }] }, // (and low tufts between the three trails, and along their outer edges)
     { geo: boulderGeo(41), mat: rMat, n: 26, lat: [6, 90], s: [0.2, 1.3], shadow: true, sink: 0.12 }, { geo: boulderGeo(43), mat: rMat, n: 18, lat: [6.5, 90], s: [0.3, 2.2], shadow: true, sink: 0.15 },
     { geo: cactusGeo(53), mat: cMat, n: 5, lat: [7, 80], s: [0.7, 1.15], shadow: true }, { geo: cactusGeo(59), mat: cMat, n: 4, lat: [7, 80], s: [0.7, 1.1], shadow: true }];
+  if (KC) kinds.push( // (v33: more of the desert, as the tier allows: dead trees, ocotillo, flat ledges of rock, and loose stones by the trail)
+    { geo: snagGeo(61), mat: snagMat, n: Math.round(3 * KC), lat: [7, 70], s: [0.8, 1.4], shadow: true }, { geo: snagGeo(67), mat: snagMat, n: Math.round(2 * KC), lat: [9, 90], s: [0.9, 1.6], shadow: true },
+    { geo: ocotilloGeo(71), mat: ocoMat, n: Math.round(5 * KC), lat: [6.5, 60], s: [0.75, 1.2], shadow: true },
+    { geo: slab, mat: rMat, n: Math.round(8 * KC), lat: [6, 80], s: [0.6, 2.2], shadow: true, sink: 0.12 },
+    { geo: pebble, mat: rMat, n: Math.round(240 * KC), lat: [3.2, 12], s: [0.03, 0.15], shadow: false, sink: 0.2 });
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
   for (let s0 = 40; s0 < T.len; s0 += chunk) for (const K of kinds) {
     const pts = []; for (const B of [K, ...(K.more || [])]) for (let i = 0; i < B.n; i++) { const s = s0 + r() * chunk, side = r() < 0.5 ? -1 : 1, lat = side * lerp(B.lat[0], B.lat[1], Math.pow(r(), 1.6)), p = trailAt(s, lat, {});
@@ -83,6 +91,28 @@ function buildRunScenery() {
     pts.forEach(([x, z, sc, a], i) => { q.setFromEuler(e.set(0, a, 0)); m4.compose(V3(x, groundVis(x, z) - (K.sink || 0.05) * sc, z), q, V3(sc * (K.geo === bush ? 1.3 : 1), sc, sc * (K.geo === bush ? 1.3 : 1))); im.setMatrixAt(i, m4); });
     im.castShadow = K.shadow; im.receiveShadow = true; im.frustumCulled = false; im.userData.s0 = s0; im.visible = false; R.scene.add(im); out.push(im); } // (three culls an instanced mesh by its one geometry: these go by distance along the trail instead)
   CHASE.scenery = out;
+}
+// a dead tree: a twisted grey trunk forking into bare limbs that thin to twigs (recursive tubes, merged)
+function snagGeo(seed) {
+  const r = rng(seed), parts = [];
+  const limb = (p0, dir, len, rad, depth) => { const pts = [p0.clone()], d = dir.clone(); let p = p0.clone();
+    for (let k = 0; k < 4; k++) { d.add(V3((r() - 0.5) * 0.5, (r() - 0.3) * 0.25, (r() - 0.5) * 0.5)).normalize(); p = p.clone().addScaledVector(d, len / 4); pts.push(p); }
+    const tg = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), depth ? 5 : 8, rad, depth > 1 ? 4 : 6, false), pp = tg.attributes.position, n = tg.parameters.tubularSegments + 1, rs = tg.parameters.radialSegments + 1;
+    for (let i = 0; i < n; i++) { const t = i / (n - 1), sc = 1 - 0.65 * t; const c = tg.parameters.path.getPointAt(t); for (let j = 0; j < rs; j++) { const q = i * rs + j; pp.setXYZ(q, c.x + (pp.getX(q) - c.x) * sc, c.y + (pp.getY(q) - c.y) * sc, c.z + (pp.getZ(q) - c.z) * sc); } } // (tapering)
+    parts.push({ geo: tg.toNonIndexed() });
+    if (depth < 3) { const kids = depth === 0 ? 3 : 2 + (r() < 0.4 ? 1 : 0); for (let c = 0; c < kids; c++) { const at = pts[2 + (r() * 3 | 0) % 3], nd = d.clone().add(V3((r() - 0.5) * 1.6, 0.2 + r() * 0.6, (r() - 0.5) * 1.6)).normalize(); limb(at, nd, len * (0.55 + r() * 0.2), rad * 0.5, depth + 1); } } };
+  limb(V3(0, -0.2, 0), V3((r() - 0.5) * 0.3, 1, (r() - 0.5) * 0.3).normalize(), 2.2 + r() * 1.2, 0.13, 0);
+  for (const p of parts) { for (const k of Object.keys(p.geo.attributes)) if (!["position", "normal", "uv"].includes(k)) p.geo.deleteAttribute(k); const uv = p.geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getY(i) * 0.3, uv.getX(i) * 4); } // (the grain along the limb)
+  const g = mergeGeos(parts); g.clearGroups(); g.computeVertexNormals(); return g;
+}
+// ocotillo: a fan of long thin wands from one root, gently bowed, a few with a red tuft at the tip
+function ocotilloGeo(seed) {
+  const r = rng(seed), parts = [];
+  for (let i = 0; i < 14; i++) { const a = r() * TAU, lean = 0.12 + r() * 0.35, L = 2.2 + r() * 1.8, pts = [];
+    for (let k = 0; k <= 5; k++) { const t = k / 5, out = Math.sin(lean) * L * t * (0.8 + 0.2 * t); pts.push(V3(Math.cos(a) * out, Math.cos(lean) * L * t, Math.sin(a) * out)); }
+    const tg = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 8, 0.022, 4, false); parts.push({ geo: tg.toNonIndexed() }); }
+  for (const p of parts) for (const k of Object.keys(p.geo.attributes)) if (!["position", "normal", "uv"].includes(k)) p.geo.deleteAttribute(k);
+  const g = mergeGeos(parts); g.clearGroups(); g.computeVertexNormals(); return g;
 }
 function runCactusMat() { return RUN.cactusMat || (RUN.cactusMat = new THREE.MeshStandardMaterial({ color: 0x46553a, roughness: 0.82, normalMap: TEX.fabric.normalMap, normalScale: new THREE.Vector2(0.4, 0.4) })); } // (saguaro: a dusty grey-green, not lit up like paint)
 // weathered stone for boulders: a grainy, dull tan-grey with cracks, pits, and the odd crust of lichen; no bands (those are for cliffs)
@@ -121,7 +151,7 @@ function trailTex() {
     o.ro = 0.96 - 0.14 * pack + 0.04 * bank - 0.06 * peb; o.ao = 1 - 0.55 * dn; }, 3.2);
   return TEX.trail;
 }
-function runRockMat() { return RUN.rockMat || (RUN.rockMat = stdMat(stoneTex(), 0xffffff, [1.6, 1.6], { normalScale: new THREE.Vector2(1.2, 1.2) })); }
+function runRockMat() { return RUN.rockMat || (RUN.rockMat = gritWorld(stdMat(stoneTex(), 0xffffff, [1.6, 1.6], { normalScale: new THREE.Vector2(1.2, 1.2) }), 1.1, 0.008, 0.4)); }
 function runSceneryShow(on) { CHASE.sceneryOn = on; for (const m of CHASE.scenery || []) m.visible = on && runSceneryNear(m); }
 const runSceneryNear = m => { const C = CHASE, d = m.userData.s0 - C.s, back = C.state === "ride" || C.state === "mount" ? 60 : 420; return d > -back - 160 && d < 520; }; // (a chunk is 160 m long; facing back in the fight, the trail behind shows)
 function runSceneryUpdate() { if (!CHASE.sceneryOn) return; for (const m of CHASE.scenery || []) m.visible = runSceneryNear(m); for (const m of CHASE.ribbon ? CHASE.ribbon.children : []) m.visible = runSceneryNear(m); } // (the trails too: 12g)

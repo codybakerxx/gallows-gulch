@@ -92,7 +92,7 @@ async function boot() {
   const models = Promise.all(["Xbot.glb", "LeePerrySmith.glb", "Horse.glb", "Stork.glb"].map(f => loadGLB(ASSETS + f)));
   const tl = new THREE.TextureLoader(), texs = Promise.all(["Map-COL.jpg", "Infinite-Level_02_Tangent_SmoothUV.jpg", "skin-spec.jpg"].map(f => tl.loadAsync(ASSETS + f)));
   setProgress(0.12, "Weathering the lumber…"); await nextFrame(); buildTextures(); buildMaterials();
-  setProgress(0.35, "Raising the town…"); await nextFrame(); initSky(); buildGround(); buildMesas(); buildRocks(); buildCacti(); buildScrub(); buildTown();
+  setProgress(0.35, "Raising the town…"); await nextFrame(); initSky(); buildGround(); buildMesas(); buildRocks(); buildCacti(); buildScrub(); buildTown(); buildClutter(); buildTownWeeds(); buildTumbleweeds(); buildWindmill();
   setProgress(0.55, "Building the gallows…"); await nextFrame(); buildGallows(); buildBoard(); buildWeed(); buildDust(); buildSmoke();
   setProgress(0.7, "Waking the townsfolk…");
   let xbot, head, horse, stork, col, nrm, spec;
@@ -118,11 +118,12 @@ async function boot() {
 function onResize() { const st = $("stage"), w = st.clientWidth, h = st.clientHeight; if (!w || !h || !R.renderer) return; resizeRenderer(w, h); if (CAM && !CAM.to && CAM.name) shot(CAM.name, 0);
   try { renderFrame(T); } catch (e) {} } // (draw straight away: a resized canvas is blank until the next frame, and the getaway's run changes the view's size)
 let last = 0, T = 0, perf = { n: 0, acc: 0, steps: 0 };
-// if frames run long while playing: 1) switch off AO, light shafts and skin scattering, 2) drop a quality tier, 3) lower the resolution a little
+// if frames run long while playing: 1) switch off AO, light shafts and skin scattering, 2) drop a quality tier (and again), 3) lower the
+// resolution a little. What was built at load (textures, the crowd, the clutter) stays; the per-pixel cost is what comes down
 function perfStep() {
   perf.steps++;
   if (!R.lite && R.tier !== "low") { R.lite = true; return; }
-  if (R.tier !== "low") { R.lite = false; setQuality(R.tier === "high" ? "medium" : "low"); if (R.tier === "medium") R.lite = true; return; }
+  if (R.tier !== "low") { R.lite = false; setQuality(TIER_ORDER[TIER_ORDER.indexOf(R.tier) + 1]); if (R.tier === "medium") R.lite = true; return; }
   if ((R.resScale || 1) > 0.8) { R.resScale = 0.85; resizeRenderer(R.w, R.h); }
 }
 function tick(now) {
@@ -136,10 +137,10 @@ function tick(now) {
   if (EXEC.gripping && !STATE.trap) EXEC.ik.R.t.copy(GAL.leverTip.getWorldPosition(A1));
   updateWind(dt); updateCrowd(dt, STATE.mood); updatePanic(dt); setTrapOpen(dt, STATE.trap); updateRopeState(T, dt); updateLanterns(dt);
   if (MAN.hang && MAN.hang.caught && MAN.hang.t - MAN.hang.tCatch > 2.5 && Math.random() < dt * 0.3) Sound.ropeCreak(GAL.anchor, 0.35); // the odd creak once he hangs still
-  updateHorse(dt); updateBirds(dt); updateWeed(dt); updateDust(rdt, T); updatePuffs(dt); updateFlag(dt); updateSmoke(dt);
+  updateHorse(dt); updateBirds(dt); updateWeed(dt); updateDust(rdt, T); updateTumbleweeds(dt); updateWindmill(dt); updatePuffs(dt); updateFlag(dt); updateSmoke(dt);
   updateSiege(rdt, dt); updateBell(rdt, dt); updateChase(rdt, dt); updateCamera(rdt, T, dt); siegeLate(rdt); chaseLate(rdt); updateSky(T, R.camera); Sound.setListener(R.camera); updateBubble(rdt); updatePlay(rdt);
   renderFrame(T);
-  if (perf.steps < 5 && $("menu").hidden && $("gfx").value === "auto" && !window.GULCH_PAUSE) { perf.n++; perf.acc += rdt;
+  if (perf.steps < 7 && $("menu").hidden && $("gfx").value === "auto" && !window.GULCH_PAUSE) { perf.n++; perf.acc += rdt;
     if (perf.n === 150) { const avg = perf.acc / perf.n; perf.n = 0; perf.acc = 0; if (avg > 1 / 27) perfStep(); } }
 }
 function loop(now) { if (window.GULCH_PAUSE) { last = now; requestAnimationFrame(loop); return; } tick(now); requestAnimationFrame(loop); }

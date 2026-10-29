@@ -2,6 +2,24 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v33
+- **More detail everywhere.**
+  - **A new Ultra graphics tier**: textures at twice the resolution, a sun shadow map four times the size, more grass,
+    stronger ambient occlusion and volumetric light, and the most of the new detail. Auto now starts computers on
+    Ultra and phones on High (it was Balanced); as before, it steps down by itself if frames run long, now from Ultra
+    too.
+  - **Close-up detail textures**: the ground has sand grains, grit and little stones; timber has fibres, splinters and
+    fine checks; rock and boulders, in town and along the getaway, have grit over their own texture. They fade out
+    with distance, where they'd be too fine to see.
+  - **The town's porches**: lanterns on iron brackets either side of every door that light at dusk, a step up, shutters
+    (some hanging open), benches, crates, sacks and barrels at the ends of the porches, rain barrels, and wanted
+    posters, each with its own sketched face, name and reward.
+  - **The street**: stones large and small, broken boards and sticks, bottles outside the saloon, rusty cans and
+    horseshoes by the livery. Tumbleweeds roll and hop down the street on the wind (a few at a time, away from the
+    gallows and the word board).
+  - **The getaway's desert**: dead trees, ocotillo, flat ledges of rock and loose stones along the trail.
+  - How much of the new clutter there is follows the tier.
+
 ## v32
 - **The course is checked.** Every run of the getaway can be ridden without a hit: 300 courses from the game's own
   generator were searched frame by frame for a clean way through, also with a horse 12 cm wider and 40 cm longer,
