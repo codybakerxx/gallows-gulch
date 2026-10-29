@@ -72,7 +72,7 @@ function buildGallows() {
     const arm = woodBox(0.04, 0.04, 0.32, MAT.iron); arm.position.set(0, 0.22, -0.15); lg.add(arm);
     const hook = new THREE.Mesh(new THREE.TorusGeometry(0.02, 0.005, 6, 10, Math.PI * 1.4), MAT.iron); hook.position.set(0, 0.215, 0); hook.rotation.y = Math.PI / 2; lg.add(hook);
     GAL.lanterns.push(glass.material); (GAL.swingers = GAL.swingers || []).push({ pv, ax: 0, az: 0, vx: 0, vz: 0, k: 0.12 });
-    if (x === LAY.postX[1] || R.tier === "high") { const pl = new THREE.PointLight(0xff9a40, 0, 9, 2); pl.position.set(0, -0.24, 0.05); pv.add(pl); GAL.lanterns.push(pl); }
+    if (x === LAY.postX[1] || tierAtLeast("high")) { const pl = new THREE.PointLight(0xff9a40, 0, 9, 2); pl.position.set(0, -0.24, 0.05); pv.add(pl); GAL.lanterns.push(pl); }
   }
   g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   GAL.doors.forEach(d => d.pivot.userData.dyn = true); lp.userData.dyn = true; GAL.lanternGroups.forEach(l => l.userData.dyn = true);
@@ -222,13 +222,7 @@ function boardDraw() {
 function slotBoardPos(i) { const s = BOARD.slots[i]; return { a: px2board(s.x - s.w * 0.35, s.y - BOARD.font * 0.35), b: px2board(s.x + s.w * 0.35, s.y - BOARD.font * 0.35), h: BOARD.font / BOARD.H * LAY.board.h }; }
 function wrongBoardPos(i) { const x = BOARD.wx0 + i * BOARD.wstep + BOARD.wstep / 2; return { a: px2board(x - BOARD.wstep * 0.4, BOARD.wy - BOARD.wfont * 0.35), b: px2board(x + BOARD.wstep * 0.4, BOARD.wy - BOARD.wfont * 0.35), h: BOARD.wfont / BOARD.H * LAY.board.h }; }
 // ---- set dressing ----
-function barrel(x, z, s = 1) {
-  const g = new THREE.CylinderGeometry(0.29, 0.29, 0.86, 22, 6); const p = g.attributes.position;
-  for (let i = 0; i < p.count; i++) { const y = p.getY(i), k = 1 + 0.13 * (1 - Math.pow(y / 0.43, 2)); p.setX(i, p.getX(i) * k); p.setZ(i, p.getZ(i) * k); } g.computeVertexNormals();
-  const uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 2.2, uv.getY(i) * 0.9);
-  const m = new THREE.Mesh(g, MAT.wood); m.position.set(x, 0.43 * s, z); m.scale.setScalar(s); m.castShadow = m.receiveShadow = true; R.scene.add(m);
-  for (const y of [-0.3, 0.3]) { const h = new THREE.Mesh(new THREE.TorusGeometry(0.31, 0.012, 6, 28), MAT.iron); h.rotation.x = Math.PI / 2; h.position.set(x, (0.43 + y) * s, z); h.scale.setScalar(s * (1 + 0.13 * (1 - (y / 0.43) ** 2)) / 1.0); R.scene.add(h); }
-}
+function barrel(x, z, s = 1) { const b = barrelMesh(s); b.position.set(x, 0, z); R.scene.add(b); } // (07c)
 function buildSetDressing() {
   const G0 = new THREE.Group(); R.scene.add(G0); const add0 = R.scene.add.bind(R.scene); R.scene.add = o => G0.add(o);
   try { buildSetDressingInner(); } finally { R.scene.add = add0; }
