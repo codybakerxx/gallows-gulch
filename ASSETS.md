@@ -9,12 +9,16 @@ glTF 2.0 binary. The build writes each one to `dist/models/<name>.glb.txt` as ba
 
 | File | Bytes | Meshes (primitives) | Vertices | Triangles | Skeleton | Morph targets | Animations | Embedded textures |
 |---|---:|---:|---:|---:|---:|---:|---:|---|
+| `ARC09.glb` | 2.02 MB | 10 (10) | 66,987 | 86,552 | – | – | – | 512×512 jpeg, 1024×1024 jpeg, 1024×1024 jpeg, 1024×1024 jpeg |
 | `Horse.glb` | 177.5 KB | 1 (1) | 796 | 984 | – | 15 | 1 | – |
 | `LeePerrySmith.glb` | 395.5 KB | 1 (1) | 9,279 | 17,684 | – | – | – | – |
 | `Stork.glb` | 75.1 KB | 1 (1) | 358 | 542 | – | 13 | 1 | – |
 | `Xbot.glb` | 2.79 MB | 2 (2) | 28,374 | 49,112 | 67 joints | – | 7 | – |
 
-**`Horse.glb`** — The loose horse that now and then bolts down the street (a bay coat painted in code; galloping by its morph targets).
+**`ARC09.glb`** — The ARC-09 laser gun on the crate at your middle cover in the town shootout, and in your hand once you take it up (the repository owner's model, packed by tools/pack_arc09.py; its meshes merged into one in code).
+Mesh extent (model units, quantized positions through their nodes' scale and offset): 0.294 × 0.204 × 0.0524. 11 nodes, 1 material.
+
+**`Horse.glb`** — The loose horse that now and then bolts down the street, and in the getaway your horse and the posse's five (coats painted and tinted in code; galloping by its morph targets).
 Mesh extent (model units, before node transforms): 61.1 × 182 × 322. 1 nodes, 1 material.
 
 | Animation | Length | Channels |
@@ -102,6 +106,7 @@ The host, who runs the hanging and calls every letter. The subtitle shown on scr
 | `miss9.mp3` | 2.82 s | 44,100 Hz | mono | 64 kb/s | 22.3 KB | a wrong letter | “Crowd's lovin' this.” |
 | `miss10.mp3` | 2.69 s | 44,100 Hz | mono | 64 kb/s | 21.3 KB | a wrong letter | “Ooh, that'll cost him.” |
 | `miss11.mp3` | 2.53 s | 44,100 Hz | mono | 64 kb/s | 20.0 KB | a wrong letter | “Not even close, stranger.” |
+| `mystery0.mp3` | 3.87 s | 44,100 Hz | mono | 64 kb/s | 30.5 KB | the first round after the game loads, before the intro | “There's more to this game than you think. Find the mystery.” |
 | `siege0.mp3` | 2.77 s | 44,100 Hz | mono | 64 kb/s | 21.9 KB | the rope is cut and the shootout starts | “He cut him down! Shoot that stranger!” |
 | `siege2.mp3` | 3.21 s | 44,100 Hz | mono | 64 kb/s | 25.3 KB | the gunmen shoot you down | “Should've minded your own business, stranger.” |
 | `win0.mp3` | 3.55 s | 44,100 Hz | mono | 64 kb/s | 28.0 KB | the word is solved | “Go on, git. Before I change my mind.” |
@@ -115,19 +120,33 @@ Short, trimmed and level-matched mono clips, placed in 3D around the listener wh
 
 | File | Length | Sample rate | Channels | Bit rate | Bytes | What it is |
 |---|---:|---:|---|---:|---:|---|
+| `canyon0.mp3` | 2.04 s | 44,100 Hz | mono | 58 kb/s | 14.7 KB | The getaway: horse and rider hitting the canyon floor, far below |
 | `cock0.mp3` | 0.18 s | 44,100 Hz | mono | 111 kb/s | 2.5 KB | A gunman cocking his hammer: your cue to duck |
 | `cock1.mp3` | 0.29 s | 44,100 Hz | mono | 105 kb/s | 3.7 KB | A gunman cocking his hammer: your cue to duck |
 | `cough0.mp3` | 0.89 s | 44,100 Hz | mono | 66 kb/s | 7.2 KB | The cut-down man gasping and coughing for air |
 | `cough1.mp3` | 0.42 s | 44,100 Hz | mono | 68 kb/s | 3.5 KB | The cut-down man gasping and coughing for air |
+| `crows.mp3` | 12.56 s | 44,100 Hz | mono | 96 kb/s | 147.6 KB | The crows: the repository owner's two recordings of crows, cleaned and cut into 20 single caws (17 short, 3 long) with silence between, strung into calls by the game |
 | `cut0.mp3` | 0.42 s | 44,100 Hz | mono | 102 kb/s | 5.2 KB | The rope cut through |
 | `dry0.mp3` | 0.29 s | 44,100 Hz | mono | 105 kb/s | 3.7 KB | Empty revolver: the hammer falls on nothing |
 | `far0.mp3` | 0.99 s | 44,100 Hz | mono | 98 kb/s | 12.0 KB | A gunman's shot from across the street |
 | `far1.mp3` | 0.97 s | 44,100 Hz | mono | 98 kb/s | 11.7 KB | A gunman's shot from across the street |
 | `far2.mp3` | 1.02 s | 44,100 Hz | mono | 98 kb/s | 12.3 KB | A gunman's shot from across the street |
 | `far3.mp3` | 0.86 s | 44,100 Hz | mono | 99 kb/s | 10.5 KB | A gunman's shot from across the street |
+| `flap0.mp3` | 0.99 s | 44,100 Hz | mono | 98 kb/s | 12.0 KB | A crow's wings as it takes off (pitched to the bird) |
+| `flap1.mp3` | 1.54 s | 44,100 Hz | mono | 97 kb/s | 18.4 KB | A crow's wings as it takes off (pitched to the bird) |
+| `glass0.mp3` | 0.76 s | 44,100 Hz | mono | 99 kb/s | 9.2 KB | A bottle shot to pieces in the shootout (also the gallows lanterns) |
+| `glass1.mp3` | 1.04 s | 44,100 Hz | mono | 98 kb/s | 12.6 KB | A bottle shot to pieces in the shootout (also the gallows lanterns) |
+| `glass2.mp3` | 0.81 s | 44,100 Hz | mono | 99 kb/s | 9.8 KB | A bottle shot to pieces in the shootout (also the gallows lanterns) |
+| `horse0.mp3` | 0.94 s | 44,100 Hz | mono | 99 kb/s | 11.4 KB | The town horse (or a posse horse) crying out as it's shot and goes down |
+| `horse1.mp3` | 1.04 s | 44,100 Hz | mono | 98 kb/s | 12.6 KB | The town horse (or a posse horse) crying out as it's shot and goes down |
+| `horse2.mp3` | 0.99 s | 44,100 Hz | mono | 98 kb/s | 12.0 KB | The town horse (or a posse horse) crying out as it's shot and goes down |
 | `hurt0.mp3` | 0.37 s | 44,100 Hz | mono | 69 kb/s | 3.1 KB | You, hit (a grunt as a heart goes) |
 | `hurt1.mp3` | 0.47 s | 44,100 Hz | mono | 68 kb/s | 3.9 KB | You, hit (a grunt as a heart goes) |
 | `hurt2.mp3` | 0.39 s | 44,100 Hz | mono | 69 kb/s | 3.3 KB | You, hit (a grunt as a heart goes) |
+| `keg0.mp3` | 0.97 s | 44,100 Hz | mono | 98 kb/s | 11.7 KB | A bullet into a barrel (or the trough's side) and the water spouting out |
+| `keg1.mp3` | 0.97 s | 44,100 Hz | mono | 98 kb/s | 11.7 KB | A bullet into a barrel (or the trough's side) and the water spouting out |
+| `keg2.mp3` | 0.94 s | 44,100 Hz | mono | 99 kb/s | 11.4 KB | A bullet into a barrel (or the trough's side) and the water spouting out |
+| `neck0.mp3` | 0.39 s | 44,100 Hz | mono | 103 kb/s | 4.9 KB | The neck breaking as the rope catches him (the repository owner's own recording) |
 | `painf0.mp3` | 0.99 s | 44,100 Hz | mono | 66 kb/s | 8.0 KB | A woman crying out when your shot lands |
 | `painf1.mp3` | 0.94 s | 44,100 Hz | mono | 66 kb/s | 7.6 KB | A woman crying out when your shot lands |
 | `painf2.mp3` | 2.04 s | 44,100 Hz | mono | 64 kb/s | 16.2 KB | A woman crying out when your shot lands |
@@ -138,9 +157,22 @@ Short, trimmed and level-matched mono clips, placed in 3D around the listener wh
 | `painm4.mp3` | 1.88 s | 44,100 Hz | mono | 65 kb/s | 14.9 KB | A gunman crying out when your shot lands |
 | `painm5.mp3` | 1.72 s | 44,100 Hz | mono | 65 kb/s | 13.7 KB | A gunman crying out when your shot lands |
 | `painm6.mp3` | 0.94 s | 44,100 Hz | mono | 66 kb/s | 7.6 KB | A gunman crying out when your shot lands |
+| `pane0.mp3` | 1.04 s | 44,100 Hz | mono | 98 kb/s | 12.6 KB | A shop window shot through |
+| `pane1.mp3` | 1.49 s | 44,100 Hz | mono | 97 kb/s | 17.8 KB | A shop window shot through |
+| `pane2.mp3` | 0.78 s | 44,100 Hz | mono | 99 kb/s | 9.5 KB | A shop window shot through |
+| `ric0.mp3` | 1.04 s | 44,100 Hz | mono | 98 kb/s | 12.6 KB | A bullet whining off iron |
+| `ric1.mp3` | 1.04 s | 44,100 Hz | mono | 98 kb/s | 12.6 KB | A bullet whining off iron |
+| `ric2.mp3` | 1.04 s | 44,100 Hz | mono | 98 kb/s | 12.6 KB | A bullet whining off iron |
+| `scream0.mp3` | 4.55 s | 44,100 Hz | mono | 66 kb/s | 36.8 KB | The getaway: his scream as he goes over the cliff (it falls away with him) |
 | `shot0.mp3` | 1.85 s | 44,100 Hz | mono | 97 kb/s | 22.1 KB | Your revolver firing, close up |
 | `shot1.mp3` | 1.72 s | 44,100 Hz | mono | 97 kb/s | 20.6 KB | Your revolver firing, close up |
 | `shot2.mp3` | 1.88 s | 44,100 Hz | mono | 97 kb/s | 22.4 KB | Your revolver firing, close up |
+| `shout0.mp3` | 2.30 s | 44,100 Hz | mono | 57 kb/s | 16.0 KB | The getaway: a posse rider coming down the street, “There he is! Get him, boys!” |
+| `shout1.mp3` | 1.41 s | 44,100 Hz | mono | 62 kb/s | 10.7 KB | The getaway: a posse rider as you ride off, “Don’t let him get away!” |
+| `shout2.mp3` | 2.09 s | 44,100 Hz | mono | 55 kb/s | 14.1 KB | The getaway: a posse rider when your horse hits something, “Ha! We got him now!” |
+| `shout3.mp3` | 2.27 s | 44,100 Hz | mono | 58 kb/s | 16.2 KB | The getaway: a posse rider at the halfway shot, “Shoot him off that damn horse!” |
+| `shout4.mp3` | 3.60 s | 44,100 Hz | mono | 66 kb/s | 29.5 KB | The getaway: the last rider, coming alongside, “Just you and me now, you son of a bitch.” |
+| `shout5.mp3` | 2.87 s | 44,100 Hz | mono | 58 kb/s | 20.6 KB | The getaway: a posse rider when the first of them falls, “Aw, hell! He shot Earl!” |
 | `sword0.mp3` | 0.76 s | 44,100 Hz | mono | 99 kb/s | 9.2 KB | The sword pulled from the ground |
 | `taunt0.mp3` | 1.07 s | 44,100 Hz | mono | 65 kb/s | 8.6 KB | Taunt, said by a townsman: “Take this!” |
 | `taunt1.mp3` | 1.83 s | 44,100 Hz | mono | 65 kb/s | 14.5 KB | Taunt, said by a townsman: “Thought you could get away, huh?” |
@@ -149,6 +181,9 @@ Short, trimmed and level-matched mono clips, placed in 3D around the listener wh
 | `taunt4.mp3` | 1.46 s | 44,100 Hz | mono | 65 kb/s | 11.7 KB | Taunt, said by a townsman: “Any last words?” |
 | `taunt5.mp3` | 1.85 s | 44,100 Hz | mono | 65 kb/s | 14.7 KB | Taunt, said by the executioner: “Your time has come, kid!” |
 | `taunt6.mp3` | 1.38 s | 44,100 Hz | mono | 65 kb/s | 11.1 KB | Taunt, said by the executioner: “Any last words?” |
+| `tin0.mp3` | 0.39 s | 44,100 Hz | mono | 103 kb/s | 4.9 KB | A tin can hit and sent flying |
+| `tin1.mp3` | 0.57 s | 44,100 Hz | mono | 100 kb/s | 7.1 KB | A tin can hit and sent flying |
+| `tin2.mp3` | 1.04 s | 44,100 Hz | mono | 98 kb/s | 12.6 KB | A tin can hit and sent flying |
 | `whiz0.mp3` | 0.76 s | 44,100 Hz | mono | 99 kb/s | 9.2 KB | A bullet passing close by your head |
 | `whiz1.mp3` | 0.47 s | 44,100 Hz | mono | 102 kb/s | 5.9 KB | A bullet passing close by your head |
 | `whiz2.mp3` | 0.84 s | 44,100 Hz | mono | 99 kb/s | 10.1 KB | A bullet passing close by your head |
@@ -175,15 +210,19 @@ Most of the world has no asset file: it is generated when the page loads, sized 
 
 | File | Pixels | Bytes |
 |---|---:|---:|
-| `00-wide.png` | 1920×1080 | 2.09 MB |
-| `01-title.png` | 780×1688 | 657.0 KB |
-| `02-round.png` | 780×1688 | 1.42 MB |
+| `00-wide.png` | 1920×1080 | 2.22 MB |
+| `01-title.png` | 780×1688 | 700.8 KB |
+| `02-round.png` | 780×1688 | 1.49 MB |
 | `03-solved.png` | 780×1688 | 1.33 MB |
 | `04-sword.png` | 780×1688 | 1.49 MB |
-| `05-shootout.png` | 780×1688 | 1.50 MB |
-| `06-game-over.png` | 780×1688 | 1.33 MB |
-| `07-word-book.png` | 780×1688 | 518.7 KB |
+| `05-shootout.png` | 780×1688 | 1.60 MB |
+| `06-game-over.png` | 780×1688 | 1.38 MB |
+| `07-word-book.png` | 780×1688 | 574.6 KB |
+| `08-rooftops.png` | 780×1688 | 1.50 MB |
+| `09-getaway-ride.png` | 780×1688 | 1.85 MB |
+| `10-getaway-fight.png` | 780×1688 | 1.20 MB |
+| `11-getaway-cliff.png` | 780×1688 | 1.02 MB |
 
 ## Totals
 
-91 asset files: models 3.43 MB, textures 349.9 KB, audio 3.81 MB (together 7.58 MB).
+123 asset files: models 5.45 MB, textures 349.9 KB, audio 4.38 MB (together 10.17 MB).

@@ -23,10 +23,10 @@ import sys
 ROOT = os.path.dirname(os.path.abspath(__file__))
 
 # the modules, in load order (later ones use what earlier ones define)
-ORDER = ["01_util.js", "02_textures.js", "03_audio.js", "04_render.js", "05_sky.js", "06_world.js", "07_props.js",
+ORDER = ["01_util.js", "02_textures.js", "03_audio.js", "04_render.js", "05_sky.js", "06_world.js", "07_props.js", "07c_dressing.js",
          "07b_physics.js", "08a_bodygeo.js", "08b_chars.js", "08c_headdata.js", "09_anim.js", "09b_ragdoll.js",
-         "10_life.js", "11_words.js", "11b_defs.js", "12a_director.js", "12b_game.js", "12b2_play.js", "12d_siege.js",
-         "12e_book.js", "12c_boot.js"]
+         "10_life.js", "10b_horse.js", "10c_crows.js", "11_words.js", "11b_defs.js", "12a_director.js", "12b_game.js", "12b2_play.js", "12d_siege.js",
+         "12e_book.js", "12f_bell.js", "12j_targets.js", "12k_laser.js", "12l_meat.js", "12g_chase.js", "12h_runner.js", "12i_canyon.js", "12c_boot.js"]
 
 # three.js r147 files, in load order: their path on the CDN
 VENDOR = {
