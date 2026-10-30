@@ -10,7 +10,7 @@ async function lose() {
   await wait(1.25);
   const tip = () => GAL.leverTip.getWorldPosition(V3());
   await tween(0.24, p => { GAL.leverPivot.rotation.z = lerp(-0.35, 0.6, Ease.in(p)); EXEC.ik.R.t.copy(tip()); }); Sound.clank(tip());
-  STATE.trap = true; releaseRopeCoil(); puff(V3(LAY.trap.x, 0.3, LAY.trap.z), 50, 1.2); // the leaves slam into their stops a moment later (07b)
+  STATE.trap = true; releaseRopeCoil(); puff(V3(LAY.trap.x, 0.3, LAY.trap.z), 50, 1.2); Sound.hush(3.2); // the leaves slam into their stops a moment later (07b); no crow is heard over the drop and the snap
   { const np = noosePose(MAN), B = MAN.ch.bones; B.Neck.getWorldPosition(A1); B.Head.getWorldPosition(A2); A3.lerpVectors(A1, A2, 0.6);
     MAN.startDrop(GAL.anchor, GAL.rope.sim.L + np.top.distanceTo(A3)); } // the ragdoll's rope runs anchor → knot → noose
   MAN.hang.onCatch = snapMoment;
@@ -111,7 +111,7 @@ function showHintBox(on) {
   b.hidden = !on; $("hintBtn").setAttribute("aria-expanded", String(!!on));
 }
 function resetScene() {
-  resetSiege(); stopBodyPlay(); TASKS.length = 0; ROPE.held = false; ROPE.mode = null; ROPE.fromT = 1; STATE.trap = false;
+  resetSiege(); resetCrows(); resetTargets(); stopBodyPlay(); TASKS.length = 0; ROPE.held = false; ROPE.mode = null; ROPE.fromT = 1; STATE.trap = false;
   for (const d of GAL.doors) { d.ang = 0; d.vel = 0; d.slams = 0; d.pivot.rotation.z = 0; }
   GAL.leverPivot.rotation.z = -0.35; resetRope();
   MAN.hang = null; MAN.pathIdx = 0; MAN.tremble = 0; MAN.sweating = false; MAN.setSad(0); MAN.ch.skin.userData.U.sweat.value = 0; MAN.bound = true;

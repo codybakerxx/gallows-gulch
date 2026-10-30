@@ -51,7 +51,7 @@ function bellRay(ro, rd) {
 // hit: it rings and swings, a spark flies off the brass, and the round is marked. In the cleared street, that starts the getaway now
 function bellShot(at, rd) {
   const side = rd.x >= 0 ? 1 : -1; BELL.angV += side * BELL_CFG.swingKick; BELL.lastDir = 0; BELL.strikes = 0;
-  Sound.bell(bellCentre(), 1); muzzleFlash(at, 0.14); puff(at, 6, 0.4, 0.04, 0.6, 0.5, 0xf0d9a0);
+  Sound.bell(bellCentre(), 1); crowsStartle(bellCentre(), 20, 1.2); muzzleFlash(at, 0.14); puff(at, 6, 0.4, 0.04, 0.6, 0.5, 0xf0d9a0);
   if (!BELL.unlocked) Sound.preloadClips(CHASE_CLIPS); BELL.unlocked = true;
   if (SIEGE.phase === "cleared" && !BELL.pending) { BELL.pending = true; setTimeout(() => { if (SIEGE.on && SIEGE.phase === "cleared") clearedToGetaway(); else BELL.pending = false; }, 900); }
 }

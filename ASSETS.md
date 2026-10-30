@@ -121,15 +121,25 @@ Short, trimmed and level-matched mono clips, placed in 3D around the listener wh
 | `cock1.mp3` | 0.29 s | 44,100 Hz | mono | 105 kb/s | 3.7 KB | A gunman cocking his hammer: your cue to duck |
 | `cough0.mp3` | 0.89 s | 44,100 Hz | mono | 66 kb/s | 7.2 KB | The cut-down man gasping and coughing for air |
 | `cough1.mp3` | 0.42 s | 44,100 Hz | mono | 68 kb/s | 3.5 KB | The cut-down man gasping and coughing for air |
+| `crows.mp3` | 12.56 s | 44,100 Hz | mono | 96 kb/s | 147.6 KB | The crows: the repository owner's two recordings of crows, cleaned and cut into 20 single caws (17 short, 3 long) with silence between, strung into calls by the game |
 | `cut0.mp3` | 0.42 s | 44,100 Hz | mono | 102 kb/s | 5.2 KB | The rope cut through |
 | `dry0.mp3` | 0.29 s | 44,100 Hz | mono | 105 kb/s | 3.7 KB | Empty revolver: the hammer falls on nothing |
 | `far0.mp3` | 0.99 s | 44,100 Hz | mono | 98 kb/s | 12.0 KB | A gunman's shot from across the street |
 | `far1.mp3` | 0.97 s | 44,100 Hz | mono | 98 kb/s | 11.7 KB | A gunman's shot from across the street |
 | `far2.mp3` | 1.02 s | 44,100 Hz | mono | 98 kb/s | 12.3 KB | A gunman's shot from across the street |
 | `far3.mp3` | 0.86 s | 44,100 Hz | mono | 99 kb/s | 10.5 KB | A gunman's shot from across the street |
+| `flap0.mp3` | 0.99 s | 44,100 Hz | mono | 98 kb/s | 12.0 KB | A crow's wings as it takes off (pitched to the bird) |
+| `flap1.mp3` | 1.54 s | 44,100 Hz | mono | 97 kb/s | 18.4 KB | A crow's wings as it takes off (pitched to the bird) |
+| `glass0.mp3` | 0.76 s | 44,100 Hz | mono | 99 kb/s | 9.2 KB | A bottle shot to pieces in the shootout (also the gallows lanterns) |
+| `glass1.mp3` | 1.04 s | 44,100 Hz | mono | 98 kb/s | 12.6 KB | A bottle shot to pieces in the shootout (also the gallows lanterns) |
+| `glass2.mp3` | 0.81 s | 44,100 Hz | mono | 99 kb/s | 9.8 KB | A bottle shot to pieces in the shootout (also the gallows lanterns) |
 | `hurt0.mp3` | 0.37 s | 44,100 Hz | mono | 69 kb/s | 3.1 KB | You, hit (a grunt as a heart goes) |
 | `hurt1.mp3` | 0.47 s | 44,100 Hz | mono | 68 kb/s | 3.9 KB | You, hit (a grunt as a heart goes) |
 | `hurt2.mp3` | 0.39 s | 44,100 Hz | mono | 69 kb/s | 3.3 KB | You, hit (a grunt as a heart goes) |
+| `keg0.mp3` | 0.97 s | 44,100 Hz | mono | 98 kb/s | 11.7 KB | A bullet into a barrel (or the trough's side) and the water spouting out |
+| `keg1.mp3` | 0.97 s | 44,100 Hz | mono | 98 kb/s | 11.7 KB | A bullet into a barrel (or the trough's side) and the water spouting out |
+| `keg2.mp3` | 0.94 s | 44,100 Hz | mono | 99 kb/s | 11.4 KB | A bullet into a barrel (or the trough's side) and the water spouting out |
+| `neck0.mp3` | 0.39 s | 44,100 Hz | mono | 103 kb/s | 4.9 KB | The neck breaking as the rope catches him (the repository owner's own recording) |
 | `painf0.mp3` | 0.99 s | 44,100 Hz | mono | 66 kb/s | 8.0 KB | A woman crying out when your shot lands |
 | `painf1.mp3` | 0.94 s | 44,100 Hz | mono | 66 kb/s | 7.6 KB | A woman crying out when your shot lands |
 | `painf2.mp3` | 2.04 s | 44,100 Hz | mono | 64 kb/s | 16.2 KB | A woman crying out when your shot lands |
@@ -140,6 +150,12 @@ Short, trimmed and level-matched mono clips, placed in 3D around the listener wh
 | `painm4.mp3` | 1.88 s | 44,100 Hz | mono | 65 kb/s | 14.9 KB | A gunman crying out when your shot lands |
 | `painm5.mp3` | 1.72 s | 44,100 Hz | mono | 65 kb/s | 13.7 KB | A gunman crying out when your shot lands |
 | `painm6.mp3` | 0.94 s | 44,100 Hz | mono | 66 kb/s | 7.6 KB | A gunman crying out when your shot lands |
+| `pane0.mp3` | 1.04 s | 44,100 Hz | mono | 98 kb/s | 12.6 KB | A shop window shot through |
+| `pane1.mp3` | 1.49 s | 44,100 Hz | mono | 97 kb/s | 17.8 KB | A shop window shot through |
+| `pane2.mp3` | 0.78 s | 44,100 Hz | mono | 99 kb/s | 9.5 KB | A shop window shot through |
+| `ric0.mp3` | 1.04 s | 44,100 Hz | mono | 98 kb/s | 12.6 KB | A bullet whining off iron |
+| `ric1.mp3` | 1.04 s | 44,100 Hz | mono | 98 kb/s | 12.6 KB | A bullet whining off iron |
+| `ric2.mp3` | 1.04 s | 44,100 Hz | mono | 98 kb/s | 12.6 KB | A bullet whining off iron |
 | `scream0.mp3` | 4.55 s | 44,100 Hz | mono | 66 kb/s | 36.8 KB | The getaway: his scream as he goes over the cliff (it falls away with him) |
 | `shot0.mp3` | 1.85 s | 44,100 Hz | mono | 97 kb/s | 22.1 KB | Your revolver firing, close up |
 | `shot1.mp3` | 1.72 s | 44,100 Hz | mono | 97 kb/s | 20.6 KB | Your revolver firing, close up |
@@ -158,6 +174,9 @@ Short, trimmed and level-matched mono clips, placed in 3D around the listener wh
 | `taunt4.mp3` | 1.46 s | 44,100 Hz | mono | 65 kb/s | 11.7 KB | Taunt, said by a townsman: “Any last words?” |
 | `taunt5.mp3` | 1.85 s | 44,100 Hz | mono | 65 kb/s | 14.7 KB | Taunt, said by the executioner: “Your time has come, kid!” |
 | `taunt6.mp3` | 1.38 s | 44,100 Hz | mono | 65 kb/s | 11.1 KB | Taunt, said by the executioner: “Any last words?” |
+| `tin0.mp3` | 0.39 s | 44,100 Hz | mono | 103 kb/s | 4.9 KB | A tin can hit and sent flying |
+| `tin1.mp3` | 0.57 s | 44,100 Hz | mono | 100 kb/s | 7.1 KB | A tin can hit and sent flying |
+| `tin2.mp3` | 1.04 s | 44,100 Hz | mono | 98 kb/s | 12.6 KB | A tin can hit and sent flying |
 | `whiz0.mp3` | 0.76 s | 44,100 Hz | mono | 99 kb/s | 9.2 KB | A bullet passing close by your head |
 | `whiz1.mp3` | 0.47 s | 44,100 Hz | mono | 102 kb/s | 5.9 KB | A bullet passing close by your head |
 | `whiz2.mp3` | 0.84 s | 44,100 Hz | mono | 99 kb/s | 10.1 KB | A bullet passing close by your head |
@@ -199,4 +218,4 @@ Most of the world has no asset file: it is generated when the page loads, sized 
 
 ## Totals
 
-100 asset files: models 3.43 MB, textures 349.9 KB, audio 4.00 MB (together 7.77 MB).
+119 asset files: models 3.43 MB, textures 349.9 KB, audio 4.34 MB (together 8.11 MB).

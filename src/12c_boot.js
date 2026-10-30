@@ -107,7 +107,7 @@ async function boot() {
   HOST.onStep = stepSnd(true); MAN.onStep = stepSnd(false, 1.25); EXEC.onStep = stepSnd(false, 0.9);
   MAN.onBreath = (a, p) => { if (p > 0.35) Sound.breath(a.ch.bones.Head.getWorldPosition(new THREE.Vector3()), p); };
   KEY_LIGHT = new THREE.PointLight(0xffd9b8, 0, 3.5, 2); R.scene.add(KEY_LIGHT);
-  buildCrowd(); prepHorse(horse); prepBirds(stork); buildSiege(); buildBell(); buildChase();
+  buildCrowd(); prepHorse(horse); prepBirds(stork); buildSiege(); buildBell(); buildChase(); buildCrows(); buildTargets(); Sound.crowGate = () => !CHASE.on; // (the distant crows are heard about the town, not out on the getaway)
   setProgress(0.95, "Saddling up…"); shot("intro", 0); resetScene(); boardDraw();
   await nextFrame(); siegePrecompile(true); try { R.renderer.compile(R.scene, R.camera); } catch (e) { console.warn("precompile", e); } siegePrecompile(false);
   Sound.preloadClips(SIEGE_CLIPS);
@@ -137,7 +137,7 @@ function tick(now) {
   if (EXEC.gripping && !STATE.trap) EXEC.ik.R.t.copy(GAL.leverTip.getWorldPosition(A1));
   updateWind(dt); updateCrowd(dt, STATE.mood); updatePanic(dt); setTrapOpen(dt, STATE.trap); updateRopeState(T, dt); updateLanterns(dt);
   if (MAN.hang && MAN.hang.caught && MAN.hang.t - MAN.hang.tCatch > 2.5 && Math.random() < dt * 0.3) Sound.ropeCreak(GAL.anchor, 0.35); // the odd creak once he hangs still
-  updateHorse(dt); updateBirds(dt); updateWeed(dt); updateDust(rdt, T); updateTumbleweeds(dt); updateWindmill(dt); updatePuffs(dt); updateFlag(dt); updateSmoke(dt);
+  updateHorse(dt); updateBirds(dt); updateCrows(dt); updateTargets(dt); updateWeed(dt); updateDust(rdt, T); updateTumbleweeds(dt); updateWindmill(dt); updatePuffs(dt); updateFlag(dt); updateSmoke(dt);
   updateSiege(rdt, dt); updateBell(rdt, dt); updateChase(rdt, dt); updateCamera(rdt, T, dt); siegeLate(rdt); chaseLate(rdt); updateSky(T, R.camera); Sound.setListener(R.camera); updateBubble(rdt); updatePlay(rdt);
   renderFrame(T);
   if (perf.steps < 7 && $("menu").hidden && $("gfx").value === "auto" && !window.GULCH_PAUSE) { perf.n++; perf.acc += rdt;

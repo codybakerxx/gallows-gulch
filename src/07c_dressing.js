@@ -148,7 +148,7 @@ function updateTumbleweeds(dt) {
   const D = DRESS.weeds; if (!D || !D.im.visible) return; const wind = WIND.v, ws = Math.hypot(wind.x, wind.z) || 1, dir = _v1.set(wind.x / ws, 0, wind.z / ws);
   D.weeds.forEach((w, i) => {
     const target = (0.9 + 0.5 * Math.sin(w.ph + w.life * 0.7)) * Math.min(3.2, ws * 1.4) * (1 + WIND.gust * 0.8); w.v += (target - w.v) * Math.min(1, dt * 1.5); w.life += dt;
-    const step = w.v * dt; w.p.addScaledVector(dir, step); w.p.addScaledVector(V3(-dir.z, 0, dir.x), Math.sin(w.life * 0.9 + w.ph) * 0.15 * dt); // (a little drift across the wind)
+    const step = w.v * dt; w.p.addScaledVector(dir, step); if (w.kick) { w.p.addScaledVector(w.kick, dt); w.kick.multiplyScalar(Math.max(0, 1 - 2.2 * dt)); } /* (a shot knocked it on: 12j) */ w.p.addScaledVector(V3(-dir.z, 0, dir.x), Math.sin(w.life * 0.9 + w.ph) * 0.15 * dt); // (a little drift across the wind)
     w.vy -= 9.8 * dt; w.y += w.vy * dt; if (w.y <= 0) { w.y = 0; w.vy = w.v > 0.8 && w.r() < dt * (0.5 + 0.35 * w.v) ? 1.0 + w.r() * 1.6 : 0; } // (it hops now and then on a stone)
     D.ax.set(dir.z, 0, -dir.x); D.dq.setFromAxisAngle(D.ax, step / w.rad); w.q.premultiply(D.dq); // (rolling: turned by the distance over its radius)
     const gy = groundVis(w.p.x, w.p.z); D.s.setScalar(w.rad / 0.38); D.m4.compose(_v2.set(w.p.x, gy + w.rad * 0.9 + w.y, w.p.z), w.q, D.s); D.im.setMatrixAt(i, D.m4);

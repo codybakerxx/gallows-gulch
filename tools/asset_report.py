@@ -142,6 +142,12 @@ SFX = {
     "cut": "The rope cut through",
     "dry": "Empty revolver: the hammer falls on nothing",
     "cock": "A gunman cocking his hammer: your cue to duck",
+    "flap": "A crow's wings as it takes off (pitched to the bird)",
+    "glass": "A bottle shot to pieces in the shootout (also the gallows lanterns)",
+    "pane": "A shop window shot through",
+    "tin": "A tin can hit and sent flying",
+    "ric": "A bullet whining off iron",
+    "keg": "A bullet into a barrel (or the trough's side) and the water spouting out",
 }
 SFX_ONE = { # the getaway (hidden): one line each
     "shout0": "The getaway: a posse rider coming down the street, “There he is! Get him, boys!”",
@@ -152,6 +158,8 @@ SFX_ONE = { # the getaway (hidden): one line each
     "shout5": "The getaway: a posse rider when the first of them falls, “Aw, hell! He shot Earl!”",
     "scream0": "The getaway: his scream as he goes over the cliff (it falls away with him)",
     "canyon0": "The getaway: horse and rider hitting the canyon floor, far below",
+    "neck0": "The neck breaking as the rope catches him (the repository owner's own recording)",
+    "crows": "The crows: the repository owner's two recordings of crows, cleaned and cut into 20 single caws (17 short, 3 long) with silence between, strung into calls by the game",
 }
 
 MODEL_ABOUT = {
@@ -242,7 +250,7 @@ def main():
     w("")
     w("| File | Length | Sample rate | Channels | Bit rate | Bytes | When | Line |")
     w("|---|---:|---:|---|---:|---:|---|---|")
-    vfiles = sorted(os.listdir(A("audio", "voice")), key=lambda s: (re.match(r"[a-z]+", s).group(0), int(re.search(r"\d+", s).group(0))))
+    vfiles = sorted(os.listdir(A("audio", "voice")), key=lambda s: (re.match(r"[a-z]+", s).group(0), int(re.search(r"\d+", s).group(0)) if re.search(r"\d+", s) else 0))
     for f in vfiles:
         a = probe(A("audio", "voice", f))
         total["audio"] += a["bytes"]
@@ -259,7 +267,7 @@ def main():
     w("")
     w("| File | Length | Sample rate | Channels | Bit rate | Bytes | What it is |")
     w("|---|---:|---:|---|---:|---:|---|")
-    sfiles = sorted(os.listdir(A("audio", "sfx")), key=lambda s: (re.match(r"[a-z]+", s).group(0), int(re.search(r"\d+", s).group(0))))
+    sfiles = sorted(os.listdir(A("audio", "sfx")), key=lambda s: (re.match(r"[a-z]+", s).group(0), int(re.search(r"\d+", s).group(0)) if re.search(r"\d+", s) else 0))
     for f in sfiles:
         a = probe(A("audio", "sfx", f))
         total["audio"] += a["bytes"]

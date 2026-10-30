@@ -363,7 +363,8 @@ function buildTown() {
   ];
   B.forEach(([along, side, w, h, d, name, opt], bi) => { const [x, z] = streetPt(along, side * (11.5 + d / 2)), ry = side < 0 ? yawL : yawR; const grp = building(x, z, ry, w, h, d, name, opt);
     if (bi % 3 !== 1) buildingAd(grp, x, z, ry, w, h, d, bi); // (a faded painted advertisement on the side wall that faces up the street: 07c)
-    if (opt && opt.roofGun) WORLD.roofs.push(roofInfo(x, z, ry, w, h, d, name, opt)); });
+    if (opt && opt.roofGun) WORLD.roofs.push(roofInfo(x, z, ry, w, h, d, name, opt));
+    (WORLD.blds = WORLD.blds || []).push({ name, along, x, z, y0: groundHeight(x, z), c: Math.cos(ry), s: Math.sin(ry), w, h, d, pd: 2.4, roofGun: !!(opt && opt.roofGun), rail: !(opt && opt.rail === false) }); }); // (where each stands: the crows perch on them, 10c)
   // church with steeple
   const ch = new THREE.Group(), cb = woodBox(8, 6, 14, MAT.wood); cb.position.y = 3; ch.add(cb);
   const roofG = new THREE.CylinderGeometry(0.01, 6.2, 3.5, 4, 1); roofG.rotateY(Math.PI / 4); const roof = new THREE.Mesh(roofG, MAT.woodDark); roof.scale.set(0.95, 1, 1.7); roof.position.y = 7.7; roof.castShadow = true; ch.add(roof);
@@ -376,11 +377,13 @@ function buildTown() {
   const tr = new THREE.Mesh(new THREE.ConeGeometry(2.7, 1.4, 20), MAT.wood); tr.position.y = 9.8; wt.add(tr);
   for (const [lx, lz] of [[-1.8, -1.8], [1.8, -1.8], [-1.8, 1.8], [1.8, 1.8]]) { const l = woodBox(0.25, 6, 0.25, MAT.wood); l.position.set(lx, 3, lz); wt.add(l); }
   { const [wx, wz] = streetPt(52, 20); wt.position.set(wx, groundHeight(wx, wz), wz); } WORLD.town.add(wt);
+  WORLD.farPerches = [0, 2.1, 4.2].map(a => wt.position.clone().add(V3(Math.cos(a) * 2.35, 9.12, Math.sin(a) * 2.35))); // (the rim of the tank: somewhere for a crow to go)
   wt.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   // telegraph line heading out of town
   const wireMat = new THREE.LineBasicMaterial({ color: 0x1b1410 }), wp = [];
   for (let i = 0; i < 14; i++) { const [x, z] = streetPt(56 + i * 26, 13 + i * 0.4), y = groundHeight(x, z); const p = woodBox(0.22, 7, 0.22, MAT.woodDark); p.position.set(x, y + 3.5, z); WORLD.town.add(p);
-    const arm = woodBox(1.6, 0.14, 0.14, MAT.woodDark); arm.position.set(x, y + 6.6, z); WORLD.town.add(arm); wp.push(V3(x - 0.6, y + 6.7, z), V3(x + 0.6, y + 6.7, z)); }
+    const arm = woodBox(1.6, 0.14, 0.14, MAT.woodDark); arm.position.set(x, y + 6.6, z); WORLD.town.add(arm); wp.push(V3(x - 0.6, y + 6.7, z), V3(x + 0.6, y + 6.7, z));
+    if (i < 3) WORLD.farPerches.push(V3(x + (i % 2 ? 0.45 : -0.45), y + 6.67, z)); }
   { const [fx, fz] = streetPt(16.5, -10.2); buildFlag(fx, fz); }
   bakeGroup(WORLD.town); R.scene.remove(WORLD.town);
   for (let s = 0; s < 2; s++) { const pts = []; for (let i = 0; i < wp.length / 2 - 1; i++) { const a = wp[i * 2 + s], b = wp[i * 2 + 2 + s]; for (let k = 0; k <= 8; k++) { const t = k / 8; pts.push(V3(lerp(a.x, b.x, t), lerp(a.y, b.y, t) - Math.sin(t * Math.PI) * 0.45, lerp(a.z, b.z, t))); } }

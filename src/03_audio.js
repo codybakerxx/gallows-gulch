@@ -28,7 +28,7 @@ const Sound = (() => {
     verbFar = ctx.createGain(); verbFar.gain.value = 0.5; verbFar.connect(far); far.connect(master);
     song.filter = ctx.createBiquadFilter(); song.filter.type = "lowpass"; song.filter.frequency.value = 20000; song.filter.Q.value = 0.5;
     song.gain = ctx.createGain(); song.gain.gain.value = 0; song.filter.connect(song.gain); song.gain.connect(duckG);
-    startAmbience(); decodeSong(); setTimeout(() => { for (const id of voice.fetches.keys()) voiceBuffer(id); for (const nm of clips.fetches.keys()) clipBuffer(nm); }, 400); return true;
+    startAmbience(); decodeSong(); crowAmb.t = setTimeout(crowAmbient, 6000); setTimeout(() => { for (const id of voice.fetches.keys()) voiceBuffer(id); for (const nm of clips.fetches.keys()) clipBuffer(nm); }, 400); return true;
   }
   function preloadVoices(ids) {
     for (const id of ids) if (!voice.fetches.has(id))
@@ -97,8 +97,9 @@ const Sound = (() => {
     if (p.positionX) { p.positionX.value = pos.x; p.positionY.value = pos.y; p.positionZ.value = pos.z; } else p.setPosition(pos.x, pos.y, pos.z);
     g.connect(p); p.connect(sfx); const w = ctx.createGain(); w.gain.value = wet; g.connect(w); w.connect(verbIn); return g;
   }
+  const lisPos = new THREE.Vector3(-2, 1.7, 6);
   function setListener(cam) {
-    if (!ctx) return; const L = ctx.listener, p = cam.position, f = _v4.set(0, 0, -1).applyQuaternion(cam.quaternion), u = _v3.set(0, 1, 0).applyQuaternion(cam.quaternion);
+    lisPos.copy(cam.position); if (!ctx) return; const L = ctx.listener, p = cam.position, f = _v4.set(0, 0, -1).applyQuaternion(cam.quaternion), u = _v3.set(0, 1, 0).applyQuaternion(cam.quaternion);
     if (L.positionX) { L.positionX.value = p.x; L.positionY.value = p.y; L.positionZ.value = p.z; L.forwardX.value = f.x; L.forwardY.value = f.y; L.forwardZ.value = f.z; L.upX.value = u.x; L.upY.value = u.y; L.upZ.value = u.z; }
     else { L.setPosition(p.x, p.y, p.z); L.setOrientation(f.x, f.y, f.z, u.x, u.y, u.z); }
   }
@@ -115,6 +116,58 @@ const Sound = (() => {
     const s = ctx.createBufferSource(); s.buffer = b; const v = ctx.createGain(); v.gain.value = gain; v.connect(dest);
     for (const [f, q] of res) { const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = f; bp.Q.value = q; s.connect(bp); bp.connect(v); }
     s.start(t);
+  }
+  // ---- crows (v35): the repository owner's two recordings, cleaned and cut into single caws in one file (audio/sfx/crows.mp3: 17 short caws from the
+  // first, 3 long drawn ones from the second, each followed by silence). The caws are found from those gaps once the file is decoded, so
+  // the cut points don't depend on how a browser's mp3 decoder pads the start. A crow's call is strung together from them the way crows
+  // call: a run of one to five, evenly spaced, each bird with its own pitch and pace, the run trailing off a little, the last caw dropping
+  const crowBank = { p: null, voices: [] }; let hushUntil = 0; const hushed = () => performance.now() / 1000 < hushUntil; // (hush: no crows over the drop and the snap)
+  function crowCaws() {
+    if (!ctx) return Promise.resolve(null);
+    if (!crowBank.p) crowBank.p = clipBuffer("crows").then(b => { if (!b) return null;
+      const D = b.getChannelData(0), sr = b.sampleRate, w = Math.floor(sr * 0.01), n = Math.floor(D.length / w), segs = []; let s0 = -1, quiet = 0;
+      for (let i = 0; i < n; i++) { let m = 0; for (let j = i * w, e = j + w; j < e; j++) { const a = Math.abs(D[j]); if (a > m) m = a; }
+        if (m > 0.012) { if (s0 < 0) s0 = i; quiet = 0; } else if (s0 >= 0 && ++quiet >= 8) { segs.push([s0, i - 7]); s0 = -1; quiet = 0; } }
+      if (s0 >= 0) segs.push([s0, n]);
+      const L = segs.filter(([a, e]) => e - a > 8).map(([a, e]) => [Math.max(0, a * w / sr - 0.012), (e - a) * w / sr + 0.06]);
+      return L.length ? { b, short: L.filter(c => c[1] < 0.45), long: L.filter(c => c[1] >= 0.45) } : null; });
+    return crowBank.p;
+  }
+  // a bird's own voice: the pitch it calls at, how fast it repeats, whether it's one of the long, drawn callers, and the few caws it uses
+  function crowVoice() { const long = Math.random() < 0.22, pick = []; for (let i = 0; i < 5; i++) pick.push(Math.random());
+    return { rate: 0.9 + Math.random() * 0.2, period: long ? 1.2 + Math.random() * 0.3 : 0.48 + Math.random() * 0.14, long, pick, last: -1 }; }
+  // one call: returns (as a promise) how many seconds from now it ends, so another bird can answer it
+  function crowCall(pos, o = {}) {
+    if (!ctx || hushed()) return Promise.resolve(0);
+    return crowCaws().then(C => { if (!C || !ctx) return 0;
+      const v = o.v || (o.v = crowVoice()), set = v.long && C.long.length ? C.long : C.short; if (!set.length) return 0;
+      const alarm = !!o.alarm, far = o.far || 0, n = o.n || (alarm ? 4 + (Math.random() * 3 | 0) : [1, 2, 2, 3, 3, 3, 4, 4, 5][Math.random() * 9 | 0]);
+      const per = v.period * (alarm ? 0.72 : 1), t0 = now() + (o.delay || 0) + 0.02;
+      // the path out: placed where the bird is, distance takes the top off it (air), and a far bird is mostly echo off the town
+      const d = at(pos, o.wet ?? lerp(0.22, 0.75, far), o.ref || 7); let dest = d;
+      if (far > 0.02) { const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = lerp(9000, 2200, far); lp.Q.value = 0.5; lp.connect(d); dest = lp; }
+      let t = t0, end = t0;
+      for (let k = 0; k < n; k++) {
+        let i = v.pick[k % v.pick.length] * set.length | 0; if (i === v.last) i = (i + 1) % set.length; v.last = i; // (never the same caw twice running)
+        const [off, dur] = set[i], s = ctx.createBufferSource(); s.buffer = C.b;
+        const rate = v.rate * (alarm ? 1.06 : 1) * (1 + (Math.random() - 0.5) * 0.05) * (k === n - 1 && n > 1 ? 0.965 : 1); s.playbackRate.value = rate;
+        const g = ctx.createGain(); g.gain.value = (o.gain ?? 0.55) * Math.pow(0.93, k) * (0.85 + Math.random() * 0.3); s.connect(g); g.connect(dest);
+        s.start(t, off, dur); end = t + dur / rate; t += per * (0.92 + Math.random() * 0.16);
+      }
+      return end - now(); });
+  }
+  // the crows round the town that you never see: three or four birds out past the buildings, each always from about the same way
+  // and with its own voice, calling now and then and answering one another
+  const crowAmb = { on: true, t: null, birds: null };
+  function crowAmbient() {
+    clearTimeout(crowAmb.t); crowAmb.t = setTimeout(crowAmbient, (12 + Math.random() * 26) * 1000);
+    if (!ctx || ctx.state !== "running" || !crowAmb.on || (api.crowGate && !api.crowGate())) return;
+    if (!crowAmb.birds) crowAmb.birds = Array.from({ length: 4 }, (_, i) => ({ v: crowVoice(), a: i * 1.6 + Math.random(), r: 40 + Math.random() * 50, h: 6 + Math.random() * 14 }));
+    const B = crowAmb.birds, first = B[Math.random() * B.length | 0], where = b => V3(lisPos.x + Math.cos(b.a) * b.r, b.h, lisPos.z + Math.sin(b.a) * b.r);
+    crowCall(where(first), { v: first.v, far: clamp((first.r - 30) / 60, 0.25, 1), gain: 0.6 }).then(len => {
+      if (Math.random() < 0.55) { const other = B.filter(b => b !== first)[Math.random() * (B.length - 1) | 0];
+        crowCall(where(other), { v: other.v, far: clamp((other.r - 30) / 60, 0.25, 1), gain: 0.6, delay: len + 0.35 + Math.random() * 1.4 }).then(l2 => {
+          if (Math.random() < 0.3) crowCall(where(first), { v: first.v, far: clamp((first.r - 30) / 60, 0.25, 1), gain: 0.55, delay: l2 + 0.3 + Math.random() * 1.2 }); }); } });
   }
   // ---- ambience ----
   function startAmbience() {
@@ -223,13 +276,14 @@ const Sound = (() => {
     clank(pos) { if (!ctx) return; const t = now(), d = at(pos, 0.4); noise(t, 0.03, 0.55, "highpass", 1500, 0.7, d); noise(t, 0.08, 0.5, "lowpass", 700, 0.8, d); modes(t, [[410, 0.3, 0.2], [1120, 0.14, 0.12], [2380, 0.05, 0.06]], d); friction(t + 0.05, 0.25, 60, 90, 0.4, [[900, 5], [1600, 6]], d, 0.4); },
     bang(pos) { if (!ctx) return; const t = now(), d = at(pos, 0.9, 4); noise(t, 0.35, 1.0, "lowpass", 850, 0.8, d); modes(t, [[72, 0.9, 0.55], [118, 0.6, 0.4], [190, 0.45, 0.3], [310, 0.3, 0.22], [520, 0.15, 0.14]], d); drum(t, 70, 32, 0.6, 1.0, d); const fw = ctx.createGain(); fw.gain.value = 0.6; d.connect(fw); fw.connect(verbFar); },
     snap(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, 0.5); noise(t, 0.07, 0.8 * k, "highpass", 1800, 0.7, d); drum(t + 0.01, 90, 40, 0.3, 0.7 * k, d); friction(t + 0.03, 0.8, 30, 18, 0.5, [[300, 6], [700, 6]], d, 0.7 * k); },
-    // the neck breaking as the rope catches him: one hard, dry crack, the rope's jerk and the weight of him all in the same instant, and nothing after
-    neckSnap(neck, knot) { if (!ctx) return; const t = now(); noise(t, 0.045, 1.0, "highpass", 1900, 0.7, at(knot, 0.05)); drum(t, 100, 45, 0.11, 0.75, at(neck, 0.04, 3)); api.crack(neck, 2.6, 0.05); },
+    // the neck breaking as the rope catches him: the repository owner's own recording (audio/sfx/neck0.mp3), played dry at the neck. If the file can't be had,
+    // the old synthesized crack stands in. Nothing else sounds with it: no ring, no glint
+    neckSnap(neck, knot) { if (!ctx) return; const n = neck.clone(), k = knot.clone();
+      clipBuffer("neck0").then(b => { if (!ctx) return; if (b) { api.clip("neck0", n, 1.6, 0, 0.05, 1, 5); return; }
+        const t = now(); noise(t, 0.045, 1.0, "highpass", 1900, 0.7, at(k, 0.05)); drum(t, 100, 45, 0.11, 0.75, at(n, 0.04, 3)); api.crack(n, 2.6, 0.05); }); },
     preloadClips,
     clip(nm, pos, gain = 1, delay = 0, wet = 0.22, rate = 1, ref = 3) { if (!ctx) return; clipBuffer(nm).then(b => { if (!b || !ctx) return; const t = now() + delay, s = ctx.createBufferSource(); s.buffer = b;
       s.playbackRate.value = rate; const g = ctx.createGain(); g.gain.value = gain; s.connect(g); g.connect(at(pos, wet, ref)); s.start(t); }); },
-    // a faint ring off polished steel, to catch the eye (and ear) when the sword glints
-    glint(pos) { if (!ctx) return; const t = now(), d = at(pos, 0.35, 4); modes(t, [[3150, 0.05, 0.9], [4720, 0.035, 0.7], [6280, 0.02, 0.5]], d); },
     // the player's own heartbeat once he's hurt
     pulse(k = 1) { if (!ctx) return; const t = now(); drum(t, 62, 38, 0.18, 0.7 * k, sfx); drum(t + 0.26, 56, 36, 0.22, 0.5 * k, sfx); },
     // the neck giving way: a few tiny, dry fractures (sharp clicks rung through small stiff resonances) over a dull low knock. Kept quiet.
@@ -246,11 +300,25 @@ const Sound = (() => {
       level = Math.max(level, 0.9); },
     applause(pos) { if (!ctx) return; const t = now(), d = at(pos, 0.5, 6); for (let i = 0; i < 260; i++) { const tt = t + Math.random() * 2.8 * Math.pow(Math.random(), 0.5); noise(tt, 0.03, 0.08 + Math.random() * 0.1, "bandpass", 900 + Math.random() * 1600, 1.1, d); }
       for (let k = 0; k < 6; k++) { const tt = t + 0.3 + Math.random() * 2.2; noise(tt, 0.35, 0.05, "lowpass", 600, 0.7, d); } }, // a few whoops/stomps, no whistles
-    caw(pos) { if (!ctx) return; const d = at(pos, 0.4, 12), n = 2 + (Math.random() * 2 | 0);
-      for (let k = 0; k < n; k++) { const t = now() + k * 0.42, o = ctx.createOscillator(), am = ctx.createOscillator(), ag = ctx.createGain(), v = ctx.createGain(); o.type = "sawtooth"; o.frequency.setValueAtTime(560, t); o.frequency.linearRampToValueAtTime(390, t + 0.3);
-        am.type = "square"; am.frequency.value = 58; ag.gain.value = 0.35; am.connect(ag); ag.connect(v.gain); v.gain.setValueAtTime(0, t); v.gain.linearRampToValueAtTime(0.45, t + 0.03); v.gain.linearRampToValueAtTime(0, t + 0.32);
-        const b1 = ctx.createBiquadFilter(); b1.type = "bandpass"; b1.frequency.value = 1350; b1.Q.value = 3; const b2 = ctx.createBiquadFilter(); b2.type = "bandpass"; b2.frequency.value = 2600; b2.Q.value = 4;
-        o.connect(b1); o.connect(b2); b1.connect(v); b2.connect(v); v.connect(d); o.start(t); am.start(t); o.stop(t + 0.35); am.stop(t + 0.35); } },
+    // crows: a call from a bird at pos (o: { v: its voice from crowVoice, n caws, alarm, far 0..1, gain, ref, delay }); resolves to when it ends
+    crowCall, crowVoice, caw(pos) { return crowCall(pos, { ref: 12 }); },
+    set crowsAmbient(on) { crowAmb.on = on; }, crowGate: null,
+    // wings: a crow taking off (two recordings, pitched to the bird and a little different each time)
+    hush(sec) { hushUntil = Math.max(hushUntil, performance.now() / 1000 + sec); },
+    flap(pos, k = 1, rate = 1) { if (!ctx || hushed()) return; api.clip("flap" + (Math.random() < 0.6 ? 0 : 1), pos, 0.75 * k, 0, 0.12, rate * (0.92 + Math.random() * 0.16), 4); },
+    // a crow hit by a bullet: the smack of it, a cut-off squawk and a burst of feathers and wings
+    crowHit(pos) { if (!ctx) return; const t = now(), d = at(pos, 0.15, 5); drum(t, 170, 70, 0.06, 0.6, d); noise(t, 0.05, 0.35, "bandpass", 2600, 0.9, d);
+      crowCaws().then(C => { if (!C || !ctx || !C.short.length) return; const [off] = C.short[Math.random() * C.short.length | 0], s = ctx.createBufferSource(); s.buffer = C.b; s.playbackRate.value = 1.18 + Math.random() * 0.12;
+        const g = ctx.createGain(), t1 = now() + 0.015; g.gain.setValueAtTime(0.6, t1); g.gain.setTargetAtTime(0, t1 + 0.09, 0.025); s.connect(g); g.connect(at(pos, 0.2, 6)); s.start(t1, off + 0.02, 0.22); });
+      api.clip("flap0", pos, 0.5, 0.02, 0.1, 1.35, 3); },
+    // things hit in the shootout (12j): straw, water, dirt, a tin can landing
+    straw(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, 0.2, 3); noise(t, 0.22, 0.45 * k, "bandpass", 2600, 0.6, d); noise(t + 0.01, 0.1, 0.3 * k, "lowpass", 500, 0.8, d); drum(t, 110, 55, 0.08, 0.3 * k, d); },
+    splash(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, 0.3, 4); noise(t, 0.32, 0.55 * k, "lowpass", 1700, 0.7, d); noise(t + 0.015, 0.16, 0.35 * k, "bandpass", 650, 1.2, d);
+      for (let i = 0; i < 9; i++) noise(t + 0.12 + Math.random() * 0.55, 0.035, (0.06 + Math.random() * 0.08) * k, "bandpass", 1300 + Math.random() * 2600, 4, d); },
+    dirt(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, 0.2, 3); noise(t, 0.035, 0.35 * k, "highpass", 2600, 0.7, d); noise(t, 0.16, 0.55 * k, "lowpass", 900, 0.8, d); drum(t, 120, 50, 0.09, 0.35 * k, d);
+      for (let i = 0; i < 5; i++) noise(t + 0.25 + Math.random() * 0.35, 0.03, 0.05 * k, "bandpass", 1800 + Math.random() * 1500, 2, d); },
+    tinTick(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, 0.15, 3); noise(t, 0.02, 0.25 * k, "highpass", 3000, 0.8, d);
+      modes(t, [[1850 + Math.random() * 300, 0.14, 0.09], [3100 + Math.random() * 400, 0.09, 0.06], [4700, 0.05, 0.04]], d, k); },
     // a brass bell: the strike, then the hum, prime, tierce, quint and nominal ringing on, each at its own rate
     bell(pos, k = 1) { if (!ctx || k <= 0.01) return; const t = now(), d = at(pos, 0.55, 7), f = 392;
       noise(t, 0.045, 0.6 * k, "bandpass", 3400, 1.3, d); noise(t, 0.02, 0.4 * k, "highpass", 5200, 0.8, d);

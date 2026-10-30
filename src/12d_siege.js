@@ -47,7 +47,8 @@ function roofSpot(Rf, lx, back = 0.32) { const p = roofWorld(Rf, lx, 0, Rf.d / 2
 const ENEMY_COVER = [["trough", 1.56, -2.28, -0.56], ["crates", -5.82, -1.68, 0.92], ["barrels", 1.1, -5.05, -0.3]];
 const SIEGE_CLIPS = ["shot0", "shot1", "shot2", "far0", "far1", "far2", "far3", "wood0", "wood1", "wood2", "wood3", "whiz0", "whiz1", "whiz2",
   "painm0", "painm1", "painm2", "painm3", "painm4", "painm5", "painm6", "painf0", "painf1", "painf2", "hurt0", "hurt1", "hurt2", "cough0", "cough1",
-  "sword0", "cut0", "dry0", "cock0", "cock1", "taunt0", "taunt1", "taunt2", "taunt3", "taunt4", "taunt5", "taunt6"];
+  "sword0", "cut0", "dry0", "cock0", "cock1", "taunt0", "taunt1", "taunt2", "taunt3", "taunt4", "taunt5", "taunt6",
+  "neck0", "crows", "flap0", "flap1", "glass0", "glass1", "glass2", "pane0", "pane1", "pane2", "tin0", "tin1", "tin2", "ric0", "ric1", "ric2", "keg0", "keg1", "keg2"]; // (v35: the neck, the crows, the things to shoot: 10c, 12j)
 const rnd = (a, b) => a + Math.random() * (b - a);
 // a clip from a set, never the same one twice in a siege while any are left unplayed
 function siegePick(prefix, n) { const u = SIEGE.used[prefix] || (SIEGE.used[prefix] = new Set()); if (u.size >= n) u.clear();
@@ -141,9 +142,9 @@ function buildEnemyCover(list) {
   const grp = S.props = new THREE.Group(); grp.visible = !!S.on; R.scene.add(grp);
   const add0 = R.scene.add.bind(R.scene); R.scene.add = o => grp.add(o);
   try { for (const [kind, x, z, ry] of list) { const sx = Math.cos(ry), sz = -Math.sin(ry); // (its own left-right)
-    if (kind === "trough") { const t = woodBox(1.8, 0.6, 0.56, MAT.woodDark); t.position.set(x, 0.3, z); t.rotation.y = ry; R.scene.add(t);
+    if (kind === "trough") { const t = woodBox(1.8, 0.6, 0.56, MAT.woodDark); t.position.set(x, 0.3, z); t.rotation.y = ry; t.userData.trough = true; R.scene.add(t);
       const w = new THREE.Mesh(new THREE.PlaneGeometry(1.64, 0.42), new THREE.MeshStandardMaterial({ color: 0x1a2226, roughness: 0.05, metalness: 0.1 }));
-      w.rotation.set(-Math.PI / 2, 0, ry); w.position.set(x, 0.55, z); R.scene.add(w); }
+      w.rotation.set(-Math.PI / 2, 0, ry); w.position.set(x, 0.605, z); w.userData.trough = true; R.scene.add(w); } // (the water just over the box's top, so it shows)
     else if (kind === "crates") { for (const [o, h, y, r] of [[-0.37, 0.72, 0.36, 0.05], [0.38, 0.72, 0.36, -0.08], [-0.3, 0.5, 0.97, 0.35]]) {
       const b = woodBox(h, h, h, MAT.woodDark); b.position.set(x + sx * o, y, z + sz * o); b.rotation.y = ry + r; R.scene.add(b); } }
     else for (const o of [-0.31, 0.31]) barrel(x + sx * o, z + sz * o, 1.04); } }
@@ -170,7 +171,7 @@ function siegePrecompile(on) { const S = SIEGE, G = S.gore; for (const o of [S.v
 // ---- the four seconds after the drop (and on, behind the GAME OVER sign) ----
 function swordWindow() {
   if (SIEGE.on || !SIEGE.sword) return; SIEGE.phase = "window"; SIEGE.winLeft = SIEGE_CFG.window; SIEGE.gT = 0;
-  const g = SIEGE.sword.glint; g.visible = true; Sound.glint(SIEGE.sword.group.position);
+  SIEGE.sword.glint.visible = true; // seen, not heard: nothing rings at the snap
 }
 function swordScreen(out) { // the sword as a line on screen, hilt to mid-blade
   const S = SIEGE.sword.group; S.updateMatrixWorld(true);
@@ -196,7 +197,7 @@ async function startSiege() {
   const late = SIEGE.phase === "late"; // cut down after the GAME OVER sign came up: the round he lost isn't held against your streak
   if (late && STATE.streakLost != null) { STATE.streak = STATE.streakLost; savePrefs(); } swordShine(0, false);
   bellReset(); // (the bell's mark is for this shootout only: 12f)
-  const S = SIEGE; S.on = true; S.phase = "cut"; S.sword.glint.visible = false; S.t = 0; S.used = {}; showSiegeUI("cut"); for (const C of S.covers) C.grp.visible = true; S.props.visible = true;
+  const S = SIEGE; S.on = true; S.phase = "cut"; S.sword.glint.visible = false; S.t = 0; S.used = {}; showSiegeUI("cut"); for (const C of S.covers) C.grp.visible = true; S.props.visible = true; resetTargets(); showTargets(true); crowsGather();
   S.bullets = GUN.rounds; S.reloads = GUN.reloads; S.reloadT = 0; S.health = GUN.hearts; gunHud.key = null; S.hurt = 0; S.deadT = 0; S.cool = 0; S.recoil = 0; S.holding = S.keyAim = false; S.aimId = null; S.scanT = 0; S.upT = 0; S.vm.kick = 0;
   S.shots = 0; S.downT = 0; S.aims = 0; S.said.clear(); S.tauntT = 0; S.talkUntil = 0; S.wordsAt = S.lastAt = 0; S.doomT = S.doomI = 0; S.doomSaid = false; S.hitT = 0;
   $("doomMsg").hidden = $("hitMsg").hidden = true;
@@ -368,7 +369,7 @@ function muzzleFlash(pos, size) { const f = SIEGE.flashes.find(q => q.t >= 1) ||
 function enemyFire(E) {
   const S = SIEGE, muzzle = E.gun.localToWorld(V3(0, 0.035, 0.21)); muzzleFlash(muzzle, 0.28); E.kick = 1;
   puff(muzzle, 9, 0.35, 0.3, 2.4, 0.36, 0xd8d3c8); // black powder: a cloud of white smoke hangs where he fired
-  Sound.clip(siegePick("far", 4), muzzle, 1.0, 0, 0.35, rnd(0.94, 1.06), 7);
+  Sound.clip(siegePick("far", 4), muzzle, 1.0, 0, 0.35, rnd(0.94, 1.06), 7); crowsStartle(muzzle, 28, 0.55);
   const doomed = S.phase === "doomed", exposed = doomed || playerExposed(), p = doomed ? 1 : S.run ? SIEGE_CFG.hitRun : SIEGE_CFG.hitUp;
   const hit = exposed && (doomed || clearShot(E)) && Math.random() < p; // (behind something solid, he can't hit you, unless your gun's empty)
   if (!onFrame(E, 1.0)) S.threat = { E, t: 0.7, hit }; // fired from outside your view: the arc flares on his side (siegeLate)
@@ -435,10 +436,12 @@ function fireTap() {
   muzzleFlash(S.vm.gun.localToWorld(V3(0, 0.035, 0.22)), 0.32);
   let hit = null; for (const E of S.enemies) { if (!E.alive) continue; const far = E.a.ch.bones.Spine2.getWorldPosition(_s3).distanceTo(ro);
     const h = rayActor(E.a, ro, rd, E.female, clamp((far - 12) * 0.007, 0, 0.12)); if (h && (!hit || h.t < hit.t)) hit = Object.assign(h, { E }); }
-  const env = sceneryRay(ro, rd, 80), bt = bellRay(ro, rd); // (the bell is a target too: 12f)
-  if (bt > 0 && (!hit || bt < hit.t) && (!env || bt < env.distance)) bellShot(ro.clone().addScaledVector(rd, bt), rd);
-  else if (hit && (!env || hit.t < env.distance)) shotHits(hit.E, hit.part, ro.clone().addScaledVector(rd, hit.t), rd);
-  else if (env) { const p = env.point; setTimeout(() => { puff(p, 14, 0.6, 0.08, 0.9, 0.6); Sound.clip(siegePick("wood", 4), p, 0.8, 0, 0.3, rnd(0.9, 1.1), 3); }, 40); }
+  // whatever the shot meets first: the bell (12f), a man, a crow (10c), a bottle, a can or a tumbleweed (12j), or the street and the town (12j envShot)
+  const env = sceneryRay(ro, rd, 80), bt = bellRay(ro, rd), cr = crowRay(ro, rd), tg = targetRay(ro, rd), cands = [];
+  if (bt > 0) cands.push([bt, "bell"]); if (hit) cands.push([hit.t, "man"]); if (cr) cands.push([cr.t, "crow"]); if (tg) cands.push([tg.t, "tgt"]); if (env) cands.push([env.distance, "env"]);
+  cands.sort((a, b) => a[0] - b[0]); const first = cands[0], at = first ? ro.clone().addScaledVector(rd, first[0]) : null;
+  if (first) { const k = first[1]; if (k === "bell") bellShot(at, rd); else if (k === "man") shotHits(hit.E, hit.part, at, rd); else if (k === "crow") crowShot(cr.c, at, rd); else if (k === "tgt") targetShot(tg, at, rd); else envShot(env, rd); }
+  crowsStartle(ro, 30, 0.45); if (at) crowsStartle(at, 5, 1.2); // (the crack of it puts the crows up, the ones near where it struck most of all)
   const empty = S.bullets <= 0;
   if (S.phase !== "fight" && S.phase !== "doomed") { if (empty) siegeReload(); return; } // (the street already cleared: nothing more to decide)
   const left = S.enemies.filter(E => E.alive).length;
@@ -863,7 +866,7 @@ function siegeLate(rdt) {
 function siegeLive() { return (SIEGE.on && (SIEGE.phase === "cut" || SIEGE.phase === "fight" || SIEGE.phase === "doomed" || SIEGE.phase === "cleared")) || chaseLive(); }
 // back to the start for a new round
 function resetSiege() {
-  const S = SIEGE; if (!S.sword) return;
+  const S = SIEGE; if (!S.sword) return; showTargets(false);
   S.phase = null; S.sword.glint.visible = false; swordShine(0, false); S.sword.held = false; S.sword.group.visible = true; for (const C of S.covers) C.grp.visible = false; if (S.props) S.props.visible = false; S.sword.group.position.copy(S.sword.rest.p); S.sword.group.quaternion.copy(S.sword.rest.q);
   $("clearMsg").hidden = true; bellReset(); chaseReset(); // (and a getaway, if one was under way: 12g)
   if (!S.on) return; S.on = false;

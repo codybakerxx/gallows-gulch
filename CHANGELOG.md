@@ -2,6 +2,38 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v35
+- **The neck snap is a real recording** (the repository owner's), trimmed and played dry at the neck, and nothing else
+  sounds with it: the faint ring that played as the sword began to glint is gone (the glint is only seen now), and no
+  crow is heard over the drop and the snap.
+- **Crows that sound like crows.** Every caw in the game is from the repository owner's two recordings, cleaned up and
+  cut into 20 single caws. The game strings them into calls the way crows call: runs of one to five, evenly paced,
+  trailing off, the last one dropping; each bird with its own pitch and pace, some with the long, drawn caw. Others
+  answer. Out past the buildings three or four unseen crows call now and then from about the same places, softened
+  and echoing with distance. Startled birds give a faster alarm call.
+- **Real crows.** Up to seven (fewer on the lower graphics tiers) perch on the gallows beam and the tops of its posts,
+  the rail at the back of the deck, the false fronts and hitching rails, and pick about in the street. They look
+  about in quick turns of the head, hop along, turn round, peck, preen, stretch a wing, and fly from perch to perch or
+  off out of town and back. The trap slamming, a shot, the bell or someone coming close puts them up. In the
+  shootout they can be shot: a burst of blood and feathers, and the bird tumbles down, bounces once and lies where
+  it lands in a spreading pool of blood. Each new round the dead are gone and others fly in.
+- **More to shoot in the shootout.**
+  - Bottles and tin cans on the gunmen's crates, barrels and trough, and a bottle on the post at the foot of the
+    gallows stairs. A bottle bursts into glass and whatever was in it, leaving its jagged bottom standing; a can
+    jumps, spinning, bounces and can be shot again where it lies.
+  - The gallows lanterns shatter, swing hard and go dark.
+  - Shop windows crack round the bullet hole and drop glass.
+  - Barrels and the side of the trough spout water from the hole for a few seconds; a shot into the trough throws up
+    a splash (the trough now shows its water).
+  - Hay bursts into straw; iron throws sparks and the bullet whines off it; wood splinters and keeps the hole; the
+    street spits dirt; a tumbleweed jumps and sheds twigs.
+  - New sounds for glass, windows, cans, ricochets, barrels and a crow's wings (ElevenLabs), and synthesized ones for
+    straw, splashes, dirt and a can's bounces.
+- **A swipe every row in the run.** Whatever lane you came through one row in, the next row blocks it with something
+  you can't jump, so every row needs a move left or right (some a jump as well). Still always possible: 300 courses
+  searched frame by frame came out clean in all five tests, and not one row in 7,967 could be got through without
+  changing lane.
+
 ## v34
 - **The host's first words.** The first round after the game loads, he opens with "There's more to this game than you
   think. Find the mystery." before his usual line. Recorded in his voice like the rest.

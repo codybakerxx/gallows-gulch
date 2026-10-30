@@ -14,9 +14,9 @@ const RUN = {
 };
 // what can be in a lane: tall things you go round, low things you jump (low: their height), long ones that fill a lane for a while
 const RUN_KINDS = {
-  boulder: { tall: true, half: 1.0, depth: 0.85, n: 18 }, cactus: { tall: true, half: 0.95, depth: 0.55, n: 15 }, crates: { tall: true, half: 1.0, depth: 0.6, n: 11 },
-  wagon: { tall: true, half: 0.85, depth: 2.1, n: 7 }, log: { low: 0.66, half: 1.15, depth: 0.32, n: 18 }, bales: { low: 0.98, half: 1.1, depth: 0.42, n: 12 },
-  fence: { low: 1.08, half: 1.15, depth: 0.14, n: 18 }, trough: { low: 0.76, half: 1.0, depth: 0.34, n: 12 } }; // (n: how many of each are kept: the most a course ever has out at once, 30 m behind to 170 m ahead, over 300 courses, plus two: mk_s134)
+  boulder: { tall: true, half: 1.0, depth: 0.85, n: 18 }, cactus: { tall: true, half: 0.95, depth: 0.55, n: 18 }, crates: { tall: true, half: 1.0, depth: 0.6, n: 14 },
+  wagon: { tall: true, half: 0.85, depth: 2.1, n: 7 }, log: { low: 0.66, half: 1.15, depth: 0.32, n: 12 }, bales: { low: 0.98, half: 1.1, depth: 0.42, n: 9 },
+  fence: { low: 1.08, half: 1.15, depth: 0.14, n: 12 }, trough: { low: 0.76, half: 1.0, depth: 0.34, n: 9 } }; // (n: how many of each are kept: the most a course ever has out at once, 30 m behind to 170 m ahead, over 300 courses, plus two: mk_s134)
 
 // ---- building them (each merged into a mesh or two per material, so a row costs a handful of draw calls) ----
 function mergeLocal(g) { // a group of meshes → the same, merged by material, in the group's own frame
@@ -181,23 +181,24 @@ function runCells(cells, s, full) {
     else if (cell === "long") { placeObstacle("wagon", s + 2.0, lat, r() < 0.5 ? 0 : Math.PI, 1, true); len = 4.5; } });
   return len;
 }
-// no free rides (v34): every row blocks each lane a rider could have come through the row before (C.reach) by sitting still, so every row
-// takes a swipe or a jump. An open cell there becomes a tall thing (when there's another open lane to swipe to) or a low one to jump; and a
-// row always keeps a way through
+// a swipe every row (v35; v34 asked only for a swipe or a jump): every lane a rider could have come through the row before (C.reach) is
+// blocked by something tall, so whichever lane you're in you have to move left or right; a jump alone never gets you through. The way on is
+// in another lane, open or with something low to jump as well. If the pattern left no such lane, one of the others is opened up
 function runForce(cells) {
   const C = CHASE, r = C.rng, reach = C.reach || [true, true, true], c = cells.slice();
-  const shut = [0, 1, 2].filter(i => reach[i] && c[i] === null), away = c.some((x, j) => x === null && !reach[j]); let low = c.includes("low");
-  for (const i of r() < 0.5 ? shut : shut.reverse()) { if (away || low) c[i] = r() < (away ? 0.7 : 0.55) ? "tall" : "low"; else { c[i] = "low"; low = true; } } // (one low at least if the only ways through are here)
-  if (!c.some(x => x === null || x === "low")) c[reach.indexOf(true)] = "low";
+  for (let i = 0; i < 3; i++) if (reach[i] && (c[i] === null || c[i] === "low")) c[i] = "tall";
+  if (![0, 1, 2].some(i => !reach[i] && (c[i] === null || c[i] === "low"))) { const L = [0, 1, 2].filter(i => !reach[i] && c[i] !== "long"), k = L.length ? L[(r() * L.length) | 0] : reach.indexOf(false);
+    c[k] = r() < 0.7 ? null : "low"; }
   C.reach = c.map(x => x === null || x === "low"); return c;
 }
 function runRow(s, f) {
   const C = CHASE, r = C.rng, first = C.rowsLaid || 0; let p = runPick(f);
-  if (first === 0) { p = RUN_PATTERNS[0]; C.reach = [false, true, false]; } else if (first === 2) p = RUN_PATTERNS[2]; // (you start in the middle lane: the first row blocks it; the third teaches the jump)
+  if (first === 0) { p = RUN_PATTERNS[0]; C.reach = [false, true, false]; } else if (first === 2) p = RUN_PATTERNS[2]; // (you start in the middle lane: the first row blocks it; the third teaches the jump, with a swipe)
   const got = first === 0 ? [null, "tall", null] : p.cells(r), cells = runForce(Array.isArray(got) ? got : got.c); let len = runCells(cells, s, cells.every(x => x === "low")), jump = cells.includes("low");
   C.rows.push({ s, cells, len, jump });
-  if (got.then) { const zag = runForce(got.then), zj = zag.includes("low"), s2 = s + Math.max(7, lerp(RUN.speed0, RUN.speed1, f) * (zj ? 0.95 : 0.7)) + r() * 2; // (the zag comes 0.7 s after the zig
-    runCells(zag, s2, false); C.rows.push({ s: s2, cells: zag, len: 1, jump: zj, zag: true }); len += s2 - s; jump = zj; } //  at least, however fast; more if it has to be jumped)
+  if (got.then) { const zr = C.reach.slice(), zag = runForce(got.then), zj = zag.includes("low"), far = !zag.some((x, i) => (x === null || x === "low") && zr.some((q, j) => q && Math.abs(i - j) <= 1)); // (far: two lanes over)
+    const s2 = s + Math.max(7, lerp(RUN.speed0, RUN.speed1, f) * (0.7 + (zj ? 0.25 : 0) + (far ? 0.25 : 0))) + r() * 2; // (the zag comes 0.7 s after the zig
+    runCells(zag, s2, false); C.rows.push({ s: s2, cells: zag, len: 1, jump: zj, zag: true }); len += s2 - s; jump = zj; } //  at least, however fast; more if it has to be jumped or is two lanes over)
   C.rowsLaid = first + 1;
   // dressing at the edges of the trail: nothing you can hit, just what's out there
   if (r() < 0.55) { const side = r() < 0.5 ? -1 : 1, k = r() < 0.6 ? "rock" : "cactus"; placeObstacle(k, s + (r() - 0.5) * 6, side * (4.6 + r() * 1.6), r() * 6, 0.7 + r() * 0.5); }

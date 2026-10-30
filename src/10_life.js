@@ -60,7 +60,7 @@ function prepBirds(gltf) {
 function updateBirds(dt) {
   for (const b of LIFE.birds) { b.a += b.w * dt; const x = LAY.plat.x + Math.cos(b.a) * b.r, z = LAY.plat.z + Math.sin(b.a) * b.r, y = b.h + Math.sin(b.a * 2) * 1.5;
     b.grp.position.set(x, y, z); b.grp.rotation.set(0, -b.a + (b.w > 0 ? 0 : Math.PI), (b.w > 0 ? -0.35 : 0.35));
-    b.mixer.update(dt * (0.6 + 0.4 * Math.max(0, Math.sin(b.a * 3)))); b.caw -= dt; if (b.caw < 0) { b.caw = 9 + Math.random() * 14; Sound.caw(b.grp.position); } }
+    b.mixer.update(dt * (0.6 + 0.4 * Math.max(0, Math.sin(b.a * 3)))); b.caw -= dt; if (b.caw < 0) { b.caw = 9 + Math.random() * 14; Sound.crowCall(b.grp.position.clone(), { v: b.v || (b.v = Sound.crowVoice()), ref: 14, far: 0.12, gain: 0.6 }); } }
 }
 function buildWeed() {
   const r = rng(12), parts = [];

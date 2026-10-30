@@ -2,11 +2,12 @@
 // or a jump may start on any frame, or only every `every` frames; the horse can be made wider and longer): is there always a clean way through?
 // Also: the most of each kind of obstacle a course has out at once (30 m behind to 170 m ahead), against what the game keeps of each; and (v34)
 // free rows: a row that leaves open a lane the rider could have come through the row before without touching anything (from the middle
-// lane at the start), so it could be ridden through without a swipe or a jump. There should be none
+// lane at the start), so it could be ridden through without a swipe or a jump. There should be none. And (v35) still rows: a row that can
+// be got through in the lane you came through the row before, with a jump or without; every row should need a swipe, so none of these either
 window.__courses = (seeds, opt = {}) => {
   const C = CHASE, H0 = RUN.horse, dt = 1 / 60, ns = Math.round(RUN.shift / dt), nj = Math.round(RUN.jump.dur / dt);
   const half = H0.half + (opt.wide || 0), front = H0.front + (opt.long || 0), back = H0.back + (opt.long || 0), every = opt.every || 1, clearK = opt.clear || 0.7;
-  const out = { seeds: seeds.length, fails: [], minRowsPerCourse: 1e9, maxRowsPerCourse: 0, pool: {}, patterns: {}, freeRows: 0, freeSample: [], jumpRows: 0, rows: 0 };
+  const out = { seeds: seeds.length, fails: [], minRowsPerCourse: 1e9, maxRowsPerCourse: 0, pool: {}, patterns: {}, freeRows: 0, freeSample: [], stillRows: 0, stillSample: [], jumpRows: 0, rows: 0, swipeRows: 0 };
   const realPlace = window.placeObstacle;
   for (const seed of seeds) {
     const obs = []; window.placeObstacle = (kind, s, lat, yaw = 0, scale = 1) => { const K = RUN_KINDS[kind]; if (!K) return null; obs.push({ kind, s, lat, halfLat: K.half * scale, halfS: K.depth * scale, low: K.low || 0 }); return { o: { scale: { set() {} } } }; };
@@ -15,6 +16,8 @@ window.__courses = (seeds, opt = {}) => {
     out.minRowsPerCourse = Math.min(out.minRowsPerCourse, C.rows.length); out.maxRowsPerCourse = Math.max(out.maxRowsPerCourse, C.rows.length);
     { let reach = [false, true, false]; for (const row of [...C.rows].sort((a, b) => a.s - b.s)) { out.rows++; if (row.cells.includes("low")) out.jumpRows++;
         if (row.cells.some((c, i) => reach[i] && c === null)) { out.freeRows++; if (out.freeSample.length < 3) out.freeSample.push([seed, +row.s.toFixed(1), row.cells.join('|'), reach.join('')]); }
+        if (row.cells.some((c, i) => reach[i] && (c === null || c === "low"))) { out.stillRows++; if (out.stillSample.length < 3) out.stillSample.push([seed, +row.s.toFixed(1), row.cells.join('|'), reach.join('')]); }
+        if (row.cells.some((c, i) => Math.abs(i - reach.indexOf(true)) === 2 && (c === null || c === "low")) && reach.filter(Boolean).length === 1 && !row.cells.some((c, i) => Math.abs(i - reach.indexOf(true)) === 1 && (c === null || c === "low"))) out.swipeRows++;
         reach = row.cells.map(c => c === null || c === "low"); } }
     // the pool: how many of each kind are out at once (the game keeps 30 m behind and sets 170 m ahead)
     for (const k in RUN_KINDS) { let mx = 0; for (const o of obs) { if (o.kind !== k) continue; const n = obs.filter(q => q.kind === k && q.s >= o.s - 0.1 && q.s < o.s + 200).length; mx = Math.max(mx, n); } out.pool[k] = Math.max(out.pool[k] || 0, mx); out.kept = out.kept || {}; out.kept[k] = RUN_KINDS[k].n; }

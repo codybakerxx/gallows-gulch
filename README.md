@@ -65,6 +65,14 @@ two on the rooftops, behind the false fronts of the sheriff's office and the gen
 - Run out of bullets with gunmen still standing and they know your gun is empty. They finish you off.
 - Down all nine and you survive. The street stays yours, gun still in hand, until you press **Done**.
 - There's a bell on the gallows. It's a target like any other, and it costs a bullet like any other.
+- The street reacts to your shots. Bottles and tin cans stand on the gunmen's crates, barrels and trough and on the
+  post at the foot of the gallows stairs: a bottle bursts into glass, a can jumps and can be shot again where it lands.
+  The gallows lanterns shatter and go dark, shop windows crack round the hole, barrels and the trough's side spout
+  water, the trough's water splashes, hay bursts into straw, iron throws sparks and the bullet whines off it, wood
+  splinters and keeps the hole, the street spits dirt, and a tumbleweed jumps.
+- Crows perch on the gallows, the rooftops and the hitching rails, and pick about in the street. Your shots and
+  theirs scare them up. Hit one and it drops in a burst of blood and feathers and lies where it lands. Every bullet
+  counts, as always.
 
 <details>
 <summary><b>Spoiler: the getaway</b> (what the bell is for)</summary>
@@ -97,7 +105,8 @@ grass between them. Nothing on the screen to press.
   to prove it.
 - It's flat out from the first stride, and the rows come quicker and harder to read as it goes. The edges of the view
   blur with the speed.
-- No free rides: no lane stays open from one row to the next, so every row makes you swipe or jump.
+- A swipe every row: whatever lane you came through one row in, the next row blocks it with something you can't
+  jump, so every row makes you move left or right (and some make you jump as well).
 - Ride into something and the horse shies off it into an open lane; trip over something low and you stumble; clip
   something changing lane and you're bounced back. Each costs ground, and the posse gains.
 - The bar at the top shows how close they are. Once they're close they shoot at you (dirt kicks up ahead) and the
@@ -143,7 +152,7 @@ or **Play Again** after one ends.
 
 - A whole frontier town at golden hour: false-front buildings, a church spire, mesas, a working gallows with a
   simulated rope, trapdoor and lever, dust, tumbleweeds, circling vultures and a horse that sometimes bolts down the
-  street.
+  street. Crows hop about on the gallows and the rooftops, call to one another and fly off when something startles them.
 - Lived-in detail: porches with lanterns that light at dusk, benches, shutters, crates, sacks and barrels, wanted
   posters with their own faces and prices, and the street littered with stones, broken boards, bottles, cans and
   horseshoes. Close up, the ground has grit and little stones and the timber has fibres and splinters.
@@ -152,7 +161,7 @@ or **Play Again** after one ends.
 - A spoken host: 42 recorded lines, with matching subtitles, that react to every letter. Plus gunmen's taunts and
   positional sound effects.
 - A looping soundtrack that brightens as the noose gets closer. Footsteps, wind and a crowd murmur are synthesized
-  live.
+  live. The crows' calls are real crows, strung into calls as the game goes.
 - 382 vocabulary words, each with a definition written for the game.
 - Graphics tiers (Fast, Balanced, High, Ultra, or Auto). Auto starts phones on High and computers on Ultra, and steps
   down by itself if frames run long. High adds bloom, soft shadows, ambient occlusion, light shafts, volumetric light,
@@ -186,7 +195,7 @@ public repository.
 
 ```
 build.py                 builds dist/ from src/ and assets/ (standard library only)
-src/                     the game: one HTML shell and 27 JavaScript modules, loaded in the order build.py lists
+src/                     the game: one HTML shell and 29 JavaScript modules, loaded in the order build.py lists
   00_head.html           page markup and all CSS: HUD, keyboard, menu poster, end sign, Word Book, the getaway's HUD
   01_util.js             helpers, seeded noise
   02_textures.js         procedural material textures and sprites
@@ -205,6 +214,7 @@ src/                     the game: one HTML shell and 27 JavaScript modules, loa
   10_life.js             horse, vultures, tumbleweed, dust, townsfolk
   10b_horse.js           horses up close: a smoother body, the back measured as it gallops, the coat (hair, points,
                          socks, blaze, dapples), saddle, a mane of hair that lies on the neck, tail, reins
+  10c_crows.js           the crows: perching, hopping, calling, flying, startled, shot, falling; feathers
   11_words.js            the word bank with clues, and the host's lines
   11b_defs.js            a plain-English meaning for every word
   12a_director.js        game state, camera, cutscenes
@@ -213,6 +223,7 @@ src/                     the game: one HTML shell and 27 JavaScript modules, loa
   12d_siege.js           the sword, the cut-down and the shootout
   12e_book.js            the Word Book
   12f_bell.js            the bell, and the cleared street after a win
+  12j_targets.js         what the shootout's shots do: bottles, cans, lanterns, windows, water, straw, sparks, dirt, holes
   12g_chase.js           the getaway: posse, horses, the turn, the fight, the results
   12h_runner.js          the getaway's run: three lanes, swipes and jumps, the course, the desert along the trail
   12i_canyon.js          the canyon at the end and the filmed fall
@@ -220,7 +231,7 @@ src/                     the game: one HTML shell and 27 JavaScript modules, loa
 assets/
   models/                Xbot.glb, LeePerrySmith.glb, Horse.glb, Stork.glb
   textures/              the head scan's colour, normal and specular maps
-  audio/                 soundtrack.mp3, silence.mp3, voice/ (42 host lines), sfx/ (49 effects, taunts and shouts)
+  audio/                 soundtrack.mp3, silence.mp3, voice/ (42 host lines), sfx/ (68 effects, taunts, shouts and the crows)
 vendor/three-r147/       the nine three.js r147 files the game uses, for offline tests (MIT)
 tools/
   check_build.py         checks the bundled script parses and every file the code asks for is in dist/
@@ -249,7 +260,8 @@ More detail:
 ## Credits
 
 Built with [three.js](https://threejs.org). Head scan: Lee Perry-Smith by Infinite-Realities (CC BY 3.0).
-Motion capture: Mixamo. Voices and sound effects: ElevenLabs. Music: "Eagle's Caw", made with Suno.
+Motion capture: Mixamo. Voices and sound effects: ElevenLabs; the neck snap and the crows were recorded by the
+repository owner. Music: "Eagle's Caw", made with Suno.
 Fonts: Sancreek, Zilla Slab and Permanent Marker, from Google Fonts. Full details and licences are in
 [CREDITS.md](CREDITS.md).
 
