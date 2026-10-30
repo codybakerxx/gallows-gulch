@@ -121,7 +121,7 @@ const Sound = (() => {
   // first, 3 long drawn ones from the second, each followed by silence). The caws are found from those gaps once the file is decoded, so
   // the cut points don't depend on how a browser's mp3 decoder pads the start. A crow's call is strung together from them the way crows
   // call: a run of one to five, evenly spaced, each bird with its own pitch and pace, the run trailing off a little, the last caw dropping
-  const crowBank = { p: null, voices: [] }; let hushUntil = 0; const hushed = () => performance.now() / 1000 < hushUntil; // (hush: no crows over the drop and the snap)
+  const crowBank = { p: null, voices: [], live: [] }; let hushUntil = 0; const hushed = () => performance.now() / 1000 < hushUntil; // (hush: no crows over the drop and the snap)
   function crowCaws() {
     if (!ctx) return Promise.resolve(null);
     if (!crowBank.p) crowBank.p = clipBuffer("crows").then(b => { if (!b) return null;
@@ -146,6 +146,7 @@ const Sound = (() => {
       // the path out: placed where the bird is, distance takes the top off it (air), and a far bird is mostly echo off the town
       const d = at(pos, o.wet ?? lerp(0.22, 0.75, far), o.ref || 7); let dest = d;
       if (far > 0.02) { const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = lerp(9000, 2200, far); lp.Q.value = 0.5; lp.connect(d); dest = lp; }
+      const cg = ctx.createGain(); cg.connect(dest); dest = cg; // (the whole call through one gain, so a hush can cut it short)
       let t = t0, end = t0;
       for (let k = 0; k < n; k++) {
         let i = v.pick[k % v.pick.length] * set.length | 0; if (i === v.last) i = (i + 1) % set.length; v.last = i; // (never the same caw twice running)
@@ -154,6 +155,7 @@ const Sound = (() => {
         const g = ctx.createGain(); g.gain.value = (o.gain ?? 0.55) * Math.pow(0.93, k) * (0.85 + Math.random() * 0.3); s.connect(g); g.connect(dest);
         s.start(t, off, dur); end = t + dur / rate; t += per * (0.92 + Math.random() * 0.16);
       }
+      crowBank.live = crowBank.live.filter(L => L.end > now()); crowBank.live.push({ cg, end });
       return end - now(); });
   }
   // the crows round the town that you never see: three or four birds out past the buildings, each always from about the same way
@@ -304,7 +306,9 @@ const Sound = (() => {
     crowCall, crowVoice, caw(pos) { return crowCall(pos, { ref: 12 }); },
     set crowsAmbient(on) { crowAmb.on = on; }, crowGate: null,
     // wings: a crow taking off (two recordings, pitched to the bird and a little different each time)
-    hush(sec) { hushUntil = Math.max(hushUntil, performance.now() / 1000 + sec); }, get hushed() { return hushed(); },
+    hush(sec) { hushUntil = Math.max(hushUntil, performance.now() / 1000 + sec); // (and any crow mid-call stops)
+      if (ctx) { for (const L of crowBank.live) if (L.end > now()) L.cg.gain.setTargetAtTime(0, now(), 0.04); crowBank.live = []; } },
+    get hushed() { return hushed(); }, get crowsCalling() { return ctx ? crowBank.live.filter(L => L.end > now()).length : 0; },
     flap(pos, k = 1, rate = 1) { if (!ctx || hushed()) return; api.clip("flap" + (Math.random() < 0.6 ? 0 : 1), pos, 0.75 * k, 0, 0.12, rate * (0.92 + Math.random() * 0.16), 4); },
     // a crow hit by a bullet: the smack of it, a cut-off squawk and a burst of feathers and wings
     crowHit(pos) { if (!ctx) return; const t = now(), d = at(pos, 0.15, 5); drum(t, 170, 70, 0.06, 0.6, d); noise(t, 0.05, 0.35, "bandpass", 2600, 0.9, d);

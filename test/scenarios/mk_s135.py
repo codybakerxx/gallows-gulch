@@ -26,9 +26,10 @@ shot("a_crows")
 E("""(async () => { STATE.misses = STATE.maxWrong - 1; STATE.hintShown = true; MAN.pathIdx = TRAP_I; MAN.place(MAN_PATH[TRAP_I][0], MAN_PATH[TRAP_I][1], trapYaw()); GAL.rope.onNeck = true; EXEC.gripping = true; hud();
   const miss = [...'QZXJVKWYFBPGMHUDCLNRSTOIEA'].filter(c => !STATE.word.includes(c) && !STATE.guessed.has(c)); __snd.length = 0; guess(miss[0]);
   await __go(3000, () => MAN.hang && MAN.hang.caught); const tc = performance.now() / 1000; await __go(90);
-  const nearE = __snd.filter(e => Math.abs(e[0] - tc) < 1.5), near = nearE.map(e => e[1] + (e[2] ? ':' + e[2] : '') + (e[3] ? ' (hushed)' : '')), snap = near.includes('clip:neck0');
+  const h0 = (__snd.find(e => e[1] === 'hush') || [tc - 1.5])[0], calling = Sound.crowsCalling;
+  const nearE = __snd.filter(e => e[0] >= h0 && e[0] < tc + 1.5), near = nearE.map(e => e[1] + (e[2] ? ':' + e[2] : '') + (e[3] ? ' (hushed)' : '')), snap = near.includes('clip:neck0');
   const bad = nearE.filter(e => /glint|bell/.test(e[1]) || (/flap|crowCall|caw/.test(e[1]) && !e[3])).map(e => e[1]); // (a crow's call or wings asked for while Sound.hush is on make no sound)
-  return __check('the snap', snap && !bad.length, { near, bad }); })()""")
+  return __check('the snap', snap && !bad.length && !calling, { near, bad, calling }); })()""")
 E("""(async () => { SIEGE_CFG.hitUp = 0; SIEGE_CFG.hitRun = 0; const iv = setInterval(() => { if (!STATE.trap && STATE.locked) STATE.ts = 6; }, 10); await __go(3000, () => SIEGE.phase === 'window'); clearInterval(iv); STATE.ts = 1; await __go(4);
   startSiege(); await __go(240, () => SIEGE.phase === 'fight'); await __go(60); return __check('shootout', SIEGE.phase === 'fight' && TGT.grp.visible && TGT.items.every(T => T.state === 'stand'), { phase: SIEGE.phase, items: TGT.items.length }); })()""")
 E("""(async () => { const T = TGT.items.find(q => q.kind === 'bottle' && q.home.z > -1); await __fireAt(T.mesh.position.clone().add(V3(0, 0.13, 0))); await __go(30); return __check('bottle', T.state === 'broken' && !T.mesh.visible, { st: T.state }); })()""")
@@ -40,7 +41,9 @@ E("""(async () => { const c = CROWS.list.find(q => q.state !== 'dead'), P = CROW
   const fl = goreFloor(c.pos.x, c.pos.z, c.pos.y + 0.2); return __check('crow shot', hit && c.rest && c.pos.y < fl + 0.1 && c.pos.y > fl - 0.1 && SIEGE.pools.length >= 1, { hit, rest: c.rest, y: +c.pos.y.toFixed(3), floor: +fl.toFixed(3), pools: SIEGE.pools.length, kills: SIEGE.crowKills }); })()""")
 shot("c_crow")
 E("""(async () => { const L = TGT.lamps[1], p = L.glass.getWorldPosition(V3()); await __fireAt(p); await __go(10); return __check('lantern', L.broken && !GAL.lanterns.includes(L.glass.material) && (!L.light || L.light.intensity === 0), { broken: L.broken }); })()""")
-E("""(async () => { const B = WORLD.blds.find(b => b.name === 'SHERIFF'), p = roofWorld(B, B.w * 0.3, 1.7, B.d / 2 + 0.24); await __fireAt(p); await __go(10); return __check('window', TGT.cracks.used === 1, { cracks: TGT.cracks.used }); })()""")
+E("""(async () => { const B = WORLD.blds.find(b => b.name === 'SHERIFF'), p = roofWorld(B, B.w * 0.3, 1.7, B.d / 2 + 0.24); let tries = 0;
+  while (!TGT.cracks.used && tries < 4) { tries++; await __fireAt(p); await __go(10); } // (a gunman or a crow can step into the line: try again)
+  return __check('window', TGT.cracks.used >= 1, { cracks: TGT.cracks.used, tries }); })()""")
 E("""(async () => { const [k, x, z, ry] = ENEMY_COVER.find(c => c[0] === 'barrels'), p = V3(x - Math.cos(ry) * 0.31, 0.5, z + Math.sin(ry) * 0.31); await __fireAt(p); await __go(30); return __check('barrel', TGT.spouts.length === 1, { spouts: TGT.spouts.length }); })()""")
 shot("d_barrel")
 E("""(async () => { newRound(); await __go(30); const c = __dead, L = TGT.lamps[1];
