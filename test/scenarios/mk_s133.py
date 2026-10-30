@@ -1,4 +1,4 @@
-# builds test/s133.json: the gun and the hearts (v30; v31 gives the getaway a second reload) (run it at 390 x 844, and at 1280 x 720)
+# builds test/s133.json: the gun and the hearts (v30; v31 gives the getaway a second reload; v37: eight in the town shootout's cylinder) (run it at 390 x 844, and at 1280 x 720)
 #  1) the shootout: five hearts, six in the gun and one reload shown beside it; the top bar fits; empty the cylinder and it reloads itself
 #     (you can't fire while it does, the spare goes); empty it again and you're out: they finish you, one heart a shot, five shots
 #  2) the getaway: the same gun and hearts, drawn the same way, with two reloads (two speedloaders) in the run and the fight; every rider still
@@ -14,7 +14,7 @@ E("""window.__errs = []; window.addEventListener('error', e => __errs.push(Strin
 steps.append(["click", "#startBtn"]); steps.append(["wait", 1500])
 E(open(os.path.join(HERE, "chase_helpers.js")).read())
 E("""window.__bar = () => { const g = document.getElementById('gun'), m = document.getElementById('meta'), hud = document.getElementById('hud');
-  return { chambers: document.querySelectorAll('#cyl circle[r="10"]').length, loaded: document.querySelectorAll('#cyl circle[r="10"][fill="#d8a246"]').length, hearts: document.querySelectorAll('#hp svg').length, full: document.querySelectorAll('#hp svg:not(.gone)').length,
+  return { chambers: document.querySelectorAll('#cyl g circle[stroke="#6b5a45"]').length, loaded: document.querySelectorAll('#cyl g circle[stroke="#6b5a45"][fill="#d8a246"]').length, hearts: document.querySelectorAll('#hp svg').length, full: document.querySelectorAll('#hp svg:not(.gone)').length,
     badge: __vis('reloads'), badges: document.querySelectorAll('#reloads svg').length, full: document.querySelectorAll('#reloads svg.full').length, badgeUsed: document.getElementById('reloads').classList.contains('used'), meta: m.textContent, metaClipped: m.scrollWidth > m.clientWidth + 1, barOverflow: hud.scrollWidth > hud.clientWidth + 1, title: g.title }; }; 1""")
 # ---- 1) the shootout ----
 E("""(async () => { try { await __siege(); const S = SIEGE, out = {}; await __go(30, () => { __calm(); return false; });

@@ -2,6 +2,31 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v37
+- **Look round.** In the hangman part, a drag on the picture turns your head, all the way round and up and down; the
+  game turns you back each time it cuts to a new view. In the shootout you can now turn all the way round and look from
+  your boots to straight up (it was about 70° either side and a little up or down), by the Aim pad or by dragging on
+  the picture, even down behind cover. A quick drag turns you further.
+- **A revolver on a barrel.** Off to the side of the street, out of the view the round ends on, a revolver lies on a
+  barrel. Win the round and it catches the light, a glint swelling and fading and sparks along the steel. Tap it and
+  you're in the shootout: the host calls "Shoot that stranger!", the man you saved slips away, and you run for the
+  nearest cover.
+- **Eight in the gun.** The town shootout's revolver holds eight, and its reload is eight (16 rounds in all). The
+  getaway's is still six.
+- **The laser any time.** It can be taken up from the crate whenever you like, rounds left or not.
+- **Ash.** A man in the laser's beam goes black and glowing in a blue flash, then crumbles from the head down with a
+  line of embers sinking through him, the ash drifting down into a small heap that smoulders a while. His gun drops.
+- **Bigger drumsticks.** A crow in the beam comes down as a drumstick about 0.6–0.7 m long (it was the crow's size).
+- **The town's horses.** Two to six more horses, by quality setting: one saddled and tied at the hitching rail by the
+  trough, others loose at the edge of town and behind the street's cover, heads down tearing at tufts of grass, looking
+  up now and then, swishing their tails; on the higher settings one or two wander at a walk from patch to patch. They can be shot (and lasered).
+- **Things that break.** Crates, barrels, the coffin, the trough and hitching rail, the wagon wheel, the barrels and
+  crates along the boardwalks, the benches, crates, sacks, barrels, lanterns, shutters and wanted posters on every
+  porch, and the gunmen's trough, crates and barrels. Each takes a few bullets (or under a second of the beam) and
+  bursts into planks, staves and hoops, glass, straw, grain or paper, with water out of a barrel or trough. A crate
+  stacked on it goes too, and a bottle or can on it falls. A gunman whose cover is gone is in the open. A new
+  sound for wood breaking (ElevenLabs).
+
 ## v36
 - **A laser gun on the crate.** The ARC-09 (a model the repository owner made in another chat) lies on its side on the
   crate at your middle cover, down by your left hip: out of sight in the usual view, there when you look down. While

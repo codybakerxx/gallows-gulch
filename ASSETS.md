@@ -109,6 +109,7 @@ The host, who runs the hanging and calls every letter. The subtitle shown on scr
 | `mystery0.mp3` | 3.87 s | 44,100 Hz | mono | 64 kb/s | 30.5 KB | the first round after the game loads, before the intro | “There's more to this game than you think. Find the mystery.” |
 | `siege0.mp3` | 2.77 s | 44,100 Hz | mono | 64 kb/s | 21.9 KB | the rope is cut and the shootout starts | “He cut him down! Shoot that stranger!” |
 | `siege2.mp3` | 3.21 s | 44,100 Hz | mono | 64 kb/s | 25.3 KB | the gunmen shoot you down | “Should've minded your own business, stranger.” |
+| `siege3.mp3` | 1.49 s | 44,100 Hz | mono | 65 kb/s | 11.9 KB | the shootout started from the revolver on the barrel, after a won round (cut from the end of siege0) | “Shoot that stranger!” |
 | `win0.mp3` | 3.55 s | 44,100 Hz | mono | 64 kb/s | 28.0 KB | the word is solved | “Go on, git. Before I change my mind.” |
 | `win1.mp3` | 3.87 s | 44,100 Hz | mono | 64 kb/s | 30.5 KB | the word is solved | “Ride on, you lucky son of a gun.” |
 | `win2.mp3` | 3.24 s | 44,100 Hz | mono | 64 kb/s | 25.6 KB | the word is solved | “Rope goes home empty tonight.” |
@@ -173,6 +174,9 @@ Short, trimmed and level-matched mono clips, placed in 3D around the listener wh
 | `shout3.mp3` | 2.27 s | 44,100 Hz | mono | 58 kb/s | 16.2 KB | The getaway: a posse rider at the halfway shot, “Shoot him off that damn horse!” |
 | `shout4.mp3` | 3.60 s | 44,100 Hz | mono | 66 kb/s | 29.5 KB | The getaway: the last rider, coming alongside, “Just you and me now, you son of a bitch.” |
 | `shout5.mp3` | 2.87 s | 44,100 Hz | mono | 58 kb/s | 20.6 KB | The getaway: a posse rider when the first of them falls, “Aw, hell! He shot Earl!” |
+| `smash0.mp3` | 0.76 s | 44,100 Hz | mono | 99 kb/s | 9.2 KB | Something wooden shot to pieces: a crate, barrel, bench, the coffin, the trough |
+| `smash1.mp3` | 0.89 s | 44,100 Hz | mono | 99 kb/s | 10.8 KB | Something wooden shot to pieces: a crate, barrel, bench, the coffin, the trough |
+| `smash2.mp3` | 0.65 s | 44,100 Hz | mono | 100 kb/s | 8.0 KB | Something wooden shot to pieces: a crate, barrel, bench, the coffin, the trough |
 | `sword0.mp3` | 0.76 s | 44,100 Hz | mono | 99 kb/s | 9.2 KB | The sword pulled from the ground |
 | `taunt0.mp3` | 1.07 s | 44,100 Hz | mono | 65 kb/s | 8.6 KB | Taunt, said by a townsman: “Take this!” |
 | `taunt1.mp3` | 1.83 s | 44,100 Hz | mono | 65 kb/s | 14.5 KB | Taunt, said by a townsman: “Thought you could get away, huh?” |
@@ -225,4 +229,4 @@ Most of the world has no asset file: it is generated when the page loads, sized 
 
 ## Totals
 
-123 asset files: models 5.45 MB, textures 349.9 KB, audio 4.38 MB (together 10.17 MB).
+127 asset files: models 5.45 MB, textures 349.9 KB, audio 4.42 MB (together 10.21 MB).

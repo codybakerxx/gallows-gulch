@@ -49,7 +49,7 @@ function updateHerd(dt) {
     if (H.walk) { const to = H.walk.to, dx = to.x - H.x, dz = to.z - H.z, d = Math.hypot(dx, dz), want = Math.atan2(dx, dz), dy = ((want - H.yaw + Math.PI) % TAU + TAU) % TAU - Math.PI;
       H.yaw += clamp(dy, -dt * 0.9, dt * 0.9); const v = Math.abs(dy) > 0.6 ? 0.35 : 1.25; H.x += Math.sin(H.yaw) * v * dt; H.z += Math.cos(H.yaw) * v * dt;
       H.ph = (H.ph + dt * v / 1.6) % 1; H.U.walk.value.set(H.ph, 0.3 * Math.min(1, v), 0.08, 0); bob = Math.abs(Math.sin(H.ph * TAU * 2)) * 0.018; H.act.timeScale = 0.12;
-      H.stepT -= dt; if (H.stepT <= 0) { H.stepT = 0.4; if (H.grp.position.distanceTo(R.camera.position) < 30) Sound.hoof(H.grp.position); }
+      H.stepT -= dt; if (H.stepT <= 0) { H.stepT = 0.4; if (!Sound.hushed && H.grp.position.distanceTo(R.camera.position) < 30) Sound.hoof(H.grp.position); } // (quiet over the drop and the snap, as the crows are)
       if (d < 0.4) { H.walk = null; H.neckT = rnd(1.26, 1.34); H.mood = rnd(8, 18); } }
     else { const k = H.U.walk.value; k.y *= 1 - Math.min(1, dt * 5); H.act.timeScale = 0; if (k.y < 0.002) k.y = 0; }
     H.neckA += (H.neckT - H.neckA) * Math.min(1, dt * (H.neckT > H.neckA ? 1.2 : 2.2));
@@ -57,7 +57,7 @@ function updateHerd(dt) {
     H.U.neck.value = H.neckA + chew;
     // its tail swishes now and then; it blows through its nose
     H.swishT -= dt; if (H.swishT <= 0) { H.swishT = rnd(3, 9); H.swish = 0.9; } if (H.swish > 0) { H.swish -= dt; H.act.time += dt * 2.2; }
-    H.snortT -= dt; if (H.snortT <= 0) { H.snortT = rnd(10, 30); if (H.grp.position.distanceTo(R.camera.position) < 22) Sound.horseSnort(H.grp.localToWorld(_hd1.set(0, 1.4, 1.2))); }
+    H.snortT -= dt; if (H.snortT <= 0) { H.snortT = rnd(10, 30); if (!Sound.hushed && H.grp.position.distanceTo(R.camera.position) < 22) Sound.horseSnort(H.grp.localToWorld(_hd1.set(0, 1.4, 1.2))); }
     herdPlace(H, bob); if (H.grp.position.distanceToSquared(R.camera.position) < 2500 || H.walk || (H.t * 60 | 0) % 3 === 0) horseTackUpdate(H, dt);
   }
 }

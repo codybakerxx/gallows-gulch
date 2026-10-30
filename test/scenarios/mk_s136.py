@@ -1,7 +1,7 @@
 # builds test/s136.json: v36, the laser gun on the crate, and horses and crows that fall (or come out as meat).
 #   - the laser lies on the crate at your middle cover, out of sight in the usual views (crouched behind the crate, or up and looking
 #     ahead) and in sight when you look down at it ("seen": how many of its bounding box's corners and middle show, of 9)
-#   - tapping it with a round left in the revolver does nothing but say so
+#   - (v36 also checked that a tap with a round left in the revolver did nothing; from v37 it can be taken up any time: mk_s137)
 #   - the town horse shot with the revolver goes down and lies on the ground
 #   - the revolver empty: the laser wakes, a tap picks it up, the fight goes on with it
 #   - the beam: a gunman goes down; a crow comes out as a chicken leg that lands; the town horse comes out as a steak, quickly, and it lands
@@ -40,8 +40,6 @@ E("""(async () => { for (let i = 0; i < 100 && !LASER.ready; i++) await new Prom
   S.holding = true; __aimPt(L.crate.position); await __go(20, () => { __calm(); __aimPt(L.crate.position); return false; }); const seen = __seen(L.crate), pitch = +S.pitch.toFixed(2);
   return __check('laser on the crate', L.ready && L.state === 'crate' && L.crate.visible && S.cover === 1 && normal.every(n => n <= 1) && seen >= 4 && pitch < -0.5, { cover: S.cover, normal, seen, pitch }); })()""")
 shot("a_crate")
-E("""(async () => { const L = LASER, used = laserTap(__tapAt(L.crate.position)); await __go(2);
-  return __check('not while the revolver is loaded', used && L.state === 'crate' && /revolver/.test($('siegeTip').textContent) && !$('siegeTip').hidden, { used, state: L.state, tip: $('siegeTip').textContent }); })()""")
 # the town horse, shot with the revolver
 E("""(async () => { const H = LIFE.horse, S = SIEGE, p0 = S.pools.length; let got = false, tries = 0;
   while (!H.dead && tries < 3) { tries++; got = await __horseUp(); S.cool = 0; S.reloadT = 0; S.bullets = 6; fireTap(); await __go(3); } const shot = !!H.dead && !H.run; // (a gunman can step into the line: again, next time it comes through)

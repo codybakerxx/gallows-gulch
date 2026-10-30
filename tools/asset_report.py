@@ -122,6 +122,8 @@ def voice_texts():
         SIEGE_WHEN[clip] = SIEGE_WHEN.get(key, "the shootout")
     m = re.search(r'const MYSTERY_LINE = "((?:[^"\\]|\\.)*)"; VOICE_LINES\[MYSTERY_LINE\] = \["(\w+)"', words)
     if m: out[m.group(2)] = m.group(1)
+    m = re.search(r'const REVOLVER_LINE = "((?:[^"\\]|\\.)*)"; VOICE_LINES\[REVOLVER_LINE\] = \["(\w+)"', read("src/12p_look.js"))
+    if m: out[m.group(2)] = m.group(1); SIEGE_WHEN[m.group(2)] = "the shootout started from the revolver on the barrel, after a won round (cut from the end of siege0)"
     return out
 
 
@@ -155,6 +157,7 @@ SFX = {
     "ric": "A bullet whining off iron",
     "keg": "A bullet into a barrel (or the trough's side) and the water spouting out",
     "horse": "The town horse (or a posse horse) crying out as it's shot and goes down",
+    "smash": "Something wooden shot to pieces: a crate, barrel, bench, the coffin, the trough",
 }
 SFX_ONE = { # the getaway (hidden): one line each
     "shout0": "The getaway: a posse rider coming down the street, “There he is! Get him, boys!”",

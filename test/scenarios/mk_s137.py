@@ -18,7 +18,9 @@ steps = []
 E = lambda js: steps.append(["eval", js])
 shot = lambda f: steps.append(["shot", f"test/{pre}_{f}.png"])
 E("""window.__errs = []; window.addEventListener('error', e => __errs.push(String(e.message) + ' @' + (e.filename || '').split('/').pop() + ':' + (e.lineno || ''))); window.addEventListener('unhandledrejection', e => __errs.push('rej ' + String(e.reason && e.reason.stack || e.reason))); 1""")
-steps.append(["wait", 2500]); steps.append(["click", "#startBtn"]); steps.append(["wait", 1500])
+steps.append(["wait", 2500]) # (and the page drawing again before the click: under SwiftShader at desktop size the first frames behind the menu can take a while)
+E("""new Promise(res => { const to = setTimeout(() => res('no frame in 120 s'), 120000); requestAnimationFrame(() => requestAnimationFrame(() => { clearTimeout(to); res(1); })); })""")
+steps.append(["wait", 600]); steps.append(["click", "#startBtn"]); steps.append(["wait", 1500])
 E(open(os.path.join(HERE, "chase_helpers.js")).read())
 E("""window.__check = (name, ok, info) => JSON.stringify({ check: name, ok: !!ok, info, errs: __errs.slice(0, 3) });
 window.__step = async n => { const RF = window.renderFrame; window.renderFrame = () => {}; try { await __go(n); } finally { window.renderFrame = RF; } return 1; };

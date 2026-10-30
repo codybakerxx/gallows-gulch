@@ -29,12 +29,14 @@ ROUND = """(async () => { await __go(600, () => !STATE.locked); const r = __righ
   return JSON.stringify({ word: STATE.word, guessed: [...STATE.guessed].join(''), locked: STATE.locked, bubble: STATE.bubble && STATE.bubble.text, errs: __errs }); })()"""
 
 
+FRAMES = "new Promise(res => { const to = setTimeout(() => res('no frame in 120 s'), 120000); requestAnimationFrame(() => requestAnimationFrame(() => { clearTimeout(to); res(1); })); })"
 def phone():
     steps = []
     E = lambda js: steps.append(["eval", js])
     shot = lambda f: steps.append(["shot", f"{OUT}/{f}.png"])
     steps.append(["wait", 2500])
     shot("01-title")
+    steps.append(["eval", FRAMES]); steps.append(["wait", 600])  # (the page drawing again first: under SwiftShader the first frames behind the menu can hold a click up)
     steps.append(["click", "#startBtn"])
     steps.append(["wait", 1500])
     E("document.getElementById('kb').classList.add('up'); 1")  # (the game adds this a frame after the round starts; a slow headless frame can miss the wait)
@@ -87,6 +89,7 @@ def getaway():
     steps = []
     E = lambda js: steps.append(["eval", js])
     shot = lambda f: steps.append(["shot", f"{OUT}/{f}.png"])
+    steps.append(["eval", FRAMES]); steps.append(["wait", 600])  # (the page drawing again first: under SwiftShader the first frames behind the menu can hold a click up)
     steps.append(["click", "#startBtn"])
     steps.append(["wait", 1500])
     E(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "chase_helpers.js")).read())
@@ -110,6 +113,7 @@ def getaway():
 def wide():
     steps = []
     E = lambda js: steps.append(["eval", js])
+    steps.append(["eval", FRAMES]); steps.append(["wait", 600])  # (the page drawing again first: under SwiftShader the first frames behind the menu can hold a click up)
     steps.append(["click", "#startBtn"])
     steps.append(["wait", 1500])
     E(GO)

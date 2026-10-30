@@ -34,6 +34,9 @@ on a desktop too.
 letter costs a bullet from the revolver at the top left and walks the man a step closer to the noose. Solve the word
 and he goes free. On your last chance a clue appears at the top (except on Outlaw).
 
+**Looking round.** Drag on the picture to turn your head: all the way round, up and down. Horses graze and wander at
+the edge of town, some behind you. Each time the game cuts to a new view (a guess, the drop) you're turned back to it.
+
 **Settings** (the WANTED poster menu):
 
 | Word length | Letters |   | Difficulty | Misses | Words |
@@ -46,14 +49,20 @@ and he goes free. On your last chance a clue appears at the top (except on Outla
 **When he hangs.** A sword glints, stuck in the ground under the gallows. Tap it within 4 seconds, or even after the GAME OVER sign comes
 up, to cut him down and fight for the round.
 
+**When you save him.** Somewhere off to the side, out of the view the round ends on, a revolver lies on a barrel. Once
+you've won it catches the light. Look round, find it and tap it, and the town turns on you: the same shootout, as the
+stranger.
+
 **The shootout.** Now you're the stranger, behind cover, and nine gunmen are out for you: seven in the street and
 two on the rooftops, behind the false fronts of the sheriff's office and the general store.
-- Your revolver holds **6 rounds**, and you get **one reload**: 12 rounds in all. The reload is automatic: when the
+- Your revolver holds **8 rounds**, and you get **one reload**: 16 rounds in all. The reload is automatic: when the
   cylinder empties it refills by itself, and you can't fire until it's done. The speedloader beside the cylinder shows
   whether your reload is still there.
 - You have **5 hearts**. Hearts you lose show as empty outlines.
 - **Hold Aim** to rise up and drag to aim. **Fire** shoots. **Tap a piece of cover** to run to it.
   On a keyboard, hold **Shift** or **A** to rise and press **Space** or **Enter** to fire.
+- You can turn all the way round and look from your boots to straight up: drag on the Aim pad, or drag on the picture
+  (up or down behind cover). A quick drag turns you further than a slow one.
 - While you're down behind cover, nobody can hit you. Once you're up, a gunman takes **0.3 s** to fire, and his
   hammer cocks just before he does. A red chevron marks the man taking aim.
 - A gunman outside your view can take aim at you too, but he takes longer about it, and a **red arc** around the
@@ -73,11 +82,16 @@ two on the rooftops, behind the false fronts of the sheriff's office and the gen
 - Crows perch on the gallows, the rooftops and the hitching rails, and pick about in the street. Your shots and
   theirs scare them up. Hit one and it drops in a burst of blood and feathers and lies where it lands. Every bullet
   counts, as always.
-- A loose horse bolts across the street past the gallows during the fight. Shoot it and it goes down.
-- Look down at the crate by your left hip at your middle cover. There's something on it, but it's no use while
-  you've a round left in the revolver. Run dry and it wakes up humming: tap it to take it up. It's a laser: **hold
-  Fire** for a blue beam that drops a man almost at once and scorches what it touches. It holds **20 seconds** of
-  firing (the blue ring where the cylinder was), then takes **7 seconds** to charge itself (the ring fills amber).
+- A loose horse bolts across the street past the gallows during the fight, and the town's other horses are about:
+  one tied at the rail by the trough, others grazing and wandering at the edges, some behind you. Shoot one and it
+  goes down.
+- Most of what's lying about can be shot to pieces: crates, barrels, the coffin, the trough and hitching rail, the
+  wagon wheel, the benches, sacks, lanterns, shutters and posters on the porches, and the gunmen's own cover. Each
+  takes a few bullets; whatever was on it falls, and a gunman whose cover is gone is in the open.
+- Look down at the crate by your left hip at your middle cover. There's a laser on it, and you can tap it to take it
+  up at any time (if the revolver runs dry first it wakes up humming). **Hold Fire** for a blue beam: a man in it
+  burns to ash and crumbles into a little heap, and it scorches and breaks what it touches. It holds **20 seconds**
+  of firing (the blue ring where the cylinder was), then takes **7 seconds** to charge itself (the ring fills amber).
   What it does to a horse or a crow is best seen.
 
 <details>
@@ -122,8 +136,8 @@ grass between them. Nothing on the screen to press.
 the same way, keeping to the trail, and nobody can hurt you while you turn.
 
 **Second half, the fight.**
-- It's the same gun and the same hearts as the shootout, 6 rounds and 5 hearts, but out here you get two automatic
-  reloads instead of one: 18 rounds in all. A speedloader for each sits beside the cylinder.
+- It's the same gun and the same hearts as the shootout, but out here it holds 6 rounds and you get two automatic
+  reloads: 18 rounds in all. A speedloader for each sits beside the cylinder.
 - Aim with the mouse, by dragging the **Aim** pad (as in the shootout) or by dragging on the view. Any of these works
   while another finger holds **Fire**. **Click** or **Fire** shoots.
 - When the cylinder empties it reloads by itself, twice. Run dry with riders still coming and they ride in and finish
@@ -144,7 +158,7 @@ filmed in a few shots. You can skip it after the first time. Then **Retry chase*
 The run takes about 55 seconds and the fight about 20–40, depending on your shooting. The run's numbers (lanes,
 speeds, jumps, the course, what a hit costs) are in `RUN` at the top of `src/12h_runner.js`; the fight's and the
 posse's in `CHASE_CFG` at the top of `src/12g_chase.js`; the canyon and the shots of the end in `CANYON` and `CINE` in
-`src/12i_canyon.js`. The gun and the hearts are in `GUN` at the top of `src/12d_siege.js`, and the laser's charge
+`src/12i_canyon.js`. The gun and the hearts are in `GUN` at the top of `src/12d_siege.js` (the town shootout's eight rounds in `SIEGE_ROUNDS`), and the laser's charge
 and recharge in `LASER_CFG` at the top of `src/12k_laser.js`.
 
 </details>
@@ -203,7 +217,7 @@ public repository.
 
 ```
 build.py                 builds dist/ from src/ and assets/ (standard library only)
-src/                     the game: one HTML shell and 32 JavaScript modules, loaded in the order build.py lists
+src/                     the game: one HTML shell and 36 JavaScript modules, loaded in the order build.py lists
   00_head.html           page markup and all CSS: HUD, keyboard, menu poster, end sign, Word Book, the getaway's HUD
   01_util.js             helpers, seeded noise
   02_textures.js         procedural material textures and sprites
@@ -234,6 +248,10 @@ src/                     the game: one HTML shell and 32 JavaScript modules, loa
   12j_targets.js         what the shootout's shots do: bottles, cans, lanterns, windows, water, straw, sparks, dirt, holes
   12k_laser.js           the laser gun: on the crate, taken up, the beam, the charge, its ring in the top bar
   12l_meat.js            horses shot down (in town and in the getaway); the laser's flash, and the steak and chicken legs
+  12m_break.js           the things that break: tagged as the town is built, merged, hidden in the shader when shot apart
+  12n_herd.js            the town's horses: tied, grazing, walking (a standing horse made from the gallop: 10b)
+  12o_ash.js             a man in the laser's beam burning to ash, and the heap he leaves
+  12p_look.js            looking round in the hangman part; the revolver on the barrel that starts the shootout after a win
   12g_chase.js           the getaway: posse, horses, the turn, the fight, the results
   12h_runner.js          the getaway's run: three lanes, swipes and jumps, the course, the desert along the trail
   12i_canyon.js          the canyon at the end and the filmed fall
@@ -241,7 +259,7 @@ src/                     the game: one HTML shell and 32 JavaScript modules, loa
 assets/
   models/                Xbot.glb, LeePerrySmith.glb, Horse.glb, Stork.glb, ARC09.glb (the laser gun)
   textures/              the head scan's colour, normal and specular maps
-  audio/                 soundtrack.mp3, silence.mp3, voice/ (42 host lines), sfx/ (71 effects, taunts, shouts and the crows)
+  audio/                 soundtrack.mp3, silence.mp3, voice/ (43 host lines), sfx/ (74 effects, taunts, shouts and the crows)
 vendor/three-r147/       the nine three.js r147 files the game uses, for offline tests (MIT)
 tools/
   check_build.py         checks the bundled script parses and every file the code asks for is in dist/
