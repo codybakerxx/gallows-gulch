@@ -304,7 +304,7 @@ const Sound = (() => {
     crowCall, crowVoice, caw(pos) { return crowCall(pos, { ref: 12 }); },
     set crowsAmbient(on) { crowAmb.on = on; }, crowGate: null,
     // wings: a crow taking off (two recordings, pitched to the bird and a little different each time)
-    hush(sec) { hushUntil = Math.max(hushUntil, performance.now() / 1000 + sec); },
+    hush(sec) { hushUntil = Math.max(hushUntil, performance.now() / 1000 + sec); }, get hushed() { return hushed(); },
     flap(pos, k = 1, rate = 1) { if (!ctx || hushed()) return; api.clip("flap" + (Math.random() < 0.6 ? 0 : 1), pos, 0.75 * k, 0, 0.12, rate * (0.92 + Math.random() * 0.16), 4); },
     // a crow hit by a bullet: the smack of it, a cut-off squawk and a burst of feathers and wings
     crowHit(pos) { if (!ctx) return; const t = now(), d = at(pos, 0.15, 5); drum(t, 170, 70, 0.06, 0.6, d); noise(t, 0.05, 0.35, "bandpass", 2600, 0.9, d);
