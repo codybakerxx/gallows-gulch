@@ -171,8 +171,8 @@ function setDusk(d, forceEnv) {
   const sun = SKY.sun; sun.color.copy(_sc); sun.intensity = lerp(4.2, 2.9, d);
   sun.position.copy(sun.target.position).addScaledVector(SKY.sunDir, 90);
   SKY.hemi.color.setRGB(lerp(0.62, 0.5, d), lerp(0.58, 0.38, d), lerp(0.62, 0.45, d)); SKY.hemi.groundColor.setRGB(lerp(0.5, 0.36, d), lerp(0.34, 0.22, d), lerp(0.2, 0.14, d));
-  SKY.hemi.intensity = lerp(0.3, 0.24, d); if (SKY.fill) { SKY.fill.intensity = lerp(0.6, 0.55, d); SKY.fill.color.setRGB(lerp(0.92, 0.9, d), lerp(0.86, 0.7, d), lerp(0.84, 0.62, d)); }
-  R.scene.fog.color.copy(SKY.horizon); R.scene.fog.density = lerp(0.0008, 0.0011, d);
+  SKY.hemi.intensity = lerp(0.3, 0.24, d) * (SKY.hemiK ?? 1); if (SKY.fill) { SKY.fill.intensity = lerp(0.6, 0.55, d); SKY.fill.color.setRGB(lerp(0.92, 0.9, d), lerp(0.86, 0.7, d), lerp(0.84, 0.62, d)); } // (hemiK: more light bounced off rock, down in the getaway's canyon: 12i)
+  R.scene.fog.color.copy(SKY.horizon); R.scene.fog.density = lerp(0.0008, 0.0011, d) * (SKY.fogK ?? 1);
   if (forceEnv || Math.abs(d - SKY.envDusk) > 0.12) updateEnv(d);
 }
 function updateEnv(d) {

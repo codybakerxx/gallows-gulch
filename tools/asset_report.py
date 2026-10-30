@@ -114,6 +114,8 @@ def voice_texts():
     for key, clip in re.findall(r"SIEGE_LINES\.(\w+)\] = \[\"(siege\d)\"", words):
         out[clip] = siege[key]
         SIEGE_WHEN[clip] = SIEGE_WHEN.get(key, "the shootout")
+    m = re.search(r'const MYSTERY_LINE = "((?:[^"\\]|\\.)*)"; VOICE_LINES\[MYSTERY_LINE\] = \["(\w+)"', words)
+    if m: out[m.group(2)] = m.group(1)
     return out
 
 
@@ -126,7 +128,7 @@ def taunt_texts():
 
 SIEGE_WHEN = {"start": "the rope is cut and the shootout starts", "lose": "the gunmen shoot you down"}
 VOICE_KIND = {"intro": "a round starts", "hit": "a right letter", "miss": "a wrong letter", "hint": "one guess left (points you to the hint)",
-              "lose": "the man hangs", "win": "the word is solved", "siege": "the shootout"}
+              "lose": "the man hangs", "win": "the word is solved", "siege": "the shootout", "mystery": "the first round after the game loads, before the intro"}
 SFX = {
     "shot": "Your revolver firing, close up",
     "far": "A gunman's shot from across the street",
@@ -140,13 +142,31 @@ SFX = {
     "cut": "The rope cut through",
     "dry": "Empty revolver: the hammer falls on nothing",
     "cock": "A gunman cocking his hammer: your cue to duck",
+    "flap": "A crow's wings as it takes off (pitched to the bird)",
+    "glass": "A bottle shot to pieces in the shootout (also the gallows lanterns)",
+    "pane": "A shop window shot through",
+    "tin": "A tin can hit and sent flying",
+    "ric": "A bullet whining off iron",
+    "keg": "A bullet into a barrel (or the trough's side) and the water spouting out",
+}
+SFX_ONE = { # the getaway (hidden): one line each
+    "shout0": "The getaway: a posse rider coming down the street, “There he is! Get him, boys!”",
+    "shout1": "The getaway: a posse rider as you ride off, “Don’t let him get away!”",
+    "shout2": "The getaway: a posse rider when your horse hits something, “Ha! We got him now!”",
+    "shout3": "The getaway: a posse rider at the halfway shot, “Shoot him off that damn horse!”",
+    "shout4": "The getaway: the last rider, coming alongside, “Just you and me now, you son of a bitch.”",
+    "shout5": "The getaway: a posse rider when the first of them falls, “Aw, hell! He shot Earl!”",
+    "scream0": "The getaway: his scream as he goes over the cliff (it falls away with him)",
+    "canyon0": "The getaway: horse and rider hitting the canyon floor, far below",
+    "neck0": "The neck breaking as the rope catches him (the repository owner's own recording)",
+    "crows": "The crows: the repository owner's two recordings of crows, cleaned and cut into 20 single caws (17 short, 3 long) with silence between, strung into calls by the game",
 }
 
 MODEL_ABOUT = {
     "Xbot.glb": "Every person in town: the host, the executioner, the hanged man, the crowd and the gunmen. One rigged body, "
                 "dressed and re-proportioned in code; its motion-capture clips drive walking, idling and reactions.",
     "LeePerrySmith.glb": "The scanned head every face is made from: skinned onto the body, given eyes, hair and hats in code, with the three textures below.",
-    "Horse.glb": "The loose horse that now and then bolts down the street (a bay coat painted in code; galloping by its morph targets).",
+    "Horse.glb": "The loose horse that now and then bolts down the street, and in the getaway your horse and the posse's five (coats painted and tinted in code; galloping by its morph targets).",
     "Stork.glb": "The vultures circling over the gulch (re-coloured in code; flapping by its morph targets).",
 }
 TEX_ABOUT = {
@@ -230,7 +250,7 @@ def main():
     w("")
     w("| File | Length | Sample rate | Channels | Bit rate | Bytes | When | Line |")
     w("|---|---:|---:|---|---:|---:|---|---|")
-    vfiles = sorted(os.listdir(A("audio", "voice")), key=lambda s: (re.match(r"[a-z]+", s).group(0), int(re.search(r"\d+", s).group(0))))
+    vfiles = sorted(os.listdir(A("audio", "voice")), key=lambda s: (re.match(r"[a-z]+", s).group(0), int(re.search(r"\d+", s).group(0)) if re.search(r"\d+", s) else 0))
     for f in vfiles:
         a = probe(A("audio", "voice", f))
         total["audio"] += a["bytes"]
@@ -247,13 +267,13 @@ def main():
     w("")
     w("| File | Length | Sample rate | Channels | Bit rate | Bytes | What it is |")
     w("|---|---:|---:|---|---:|---:|---|")
-    sfiles = sorted(os.listdir(A("audio", "sfx")), key=lambda s: (re.match(r"[a-z]+", s).group(0), int(re.search(r"\d+", s).group(0))))
+    sfiles = sorted(os.listdir(A("audio", "sfx")), key=lambda s: (re.match(r"[a-z]+", s).group(0), int(re.search(r"\d+", s).group(0)) if re.search(r"\d+", s) else 0))
     for f in sfiles:
         a = probe(A("audio", "sfx", f))
         total["audio"] += a["bytes"]
         k = f[:-4]
         kind = re.match(r"[a-z]+", k).group(0)
-        what = f"Taunt, said by {taunts[k][1]}: “{taunts[k][0]}”" if k in taunts else SFX.get(kind, "")
+        what = f"Taunt, said by {taunts[k][1]}: “{taunts[k][0]}”" if k in taunts else SFX_ONE.get(k) or SFX.get(kind, "")
         w(f"| `{f}` | {a['dur']:.2f} s | {a['sr']:,} Hz | {chan(a['ch'])} | {a['br'] // 1000} kb/s | {kb(a['bytes'])} | {what} |")
     w("")
 
