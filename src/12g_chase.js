@@ -373,6 +373,7 @@ function updateRiders(dt) {
   if (hide !== !!C.posseHidden) { C.posseHidden = hide; for (const R0 of C.riders) if (R0.alive) { R0.a.root.visible = !hide; R0.H.grp.visible = !hide; horseTackShow(R0.H, !hide); R0.gun.visible = !hide && R0.kind !== "lasso"; } }
   const viewHalf = Math.atan(Math.tan(THREE.MathUtils.degToRad(64) / 2) * R.camera.aspect), p0 = Object.assign({}, trailAt(C.s, 0, _tB)); // (half the view's width, as an angle, at the fight's field of view; where you are on the trail)
   for (const R0 of C.riders) { const a = R0.a, H = R0.H;
+    if (R0.free && R0.free.down) { const F = R0.free; F.t += dt; chaseHorseFallStep(R0, dt); if (a.hang) a.update(dt); continue; } // (his horse was shot: it's down too, 12l)
     if (R0.free) { // fallen: the horse runs on without him, drifting off and slowing; he lies where he came down
       const F = R0.free; F.t += dt; F.v = Math.max(0, F.v - dt * 1.4); F.s += F.v * dt; F.l += F.side * dt * 1.1; placeHorse(H, F.s, F.l, F.side * 1.1, F.v, dt, 0); if (F.t > 6 || F.s < C.s - 90 || (C.cine && F.s > C.cine.sEdge - 6)) { H.grp.visible = false; horseTackShow(H, false); } // (and it shies away from the edge: never runs out over the canyon)
       if (a.hang) { a.update(dt); } continue; }
@@ -471,7 +472,9 @@ function chaseFire() {
   muzzleFlash(SIEGE.vm.gun.localToWorld(V3(0, 0.035, 0.22)), 0.3);
   const ro = R.camera.position.clone(), rd = aimDir(V3()).normalize(); let hit = null;
   for (const R0 of C.riders) { if (!R0.alive || !R0.a.root.visible) continue; const far = R0.a.ch.bones.Spine2.getWorldPosition(_c1).distanceTo(ro), h = rayActor(R0.a, ro, rd, false, clamp((far - 10) * 0.006, 0, 0.1)); if (h && (!hit || h.t < hit.t)) hit = Object.assign(h, { R0 }); }
-  if (hit) { riderHit(hit.R0, hit.part, ro.clone().addScaledVector(rd, hit.t), rd); C.stats.hits++; }
+  const hh = chaseHorseRay(ro, rd); // (or his horse: it goes down and throws him, 12l)
+  if (hh && (!hit || hh.t < hit.t)) { chaseHorseShot(hh.R0, ro.clone().addScaledVector(rd, hh.t), rd); C.stats.hits++; }
+  else if (hit) { riderHit(hit.R0, hit.part, ro.clone().addScaledVector(rd, hit.t), rd); C.stats.hits++; }
   else { for (let t = 2; t < 70; t += 1) { const q = _c1.copy(ro).addScaledVector(rd, t); if (q.y < groundVis(q.x, q.z)) { kickDust(q, 8, 0.5, 1.0, 0.7, 1.1); break; } } } // (a puff where it hits the dirt)
   if (C.rounds <= 0) { if (C.reloads > 0) chaseReload(); else if (C.riders.some(r => r.alive)) chaseDoomed(); } chaseHud();
 }

@@ -2,6 +2,27 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v36
+- **A laser gun on the crate.** The ARC-09 (a model the repository owner made in another chat) lies on its side on the
+  crate at your middle cover, down by your left hip: out of sight in the usual view, there when you look down. While
+  there's a round left in the revolver, tapping it only gets a "not while there's a round left" tip. Once the revolver
+  is empty (no reload left either), it wakes: its lights come up and it hums, so you might hear where it is, and the
+  gunmen hold off a few seconds longer before they start on you. Tap it (from another cover you run back for it) and
+  it rises into your hand and the fight's back on.
+- **The beam.** Hold Fire: a blue beam, with a low futuristic hum and a whine over it. It drops a gunman almost at once,
+  scorches what it touches (wood, ground, iron; it cracks windows), rings the bell, knocks bottles and cans about,
+  and throws blue sparks and smoke.
+- **The charge.** 20 seconds of firing in all, shown as a blue ring where the revolver's cylinder was, with the seconds
+  left in the top bar. Empty, it won't fire for 7 seconds while it charges itself, the ring filling amber with a rising
+  whine, then a chime.
+- **Horses go down.** The town horse now crosses the street just past the gallows during the shootout, and shot with
+  the revolver it screams, crashes onto its side and lies in its blood. A posse horse shot in the getaway goes down
+  the same way, sliding along the trail, and throws its rider.
+- **Meat.** A horse touched by the beam is gone in a flash, blue and white, a tenth of a second, and a big grilled
+  steak drops out of it, bounces and lies steaming. A crow comes out as a roast chicken leg the same way.
+- New sounds: the horse's cry (ElevenLabs), and synthesized ones for the laser (hum, whine, charge, chime, the zap),
+  the meat landing and its sizzle.
+
 ## v35
 - **The neck snap is a real recording** (the repository owner's), trimmed and played dry at the neck, and nothing else
   sounds with it: the faint ring that played as the sword began to glint is gone (the glint is only seen now), and no

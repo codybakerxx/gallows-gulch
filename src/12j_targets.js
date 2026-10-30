@@ -172,7 +172,7 @@ function updateCans(dt) {
 }
 
 // ---- the street, the buildings and everything else: what was hit decides what happens ----
-function envShot(env, rd) {
+function envShot(env, rd, laser) { // (laser: the beam, 12k, which scorches and smokes for itself; here only what's particular to a material)
   const p = env.point, o = env.object, mat = Array.isArray(o.material) ? o.material[env.face ? env.face.materialIndex : 0] : o.material;
   const n = env.face ? _t1.copy(env.face.normal).transformDirection(o.matrixWorld) : _t1.set(0, 1, 0); if (n.dot(rd) > 0) n.negate(); const nn = n.clone();
   // a gallows lantern: it shatters, swings and goes out
@@ -200,12 +200,14 @@ function envShot(env, rd) {
     Sound.straw(p, 1); puff(p, 10, 0.5, 0.18, 1.4, 0.45, 0xd8c088);
     for (let i = 0; i < 16; i++) debris("straw", p, _t3.copy(nn).multiplyScalar(rnd(0.5, 2)).add(_t2.set(rnd(-1, 1), rnd(0.2, 1.6), rnd(-1, 1))), rnd(0.6, 1.1)); return; }
   if (mat === MAT.iron || mat === MAT.brass) { // iron: sparks, and the bullet whines off it
-    Sound.clip(siegePick("ric", 3), p, 0.9, 0, 0.3, rnd(0.92, 1.1), 4);
+    if (!laser) Sound.clip(siegePick("ric", 3), p, 0.9, 0, 0.3, rnd(0.92, 1.1), 4);
     for (let i = 0; i < 16; i++) emit(TGT.sparks, p, _t3.copy(nn).multiplyScalar(rnd(0.8, 3)).add(_t2.set(rnd(-1.2, 1.2), rnd(-0.4, 1.4), rnd(-1.2, 1.2))), rnd(0.12, 0.4)); return; }
+  if (laser && o === WORLD.ground) { Sound.sizzle(p, 0.35); return; }
   if (o === WORLD.ground) { // the street: a spurt of dirt
     Sound.dirt(p, 1); puff(p.clone().add(_t3.set(0, 0.08, 0)), 26, 1.2, 0.3, 1.6, 0.75, 0xd2b48e);
     for (let i = 0; i < 34; i++) emit(TGT.dirt, p, _t3.set(rnd(-0.7, 0.7), rnd(1.4, 3.4), rnd(-0.7, 0.7)).addScaledVector(rd, -rnd(0.2, 1)), rnd(0.6, 1.1), rnd(0.7, 1));
     for (let i = 0; i < 10; i++) debris("clod", p, _t3.set(rnd(-0.8, 0.8), rnd(1.2, 2.8), rnd(-0.8, 0.8)).addScaledVector(rd, -0.6), rnd(0.8, 1.6)); return; }
+  if (laser) { Sound.sizzle(p, 0.35); return; }
   // wood (and anything else): splinters and a hole that stays
   setTimeout(() => { puff(p, 14, 0.6, 0.08, 0.9, 0.6); Sound.clip(siegePick("wood", 4), p, 0.8, 0, 0.3, rnd(0.9, 1.1), 3); }, 40);
   decal(TGT.holes, p, nn, rnd(0.8, 1.15));

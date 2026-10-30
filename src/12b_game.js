@@ -111,7 +111,7 @@ function showHintBox(on) {
   b.hidden = !on; $("hintBtn").setAttribute("aria-expanded", String(!!on));
 }
 function resetScene() {
-  resetSiege(); resetCrows(); resetTargets(); stopBodyPlay(); TASKS.length = 0; ROPE.held = false; ROPE.mode = null; ROPE.fromT = 1; STATE.trap = false;
+  resetSiege(); resetCrows(); resetTargets(); resetMeat(); stopBodyPlay(); TASKS.length = 0; ROPE.held = false; ROPE.mode = null; ROPE.fromT = 1; STATE.trap = false;
   for (const d of GAL.doors) { d.ang = 0; d.vel = 0; d.slams = 0; d.pivot.rotation.z = 0; }
   GAL.leverPivot.rotation.z = -0.35; resetRope();
   MAN.hang = null; MAN.pathIdx = 0; MAN.tremble = 0; MAN.sweating = false; MAN.setSad(0); MAN.ch.skin.userData.U.sweat.value = 0; MAN.bound = true;

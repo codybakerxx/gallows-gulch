@@ -16,7 +16,7 @@
 const GUN = { rounds: 6, reloads: 1, reload: 1.6, hearts: 5 }; // (rounds in the cylinder; reloads you get, each automatic when it's empty; seconds a reload takes)
 const SIEGE_CFG = { window: 4.0, bullets: GUN.rounds, health: GUN.hearts, grace: 2.5, telegraph: 0.3, gap: [1.8, 3.0], hitUp: 0.5, hitRun: 0.3, react: 0.3,
   speed: [3.0, 3.7], hold: [0.8, 1.9], // how fast they dash between their spots (m/s), and how long they hold each one
-  eye: 1.56, crouchEye: 0.72, sens: 0.0042, yawLim: 1.2, pitchLo: -0.3, pitchHi: 0.5, fireCool: 0.4, runSpeed: 4.2,
+  eye: 1.56, crouchEye: 0.72, sens: 0.0042, yawLim: 1.2, pitchLo: -1.0, pitchHi: 0.5, fireCool: 0.4, runSpeed: 4.2,
   doom: [1.3, 0.85], // out of bullets: the first of them takes aim this long after your last shot, and the next every 0.85 s after
   tauntGap: 7, hideTaunt: 8, // at least 7 s between taunts; 8 s down behind cover and they call you out
   offAim: 0.5, // a man taking aim from outside your view takes this much longer about it: the red arc gives you the time to get down
@@ -48,7 +48,7 @@ const ENEMY_COVER = [["trough", 1.56, -2.28, -0.56], ["crates", -5.82, -1.68, 0.
 const SIEGE_CLIPS = ["shot0", "shot1", "shot2", "far0", "far1", "far2", "far3", "wood0", "wood1", "wood2", "wood3", "whiz0", "whiz1", "whiz2",
   "painm0", "painm1", "painm2", "painm3", "painm4", "painm5", "painm6", "painf0", "painf1", "painf2", "hurt0", "hurt1", "hurt2", "cough0", "cough1",
   "sword0", "cut0", "dry0", "cock0", "cock1", "taunt0", "taunt1", "taunt2", "taunt3", "taunt4", "taunt5", "taunt6",
-  "neck0", "crows", "flap0", "flap1", "glass0", "glass1", "glass2", "pane0", "pane1", "pane2", "tin0", "tin1", "tin2", "ric0", "ric1", "ric2", "keg0", "keg1", "keg2"]; // (v35: the neck, the crows, the things to shoot: 10c, 12j)
+  "neck0", "crows", "flap0", "flap1", "glass0", "glass1", "glass2", "pane0", "pane1", "pane2", "tin0", "tin1", "tin2", "ric0", "ric1", "ric2", "keg0", "keg1", "keg2", "horse0", "horse1", "horse2"]; // (v35: the neck, the crows, the things to shoot: 10c, 12j; v36: a horse shot, 12l)
 const rnd = (a, b) => a + Math.random() * (b - a);
 // a clip from a set, never the same one twice in a siege while any are left unplayed
 function siegePick(prefix, n) { const u = SIEGE.used[prefix] || (SIEGE.used[prefix] = new Set()); if (u.size >= n) u.clear();
@@ -187,7 +187,8 @@ function swordHit(e) {
 function siegeTap(e) {
   if (SIEGE.phase === "window" || SIEGE.phase === "late") { if (swordHit(e)) { startSiege(); return true; } return false; } // (late: the GAME OVER sign is up, and he can still be cut down)
   if (!SIEGE.on) return false;
-  if (SIEGE.phase === "fight") coverTap(e);
+  if (laserTap(e)) { if (e.cancelable) e.preventDefault(); return true; } // (the laser on the crate: 12k)
+  if (SIEGE.phase === "fight" || (SIEGE.phase === "doomed" && laserAvail())) coverTap(e);
   if (e.cancelable) e.preventDefault(); return true;
 }
 
@@ -197,7 +198,7 @@ async function startSiege() {
   const late = SIEGE.phase === "late"; // cut down after the GAME OVER sign came up: the round he lost isn't held against your streak
   if (late && STATE.streakLost != null) { STATE.streak = STATE.streakLost; savePrefs(); } swordShine(0, false);
   bellReset(); // (the bell's mark is for this shootout only: 12f)
-  const S = SIEGE; S.on = true; S.phase = "cut"; S.sword.glint.visible = false; S.t = 0; S.used = {}; showSiegeUI("cut"); for (const C of S.covers) C.grp.visible = true; S.props.visible = true; resetTargets(); showTargets(true); crowsGather();
+  const S = SIEGE; S.on = true; S.phase = "cut"; S.sword.glint.visible = false; S.t = 0; S.used = {}; showSiegeUI("cut"); for (const C of S.covers) C.grp.visible = true; S.props.visible = true; resetTargets(); showTargets(true); crowsGather(); resetLaser(); horseHurry();
   S.bullets = GUN.rounds; S.reloads = GUN.reloads; S.reloadT = 0; S.health = GUN.hearts; gunHud.key = null; S.hurt = 0; S.deadT = 0; S.cool = 0; S.recoil = 0; S.holding = S.keyAim = false; S.aimId = null; S.scanT = 0; S.upT = 0; S.vm.kick = 0;
   S.shots = 0; S.downT = 0; S.aims = 0; S.said.clear(); S.tauntT = 0; S.talkUntil = 0; S.wordsAt = S.lastAt = 0; S.doomT = S.doomI = 0; S.doomSaid = false; S.hitT = 0;
   $("doomMsg").hidden = $("hitMsg").hidden = true;
@@ -426,6 +427,7 @@ function sceneryRay(ro, rd, far) {
 }
 function fireTap() {
   const S = SIEGE; if (S.phase !== "fight" && S.phase !== "doomed" && S.phase !== "cleared") return;
+  if (laserHeld()) { laserTrigger(true); return; } // (the laser in hand: Fire held is the beam, 12k)
   if (S.reloadT > 0) return; // (reloading: the cylinder's open)
   if (S.bullets <= 0) { if (S.cool <= 0) { Sound.clip("dry0", null, 0.9, 0, 0.05); S.cool = 0.3; } return; } // click: empty
   if (S.crouch || S.run || S.cv > 0.5) { nudgeAim(); return; } // still behind the cover: hold Aim to come up first
@@ -437,10 +439,10 @@ function fireTap() {
   let hit = null; for (const E of S.enemies) { if (!E.alive) continue; const far = E.a.ch.bones.Spine2.getWorldPosition(_s3).distanceTo(ro);
     const h = rayActor(E.a, ro, rd, E.female, clamp((far - 12) * 0.007, 0, 0.12)); if (h && (!hit || h.t < hit.t)) hit = Object.assign(h, { E }); }
   // whatever the shot meets first: the bell (12f), a man, a crow (10c), a bottle, a can or a tumbleweed (12j), or the street and the town (12j envShot)
-  const env = sceneryRay(ro, rd, 80), bt = bellRay(ro, rd), cr = crowRay(ro, rd), tg = targetRay(ro, rd), cands = [];
-  if (bt > 0) cands.push([bt, "bell"]); if (hit) cands.push([hit.t, "man"]); if (cr) cands.push([cr.t, "crow"]); if (tg) cands.push([tg.t, "tgt"]); if (env) cands.push([env.distance, "env"]);
+  const env = sceneryRay(ro, rd, 80), bt = bellRay(ro, rd), cr = crowRay(ro, rd), tg = targetRay(ro, rd), hr = townHorseRay(ro, rd), cands = [];
+  if (bt > 0) cands.push([bt, "bell"]); if (hit) cands.push([hit.t, "man"]); if (cr) cands.push([cr.t, "crow"]); if (tg) cands.push([tg.t, "tgt"]); if (hr) cands.push([hr.t, "horse"]); if (env) cands.push([env.distance, "env"]);
   cands.sort((a, b) => a[0] - b[0]); const first = cands[0], at = first ? ro.clone().addScaledVector(rd, first[0]) : null;
-  if (first) { const k = first[1]; if (k === "bell") bellShot(at, rd); else if (k === "man") shotHits(hit.E, hit.part, at, rd); else if (k === "crow") crowShot(cr.c, at, rd); else if (k === "tgt") targetShot(tg, at, rd); else envShot(env, rd); }
+  if (first) { const k = first[1]; if (k === "bell") bellShot(at, rd); else if (k === "man") shotHits(hit.E, hit.part, at, rd); else if (k === "crow") crowShot(cr.c, at, rd); else if (k === "tgt") targetShot(tg, at, rd); else if (k === "horse") horseShot(hr.H, at, rd); else envShot(env, rd); }
   crowsStartle(ro, 30, 0.45); if (at) crowsStartle(at, 5, 1.2); // (the crack of it puts the crows up, the ones near where it struck most of all)
   const empty = S.bullets <= 0;
   if (S.phase !== "fight" && S.phase !== "doomed") { if (empty) siegeReload(); return; } // (the street already cleared: nothing more to decide)
@@ -455,7 +457,9 @@ function siegeReload() {
 // the last bullet's gone and some of them are still standing: they know it. One calls out, and then they take turns shooting, each shot
 // a heart, cover or no cover, until you're down (updateSiege drives it, a gunman at a time, so you see each heart go)
 function siegeDoomed() {
-  const S = SIEGE; S.phase = "doomed"; S.doomT = 0; S.doomI = 0; S.doomSaid = false; S.nextShot = 99; S.wordsAt = S.lastAt = 0;
+  const S = SIEGE; S.phase = "doomed"; S.doomT = 0; S.doomI = 0; S.doomSaid = false; S.nextShot = 99; S.wordsAt = S.lastAt = 0; S.doomFirst = S.doomGap = null;
+  if (LASER.ready && LASER.state === "crate") { // (the laser on the crate wakes and hums: they give you longer, if you can find it: 12k)
+    S.doomFirst = 5; S.doomGap = 1.15; laserWake(); setTimeout(() => { if (S.phase === "doomed" && LASER.state === "crate") { const t = $("siegeTip"); t.textContent = "Something's humming down by your hip…"; t.hidden = false; S.tip = 3.5; } }, 1700); }
   for (const E of S.enemies) if (E.alive) { E.state = "pause"; E.t = 99; E.a.path = null; }
   $("siegeTip").hidden = true; S.tip = 0; S.tipNext = null;
   const m = $("doomMsg"); m.hidden = false; m.classList.remove("show"); void m.offsetWidth; m.classList.add("show");
@@ -673,7 +677,7 @@ function updatePlayer(rdt, dt) {
     base = R0.via ? V3().copy(R0.from).multiplyScalar((1 - e) * (1 - e)).addScaledVector(R0.via, 2 * e * (1 - e)).addScaledVector(R0.to, e * e) : V3().lerpVectors(R0.from, R0.to, e);
     base.y = lerp(S.run.from.y, 1.42, Math.min(1, S.run.t * (R0.look ? 2.2 : 3))) + Math.abs(Math.sin(S.run.t * Math.PI * 4)) * 0.05;
 
-    if (S.run.t >= 1) { S.cover = S.run.to_i; S.run = null; S.cv = 0.6; const C2 = S.covers[S.cover], d = ((S.yaw - C2.yaw0 + Math.PI) % TAU + TAU) % TAU - Math.PI; S.yaw = C2.yaw0 + clamp(d, -SIEGE_CFG.yawLim, SIEGE_CFG.yawLim); } }
+    if (S.run.t >= 1) { const pick = S.run.pick; S.cover = S.run.to_i; S.run = null; S.cv = 0.6; if (pick) laserTake(); const C2 = S.covers[S.cover], d = ((S.yaw - C2.yaw0 + Math.PI) % TAU + TAU) % TAU - Math.PI; S.yaw = C2.yaw0 + clamp(d, -SIEGE_CFG.yawLim, SIEGE_CFG.yawLim); } }
   if (!S.run) { S.cv += ((S.crouch ? 1 : 0) - S.cv) * Math.min(1, dt * 9); base = V3().copy(S.covers[S.cover].stand); base.y = lerp(SIEGE_CFG.eye, SIEGE_CFG.crouchEye, Ease.inOut(clamp(S.cv, 0, 1)));
     if (S.cv < 0.5) base.addScaledVector(S.covers[S.cover].side, 0.08 * (1 - S.cv)); }
   if (S.phase === "dead") { S.deadT += rdt; const k = Ease.inOut(Math.min(1, S.deadT / 0.9)); base.y = lerp(base.y, 0.32, k); }
@@ -730,7 +734,7 @@ function buildSiegeUI() {
   $("kb").appendChild(pad);
   const aim = $("padAim"); aim.addEventListener("pointerdown", aimDown); aim.addEventListener("pointermove", aimMove); for (const ev of ["pointerup", "pointercancel", "lostpointercapture"]) aim.addEventListener(ev, aimUp);
   $("padFire").addEventListener("pointerdown", e => { e.preventDefault(); $("padFire").classList.add("on"); fireTap(); });
-  for (const ev of ["pointerup", "pointercancel", "pointerleave"]) $("padFire").addEventListener(ev, () => $("padFire").classList.remove("on"));
+  for (const ev of ["pointerup", "pointercancel", "pointerleave"]) $("padFire").addEventListener(ev, () => { $("padFire").classList.remove("on"); laserTrigger(false); });
   const st = $("stage");
   for (const [id, html] of [["xhair", '<svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><circle cx="20" cy="20" r="11" fill="none" stroke="#000" stroke-opacity=".55" stroke-width="3.2"/><circle cx="20" cy="20" r="11" fill="none" stroke="#f4ead8" stroke-width="1.6"/><circle cx="20" cy="20" r="1.8" fill="#e2483a"/></svg>'],
     ["hurt", ""], ["gore", ""], ["siegeTip", SIEGE_TIP], ["hitMsg", ""], ["doomMsg", "<b>Out of bullets</b><span>They know your gun is empty</span>"], ["warn", '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 7l8 9 8-9" fill="none" stroke="#000" stroke-opacity=".5" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 7l8 9 8-9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'],
@@ -781,8 +785,8 @@ function gunHud(loaded, reloads, reloadK, hp, total = GUN.reloads) { // (total: 
 }
 const narrowHud = () => R.w < 460; // (a phone held upright: shorter words beside the gun and the hearts)
 function siegeHud() {
-  const S = SIEGE; gunHud(S.bullets, S.reloads, S.reloadT > 0 ? 1 - S.reloadT / GUN.reload : -1, S.health);
-  const n2 = S.enemies.filter(E => E.alive).length; $("meta").textContent = !S.on ? $("meta").textContent : S.reloadT > 0 ? (narrowHud() ? "" : "Reloading…") : narrowHud() ? `${n2} left` : `${n2} gunm${n2 === 1 ? "a" : "e"}n left`;
+  const S = SIEGE; if (laserHeld()) { laserHud(); heartsHud(S.health); } else gunHud(S.bullets, S.reloads, S.reloadT > 0 ? 1 - S.reloadT / GUN.reload : -1, S.health);
+  const n2 = S.enemies.filter(E => E.alive).length; $("meta").textContent = !S.on ? $("meta").textContent : laserHeld() ? laserMeta(n2) : S.reloadT > 0 ? (narrowHud() ? "" : "Reloading…") : narrowHud() ? `${n2} left` : `${n2} gunm${n2 === 1 ? "a" : "e"}n left`;
 }
 
 // ---- per frame ----
@@ -808,7 +812,7 @@ function updateSiege(rdt, dt) {
   // out of bullets: a word from one of them, then they take turns, one shot every 0.85 s, each a heart, till you're down
   if (S.phase === "doomed") { S.doomT += dt;
     if (!S.doomSaid && S.doomT > 0.35) S.doomSaid = doomTaunt() || S.doomT > 1.2;
-    if (S.doomT >= SIEGE_CFG.doom[0] + S.doomI * SIEGE_CFG.doom[1]) { const alive = S.enemies.filter(q => q.alive), E = alive[S.doomI % Math.max(1, alive.length)];
+    if (S.doomT >= (S.doomFirst ?? SIEGE_CFG.doom[0]) + S.doomI * (S.doomGap ?? SIEGE_CFG.doom[1])) { const alive = S.enemies.filter(q => q.alive), E = alive[S.doomI % Math.max(1, alive.length)];
       if (E && E.state !== "aim") { E.state = "aim"; E.t = E.tAim = 0.3; E.a.path = null; Sound.clip(siegePick("cock", 2), E.gun.position, 0.9, 0.05, 0.1, rnd(0.95, 1.05), 4); }
       S.doomI++; } }
   // the taunts that wait on a moment rather than on someone taking aim
@@ -866,7 +870,7 @@ function siegeLate(rdt) {
 function siegeLive() { return (SIEGE.on && (SIEGE.phase === "cut" || SIEGE.phase === "fight" || SIEGE.phase === "doomed" || SIEGE.phase === "cleared")) || chaseLive(); }
 // back to the start for a new round
 function resetSiege() {
-  const S = SIEGE; if (!S.sword) return; showTargets(false);
+  const S = SIEGE; if (!S.sword) return; showTargets(false); resetLaser(); S.doomFirst = S.doomGap = null;
   S.phase = null; S.sword.glint.visible = false; swordShine(0, false); S.sword.held = false; S.sword.group.visible = true; for (const C of S.covers) C.grp.visible = false; if (S.props) S.props.visible = false; S.sword.group.position.copy(S.sword.rest.p); S.sword.group.quaternion.copy(S.sword.rest.q);
   $("clearMsg").hidden = true; bellReset(); chaseReset(); // (and a getaway, if one was under way: 12g)
   if (!S.on) return; S.on = false;

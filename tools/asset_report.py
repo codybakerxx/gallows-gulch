@@ -57,13 +57,19 @@ def glb(path):
     acc = js.get("accessors", [])
     verts = tris = morph = 0
     lo, hi = [1e9] * 3, [-1e9] * 3
-    for m in js.get("meshes", []):
+    quant = False  # (a quantized mesh, KHR_mesh_quantization: its integer positions are measured through the scale and offset of its node)
+    deq = {n["mesh"]: (n.get("scale", [1, 1, 1]), n.get("translation", [0, 0, 0])) for n in js.get("nodes", []) if "mesh" in n}
+    for mi, m in enumerate(js.get("meshes", [])):
         for pr in m["primitives"]:
             pa = acc[pr["attributes"]["POSITION"]]
             verts += pa["count"]
             if "min" in pa:
-                lo = [min(a, b) for a, b in zip(lo, pa["min"])]
-                hi = [max(a, b) for a, b in zip(hi, pa["max"])]
+                pmin, pmax = pa["min"], pa["max"]
+                if pa.get("componentType", 5126) != 5126 and mi in deq:
+                    quant = True; sc, tr = deq[mi]
+                    pmin = [a * k + t for a, k, t in zip(pmin, sc, tr)]; pmax = [a * k + t for a, k, t in zip(pmax, sc, tr)]
+                lo = [min(a, b) for a, b in zip(lo, pmin)]
+                hi = [max(a, b) for a, b in zip(hi, pmax)]
             if pr.get("mode", 4) == 4:
                 tris += (acc[pr["indices"]]["count"] if "indices" in pr else pa["count"]) // 3
             morph = max(morph, len(pr.get("targets", [])))
@@ -85,7 +91,7 @@ def glb(path):
     return dict(bytes=os.path.getsize(path), meshes=len(js.get("meshes", [])),
                 prims=sum(len(m["primitives"]) for m in js.get("meshes", [])), verts=verts, tris=tris,
                 nodes=len(js.get("nodes", [])), joints=joints, morph=morph, anims=anims, mats=len(js.get("materials", [])),
-                images=images, size=[h - l for l, h in zip(lo, hi)] if verts else None, gen=js.get("asset", {}).get("generator", ""))
+                images=images, size=[h - l for l, h in zip(lo, hi)] if verts else None, quant=quant, gen=js.get("asset", {}).get("generator", ""))
 
 
 # ---------------- audio ----------------
@@ -148,6 +154,7 @@ SFX = {
     "tin": "A tin can hit and sent flying",
     "ric": "A bullet whining off iron",
     "keg": "A bullet into a barrel (or the trough's side) and the water spouting out",
+    "horse": "The town horse (or a posse horse) crying out as it's shot and goes down",
 }
 SFX_ONE = { # the getaway (hidden): one line each
     "shout0": "The getaway: a posse rider coming down the street, “There he is! Get him, boys!”",
@@ -168,6 +175,8 @@ MODEL_ABOUT = {
     "LeePerrySmith.glb": "The scanned head every face is made from: skinned onto the body, given eyes, hair and hats in code, with the three textures below.",
     "Horse.glb": "The loose horse that now and then bolts down the street, and in the getaway your horse and the posse's five (coats painted and tinted in code; galloping by its morph targets).",
     "Stork.glb": "The vultures circling over the gulch (re-coloured in code; flapping by its morph targets).",
+    "ARC09.glb": "The ARC-09 laser gun on the crate at your middle cover in the town shootout, and in your hand once you take it up "
+                 "(the repository owner's model, packed by tools/pack_arc09.py; its meshes merged into one in code).",
 }
 TEX_ABOUT = {
     "Map-COL.jpg": "Skin colour map for the head scan",
@@ -205,7 +214,7 @@ def main():
         g = infos[m]
         w(f"**`{m}`** — {MODEL_ABOUT.get(m, '')}")
         if g["size"]:
-            w(f"Mesh extent (model units, before node transforms): {g['size'][0]:.3g} × {g['size'][1]:.3g} × {g['size'][2]:.3g}. "
+            w(f"Mesh extent (model units, {'quantized positions through their nodes\' scale and offset' if g.get('quant') else 'before node transforms'}): {g['size'][0]:.3g} × {g['size'][1]:.3g} × {g['size'][2]:.3g}. "
               f"{g['nodes']} nodes, {g['mats']} material{'s' if g['mats'] != 1 else ''}.")
         if g["anims"]:
             w("")

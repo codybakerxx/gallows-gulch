@@ -73,6 +73,12 @@ two on the rooftops, behind the false fronts of the sheriff's office and the gen
 - Crows perch on the gallows, the rooftops and the hitching rails, and pick about in the street. Your shots and
   theirs scare them up. Hit one and it drops in a burst of blood and feathers and lies where it lands. Every bullet
   counts, as always.
+- A loose horse bolts across the street past the gallows during the fight. Shoot it and it goes down.
+- Look down at the crate by your left hip at your middle cover. There's something on it, but it's no use while
+  you've a round left in the revolver. Run dry and it wakes up humming: tap it to take it up. It's a laser: **hold
+  Fire** for a blue beam that drops a man almost at once and scorches what it touches. It holds **20 seconds** of
+  firing (the blue ring where the cylinder was), then takes **7 seconds** to charge itself (the ring fills amber).
+  What it does to a horse or a crow is best seen.
 
 <details>
 <summary><b>Spoiler: the getaway</b> (what the bell is for)</summary>
@@ -128,6 +134,7 @@ the same way, keeping to the trail, and nobody can hurt you while you turn.
   hits. They all keep where you can see them, even on a phone held upright.
 - A red mark shows who's about to attack, and the red arc points to anyone attacking from off the screen. Hit a man
   while he winds up and he loses the attack.
+- Shoot a rider's horse and it goes down, throwing him; he's out of the fight.
 - Lose all five hearts and you're captured.
 
 **The end.** Drop the last rider and you've won. What happens next is a short, letterboxed scene you can't control,
@@ -137,7 +144,8 @@ filmed in a few shots. You can skip it after the first time. Then **Retry chase*
 The run takes about 55 seconds and the fight about 20–40, depending on your shooting. The run's numbers (lanes,
 speeds, jumps, the course, what a hit costs) are in `RUN` at the top of `src/12h_runner.js`; the fight's and the
 posse's in `CHASE_CFG` at the top of `src/12g_chase.js`; the canyon and the shots of the end in `CANYON` and `CINE` in
-`src/12i_canyon.js`. The gun and the hearts are in `GUN` at the top of `src/12d_siege.js`.
+`src/12i_canyon.js`. The gun and the hearts are in `GUN` at the top of `src/12d_siege.js`, and the laser's charge
+and recharge in `LASER_CFG` at the top of `src/12k_laser.js`.
 
 </details>
 
@@ -195,7 +203,7 @@ public repository.
 
 ```
 build.py                 builds dist/ from src/ and assets/ (standard library only)
-src/                     the game: one HTML shell and 29 JavaScript modules, loaded in the order build.py lists
+src/                     the game: one HTML shell and 32 JavaScript modules, loaded in the order build.py lists
   00_head.html           page markup and all CSS: HUD, keyboard, menu poster, end sign, Word Book, the getaway's HUD
   01_util.js             helpers, seeded noise
   02_textures.js         procedural material textures and sprites
@@ -224,18 +232,21 @@ src/                     the game: one HTML shell and 29 JavaScript modules, loa
   12e_book.js            the Word Book
   12f_bell.js            the bell, and the cleared street after a win
   12j_targets.js         what the shootout's shots do: bottles, cans, lanterns, windows, water, straw, sparks, dirt, holes
+  12k_laser.js           the laser gun: on the crate, taken up, the beam, the charge, its ring in the top bar
+  12l_meat.js            horses shot down (in town and in the getaway); the laser's flash, and the steak and chicken legs
   12g_chase.js           the getaway: posse, horses, the turn, the fight, the results
   12h_runner.js          the getaway's run: three lanes, swipes and jumps, the course, the desert along the trail
   12i_canyon.js          the canyon at the end and the filmed fall
   12c_boot.js            loading, menu, input, main loop
 assets/
-  models/                Xbot.glb, LeePerrySmith.glb, Horse.glb, Stork.glb
+  models/                Xbot.glb, LeePerrySmith.glb, Horse.glb, Stork.glb, ARC09.glb (the laser gun)
   textures/              the head scan's colour, normal and specular maps
-  audio/                 soundtrack.mp3, silence.mp3, voice/ (42 host lines), sfx/ (68 effects, taunts, shouts and the crows)
+  audio/                 soundtrack.mp3, silence.mp3, voice/ (42 host lines), sfx/ (71 effects, taunts, shouts and the crows)
 vendor/three-r147/       the nine three.js r147 files the game uses, for offline tests (MIT)
 tools/
   check_build.py         checks the bundled script parses and every file the code asks for is in dist/
   asset_report.py        measures every asset and writes ASSETS.md
+  pack_arc09.py          packs the laser gun's source GLB for the game: quantized meshes, smaller textures (NumPy, Pillow)
 test/                    browser test harness (Playwright): see test/README.md
 docs/screenshots/        the pictures above
 ```
@@ -261,7 +272,7 @@ More detail:
 
 Built with [three.js](https://threejs.org). Head scan: Lee Perry-Smith by Infinite-Realities (CC BY 3.0).
 Motion capture: Mixamo. Voices and sound effects: ElevenLabs; the neck snap and the crows were recorded by the
-repository owner. Music: "Eagle's Caw", made with Suno.
+repository owner. The laser gun (ARC-09) was modelled by the repository owner with Claude. Music: "Eagle's Caw", made with Suno.
 Fonts: Sancreek, Zilla Slab and Permanent Marker, from Google Fonts. Full details and licences are in
 [CREDITS.md](CREDITS.md).
 

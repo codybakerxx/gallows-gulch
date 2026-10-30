@@ -44,8 +44,8 @@ function wireUI() {
     if (/^[a-zA-Z]$/.test(e.key) && $("menu").hidden && $("sign").hidden) { e.preventDefault(); guess(e.key.toUpperCase()); }
     else if (e.key === " " && STATE.locked) STATE.ts = 6;
   });
-  document.addEventListener("keyup", e => { if (CHASE.on) { chaseKey(e, false); return; } if (e.key === "Shift" || e.key === "a" || e.key === "A") SIEGE.keyAim = false; });
-  window.addEventListener("blur", () => { SIEGE.keyAim = false; CHASE.swipe = null; CHASE.drag = null; });
+  document.addEventListener("keyup", e => { if (CHASE.on) { chaseKey(e, false); return; } if (e.key === "Shift" || e.key === "a" || e.key === "A") SIEGE.keyAim = false; if (e.key === " " || e.key === "Enter") laserTrigger(false); });
+  window.addEventListener("blur", () => { SIEGE.keyAim = false; CHASE.swipe = null; CHASE.drag = null; laserTrigger(false); });
   $("motion").addEventListener("change", e => { STATE.reduceMotion = e.target.checked; savePrefs(); });
   document.addEventListener("visibilitychange", () => { if (document.hidden) Sound.pauseAll(); else Sound.wake(); });
 }
@@ -113,6 +113,7 @@ async function boot() {
   Sound.preloadClips(SIEGE_CLIPS);
   for (let i = 0; i < 3; i++) { await nextFrame(); tick(performance.now()); }
   $("loading").hidden = true; openMenu(); shot("wide", 4);
+  loadGLB(ASSETS + "ARC09.glb").then(prepLaser).catch(e => console.warn("laser gun unavailable", e)); // (the shootout's laser, 12k: fetched once the game's up)
   last = performance.now(); requestAnimationFrame(loop);
 }
 function onResize() { const st = $("stage"), w = st.clientWidth, h = st.clientHeight; if (!w || !h || !R.renderer) return; resizeRenderer(w, h); if (CAM && !CAM.to && CAM.name) shot(CAM.name, 0);
@@ -137,8 +138,8 @@ function tick(now) {
   if (EXEC.gripping && !STATE.trap) EXEC.ik.R.t.copy(GAL.leverTip.getWorldPosition(A1));
   updateWind(dt); updateCrowd(dt, STATE.mood); updatePanic(dt); setTrapOpen(dt, STATE.trap); updateRopeState(T, dt); updateLanterns(dt);
   if (MAN.hang && MAN.hang.caught && MAN.hang.t - MAN.hang.tCatch > 2.5 && Math.random() < dt * 0.3) Sound.ropeCreak(GAL.anchor, 0.35); // the odd creak once he hangs still
-  updateHorse(dt); updateBirds(dt); updateCrows(dt); updateTargets(dt); updateWeed(dt); updateDust(rdt, T); updateTumbleweeds(dt); updateWindmill(dt); updatePuffs(dt); updateFlag(dt); updateSmoke(dt);
-  updateSiege(rdt, dt); updateBell(rdt, dt); updateChase(rdt, dt); updateCamera(rdt, T, dt); siegeLate(rdt); chaseLate(rdt); updateSky(T, R.camera); Sound.setListener(R.camera); updateBubble(rdt); updatePlay(rdt);
+  updateHorse(dt); updateBirds(dt); updateCrows(dt); updateTargets(dt); updateMeat(dt); updateWeed(dt); updateDust(rdt, T); updateTumbleweeds(dt); updateWindmill(dt); updatePuffs(dt); updateFlag(dt); updateSmoke(dt);
+  updateSiege(rdt, dt); updateLaser(rdt, dt); updateBell(rdt, dt); updateChase(rdt, dt); updateCamera(rdt, T, dt); siegeLate(rdt); laserLate(rdt); chaseLate(rdt); updateSky(T, R.camera); Sound.setListener(R.camera); updateBubble(rdt); updatePlay(rdt);
   renderFrame(T);
   if (perf.steps < 7 && $("menu").hidden && $("gfx").value === "auto" && !window.GULCH_PAUSE) { perf.n++; perf.acc += rdt;
     if (perf.n === 150) { const avg = perf.acc / perf.n; perf.n = 0; perf.acc = 0; if (avg > 1 / 27) perfStep(); } }

@@ -121,6 +121,7 @@ const Sound = (() => {
   // first, 3 long drawn ones from the second, each followed by silence). The caws are found from those gaps once the file is decoded, so
   // the cut points don't depend on how a browser's mp3 decoder pads the start. A crow's call is strung together from them the way crows
   // call: a run of one to five, evenly spaced, each bird with its own pitch and pace, the run trailing off a little, the last caw dropping
+  const laz = { beam: null, charge: null, wake: null }; // (the laser's running sounds, 12k)
   const crowBank = { p: null, voices: [], live: [] }; let hushUntil = 0; const hushed = () => performance.now() / 1000 < hushUntil; // (hush: no crows over the drop and the snap)
   function crowCaws() {
     if (!ctx) return Promise.resolve(null);
@@ -315,6 +316,51 @@ const Sound = (() => {
       crowCaws().then(C => { if (!C || !ctx || !C.short.length) return; const [off] = C.short[Math.random() * C.short.length | 0], s = ctx.createBufferSource(); s.buffer = C.b; s.playbackRate.value = 1.18 + Math.random() * 0.12;
         const g = ctx.createGain(), t1 = now() + 0.015; g.gain.setValueAtTime(0.6, t1); g.gain.setTargetAtTime(0, t1 + 0.09, 0.025); s.connect(g); g.connect(at(pos, 0.2, 6)); s.start(t1, off + 0.02, 0.22); });
       api.clip("flap0", pos, 0.5, 0.02, 0.1, 1.35, 3); },
+    // the laser (v36, 12k): a hum while the beam is on (two buzzing saws a beating fifth apart under a wavering whine, a fast flutter
+    // and a hiss of static), a zap as it opens up and a short fall as it closes; the charge spent; recharging; ready again; waking on the crate
+    laser(on) { if (!ctx) return; const t = now();
+      if (on) { if (laz.beam) return; const out = ctx.createGain(); out.gain.setValueAtTime(0.0001, t); out.gain.exponentialRampToValueAtTime(0.3, t + 0.05); out.connect(sfx);
+        const w = ctx.createGain(); w.gain.value = 0.16; out.connect(w); w.connect(verbIn);
+        const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2400; lp.Q.value = 3; lp.connect(out);
+        const o1 = ctx.createOscillator(), o2 = ctx.createOscillator(), o3 = ctx.createOscillator(), l1 = ctx.createOscillator(), l2 = ctx.createOscillator();
+        o1.type = o2.type = "sawtooth"; o1.frequency.value = 92; o2.frequency.value = 138.9; o3.frequency.value = 1860; l1.frequency.value = 7.3; l2.frequency.value = 31;
+        const g1 = ctx.createGain(); g1.gain.value = 26; l1.connect(g1); g1.connect(o3.frequency);
+        const hum = ctx.createGain(); hum.gain.value = 0.42; const g2 = ctx.createGain(); g2.gain.value = 0.22; l2.connect(g2); g2.connect(hum.gain); o1.connect(hum); o2.connect(hum); hum.connect(lp);
+        const g3 = ctx.createGain(); g3.gain.value = 0.12; o3.connect(g3); g3.connect(out);
+        const ns = ctx.createBufferSource(); ns.buffer = NOISE; ns.loop = true; const nb = ctx.createBiquadFilter(); nb.type = "bandpass"; nb.frequency.value = 4200; nb.Q.value = 1.1; const ng = ctx.createGain(); ng.gain.value = 0.05; ns.connect(nb); nb.connect(ng); ng.connect(out);
+        const srcs = [o1, o2, o3, l1, l2, ns]; for (const o of srcs) o.start(t);
+        const z = ctx.createOscillator(), zg = ctx.createGain(); z.type = "sawtooth"; z.frequency.setValueAtTime(2600, t); z.frequency.exponentialRampToValueAtTime(240, t + 0.14); zg.gain.setValueAtTime(0.3, t); zg.gain.exponentialRampToValueAtTime(0.001, t + 0.16); z.connect(zg); zg.connect(lp); z.start(t); z.stop(t + 0.2);
+        laz.beam = { out, srcs }; }
+      else { const B = laz.beam; if (!B) return; laz.beam = null; B.out.gain.cancelScheduledValues(t); B.out.gain.setValueAtTime(Math.max(0.0001, B.out.gain.value), t); B.out.gain.exponentialRampToValueAtTime(0.0001, t + 0.1); for (const o of B.srcs) o.stop(t + 0.14);
+        const z = ctx.createOscillator(), zg = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1800; z.type = "sawtooth"; z.frequency.setValueAtTime(700, t); z.frequency.exponentialRampToValueAtTime(110, t + 0.18);
+        zg.gain.setValueAtTime(0.12, t); zg.gain.exponentialRampToValueAtTime(0.001, t + 0.2); z.connect(lp); lp.connect(zg); zg.connect(sfx); z.start(t); z.stop(t + 0.22); } },
+    laserEmpty() { if (!ctx) return; const t = now(), z = ctx.createOscillator(), zg = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.setValueAtTime(2400, t); lp.frequency.exponentialRampToValueAtTime(300, t + 0.8);
+      z.type = "sawtooth"; z.frequency.setValueAtTime(1300, t); z.frequency.exponentialRampToValueAtTime(70, t + 0.8); zg.gain.setValueAtTime(0.22, t); zg.gain.exponentialRampToValueAtTime(0.001, t + 0.85); z.connect(lp); lp.connect(zg); zg.connect(sfx); z.start(t); z.stop(t + 0.9);
+      drum(t + 0.05, 140, 60, 0.12, 0.35, sfx); noise(t, 0.05, 0.25, "highpass", 2500, 0.7, sfx); },
+    laserCharge(on) { if (!ctx) return; const t = now();
+      if (on) { if (laz.charge) return; const o = ctx.createOscillator(), g = ctx.createGain(), l = ctx.createOscillator(), lg = ctx.createGain(); o.type = "triangle"; o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(1100, t + 7);
+        l.frequency.value = 6; lg.gain.value = 0.02; l.connect(lg); lg.connect(g.gain); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.045, t + 0.6); o.connect(g); g.connect(sfx); o.start(t); l.start(t); laz.charge = { g, srcs: [o, l] }; }
+      else { const C = laz.charge; if (!C) return; laz.charge = null; C.g.gain.cancelScheduledValues(t); C.g.gain.setValueAtTime(Math.max(0.0001, C.g.gain.value), t); C.g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08); for (const o of C.srcs) o.stop(t + 0.1); } },
+    laserReady() { if (!ctx) return; const t = now(), z = ctx.createOscillator(), zg = ctx.createGain(), bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 900; bp.Q.value = 0.9;
+      z.type = "sawtooth"; z.frequency.setValueAtTime(180, t); z.frequency.exponentialRampToValueAtTime(1000, t + 0.32); zg.gain.setValueAtTime(0.0001, t); zg.gain.exponentialRampToValueAtTime(0.16, t + 0.25); zg.gain.exponentialRampToValueAtTime(0.0001, t + 0.42);
+      z.connect(bp); bp.connect(zg); zg.connect(sfx); z.start(t); z.stop(t + 0.45); drum(t + 0.36, 110, 70, 0.1, 0.3, sfx); drum(t + 0.5, 110, 70, 0.1, 0.25, sfx); },
+    laserWake(pos, on) { if (!ctx) return; const t = now();
+      if (on) { if (laz.wake) return; const d = at(pos, 0.05, 1.4), g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 1.2); g.connect(d);
+        const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1300; lp.connect(g); const o1 = ctx.createOscillator(), o2 = ctx.createOscillator(), l = ctx.createOscillator(), lg = ctx.createGain(), am = ctx.createGain();
+        o1.type = "sawtooth"; o1.frequency.value = 92; o2.type = "sine"; o2.frequency.value = 930; l.frequency.value = 1.3; lg.gain.value = 0.35; am.gain.value = 0.6; l.connect(lg); lg.connect(am.gain); o1.connect(am); o2.connect(am); am.connect(lp);
+        for (const o of [o1, o2, l]) o.start(t); laz.wake = { g, srcs: [o1, o2, l] };
+        const z = ctx.createOscillator(), zg = ctx.createGain(); z.type = "triangle"; z.frequency.setValueAtTime(120, t); z.frequency.exponentialRampToValueAtTime(900, t + 0.9); zg.gain.setValueAtTime(0.0001, t); zg.gain.exponentialRampToValueAtTime(0.25, t + 0.6); zg.gain.exponentialRampToValueAtTime(0.0001, t + 1); z.connect(zg); zg.connect(d); z.start(t); z.stop(t + 1.05); }
+      else { const W = laz.wake; if (!W) return; laz.wake = null; W.g.gain.cancelScheduledValues(t); W.g.gain.setValueAtTime(Math.max(0.0001, W.g.gain.value), t); W.g.gain.exponentialRampToValueAtTime(0.0001, t + 0.1); for (const o of W.srcs) o.stop(t + 0.12); } },
+    laserPick() { if (!ctx) return; const t = now(); noise(t, 0.04, 0.4, "highpass", 2200, 0.8, sfx); drum(t, 180, 90, 0.07, 0.35, sfx);
+      const z = ctx.createOscillator(), zg = ctx.createGain(); z.type = "sawtooth"; z.frequency.setValueAtTime(160, t + 0.05); z.frequency.exponentialRampToValueAtTime(1500, t + 0.35); zg.gain.setValueAtTime(0.0001, t + 0.05); zg.gain.exponentialRampToValueAtTime(0.12, t + 0.25); zg.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+      const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1100; bp.Q.value = 0.8; z.connect(bp); bp.connect(zg); zg.connect(sfx); z.start(t + 0.05); z.stop(t + 0.42); },
+    // meat (12l): the flash that turns a horse or a crow into meat, it landing, and the sizzle
+    zap(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, 0.3, 4 * k), z = ctx.createOscillator(), zg = ctx.createGain(); z.type = "square"; z.frequency.setValueAtTime(500, t); z.frequency.exponentialRampToValueAtTime(2600, t + 0.08); z.frequency.exponentialRampToValueAtTime(300, t + 0.22);
+      zg.gain.setValueAtTime(0.0001, t); zg.gain.exponentialRampToValueAtTime(0.35 * Math.min(1, k), t + 0.02); zg.gain.exponentialRampToValueAtTime(0.0001, t + 0.24); const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 3500; z.connect(lp); lp.connect(zg); zg.connect(d); z.start(t); z.stop(t + 0.26);
+      noise(t + 0.03, 0.12, 0.5, "bandpass", 1800, 0.7, d); drum(t + 0.02, 220, 80, 0.12, 0.5, d); },
+    slap(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, 0.15, 3); noise(t, 0.08, 0.5 * k, "lowpass", 1400, 0.8, d); drum(t, 130, 60, 0.08, 0.4 * k, d); },
+    sizzle(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, 0.15, 2.5), s = ctx.createBufferSource(); s.buffer = buf(1.8, (tt) => (Math.random() < 0.08 ? (Math.random() * 2 - 1) : (Math.random() * 2 - 1) * 0.25) * Math.exp(-tt * 1.6));
+      const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 2400; const g = ctx.createGain(); g.gain.value = 0.35 * k; s.connect(hp); hp.connect(g); g.connect(d); s.start(t); },
     // things hit in the shootout (12j): straw, water, dirt, a tin can landing
     straw(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, 0.2, 3); noise(t, 0.22, 0.45 * k, "bandpass", 2600, 0.6, d); noise(t + 0.01, 0.1, 0.3 * k, "lowpass", 500, 0.8, d); drum(t, 110, 55, 0.08, 0.3 * k, d); },
     splash(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, 0.3, 4); noise(t, 0.32, 0.55 * k, "lowpass", 1700, 0.7, d); noise(t + 0.015, 0.16, 0.35 * k, "bandpass", 650, 1.2, d);

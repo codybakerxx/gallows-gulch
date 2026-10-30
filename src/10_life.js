@@ -34,12 +34,14 @@ function prepHorse(gltf) {
 // now and then a loose horse bolts in from the side of town and gallops off down the street into the sunset
 function updateHorse(dt) {
   const H = LIFE.horse; if (!H) return;
+  if (H.meat) { horseMeatStep(H, dt); return; } if (H.dead) { horseFallStep(H, dt); return; } // (shot: 12l)
   if (!H.run) { H.wait -= dt; if (H.wait > 0) return;
-    const pts = [streetPt(-3, 24), streetPt(14, 2.5 + Math.random()), streetPt(110, -1 + Math.random() * 2)].map(q => V3(q[0], 0, q[1]));
+    const fight = SIEGE.on && SIEGE.phase !== "chase"; // (in the shootout it gallops right across the street just past the gallows, where it can be seen and hit from the cover, then off up the street)
+    const pts = (fight ? [streetPt(4, 14), streetPt(5.5, 7), streetPt(5.5, -7), streetPt(16, -2.5), streetPt(70, -1 + Math.random() * 2)] : [streetPt(-3, 24), streetPt(14, 2.5 + Math.random()), streetPt(110, -1 + Math.random() * 2)]).map(q => V3(q[0], 0, q[1]));
     H.run = { pts, seg: 0, d: 0, v: 5 }; H.grp.visible = true; H.yaw = Math.atan2(pts[1].x - pts[0].x, pts[1].z - pts[0].z); if (!H.tack) horseTack(H, { saddle: false }); horseTackShow(H, true); }
   const Rn = H.run; let a = Rn.pts[Rn.seg], b = Rn.pts[Rn.seg + 1], len = a.distanceTo(b);
   Rn.v = Math.min(7.5, Rn.v + dt * 3); Rn.d += Rn.v * dt;
-  if (Rn.d >= len) { Rn.d -= len; Rn.seg++; if (Rn.seg >= Rn.pts.length - 1) { H.run = null; H.grp.visible = false; horseTackShow(H, false); H.wait = 45 + Math.random() * 40; return; } a = Rn.pts[Rn.seg]; b = Rn.pts[Rn.seg + 1]; len = a.distanceTo(b); }
+  if (Rn.d >= len) { Rn.d -= len; Rn.seg++; if (Rn.seg >= Rn.pts.length - 1) { H.run = null; H.grp.visible = false; horseTackShow(H, false); H.wait = SIEGE.on ? 9 + Math.random() * 7 : 45 + Math.random() * 40; return; } a = Rn.pts[Rn.seg]; b = Rn.pts[Rn.seg + 1]; len = a.distanceTo(b); }
   const p = _v1.copy(a).lerp(b, Rn.d / len); p.y = groundHeight(p.x, p.z); H.grp.position.copy(p);
   const want = Math.atan2(b.x - a.x, b.z - a.z), dy = ((want - H.yaw + Math.PI) % TAU + TAU) % TAU - Math.PI; H.yaw += dy * Math.min(1, dt * 2.2);
   H.grp.rotation.set(0, H.yaw, -dy * 0.25); // leans into the turn

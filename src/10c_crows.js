@@ -211,7 +211,7 @@ function crowsGather() { CROWS.list.forEach((c, i) => { if (c.state === "away") 
 // the distance along a ray to the nearest bird it would hit (with a little extra width for one far off), or null
 function crowRay(ro, rd) {
   let best = null;
-  for (const c of CROWS.list) { if (c.state === "away" || !c.root.visible) continue;
+  for (const c of CROWS.list) { if (c.state === "away" || c.state === "meat" || !c.root.visible) continue;
     const ctr = c.body.getWorldPosition(_cw1).add(_cw2.set(0, 0.04 * c.s, 0)), far = ctr.distanceTo(ro), r = (c.state === "fly" ? 0.17 : 0.11) * c.s + clamp((far - 8) * 0.006, 0, 0.1) + (c.state === "dead" ? -0.03 : 0);
     const ox = ro.x - ctr.x, oy = ro.y - ctr.y, oz = ro.z - ctr.z, b = ox * rd.x + oy * rd.y + oz * rd.z, h = b * b - (ox * ox + oy * oy + oz * oz - r * r);
     if (h < 0) continue; const t = -b - Math.sqrt(h); if (t > 0 && (!best || t < best.t)) best = { t, c }; }
@@ -267,6 +267,7 @@ function updateCrows(dt) {
   if ((CROWS.peopleT -= dt) <= 0) { CROWS.peopleT = 0.2; crowPeople(); }
   for (const c of CROWS.list) {
     if (c.state === "away") { c.t -= dt; if (c.t <= 0) crowReturn(c); continue; }
+    if (c.state === "meat") { if (c.root.visible) crowMeatStep(c, dt); continue; } // (the laser: 12l)
     if (c.state === "fly") crowFly(c, dt); else if (c.state === "perch") crowPerch(c, dt); else if (c.state === "dead") crowFall(c, dt);
     if (c.state !== "away") crowPose(c, dt);
   }
@@ -274,7 +275,7 @@ function updateCrows(dt) {
 }
 // a new round: the dead are cleared away (their blood goes with the shootout's, 12d resetSiege) and the living stay where they are
 function resetCrows() {
-  for (const c of CROWS.list) if (c.state === "dead") { c.state = "away"; c.root.visible = false; c.t = 4 + Math.random() * 20; c.q.identity(); c.wingL = c.wingR = 0; c.spread = c.spreadT = 0; c.headYawT = 0; }
+  for (const c of CROWS.list) if (c.state === "dead" || c.state === "meat") { c.state = "away"; c.root.visible = false; c.root.scale.setScalar(c.s); c.t = 4 + Math.random() * 20; c.q.identity(); c.wingL = c.wingR = 0; c.spread = c.spreadT = 0; c.headYawT = 0; }
   clearFeathers();
 }
 
