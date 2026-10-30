@@ -210,17 +210,17 @@ Most of the world has no asset file: it is generated when the page loads, sized 
 
 | File | Pixels | Bytes |
 |---|---:|---:|
-| `00-wide.png` | 1920×1080 | 2.13 MB |
-| `01-title.png` | 780×1688 | 700.6 KB |
+| `00-wide.png` | 1920×1080 | 2.22 MB |
+| `01-title.png` | 780×1688 | 700.8 KB |
 | `02-round.png` | 780×1688 | 1.49 MB |
-| `03-solved.png` | 780×1688 | 1.36 MB |
-| `04-sword.png` | 780×1688 | 1.57 MB |
+| `03-solved.png` | 780×1688 | 1.33 MB |
+| `04-sword.png` | 780×1688 | 1.49 MB |
 | `05-shootout.png` | 780×1688 | 1.60 MB |
-| `06-game-over.png` | 780×1688 | 1.43 MB |
-| `07-word-book.png` | 780×1688 | 570.3 KB |
+| `06-game-over.png` | 780×1688 | 1.38 MB |
+| `07-word-book.png` | 780×1688 | 574.6 KB |
 | `08-rooftops.png` | 780×1688 | 1.50 MB |
-| `09-getaway-ride.png` | 780×1688 | 1.87 MB |
-| `10-getaway-fight.png` | 780×1688 | 1.19 MB |
+| `09-getaway-ride.png` | 780×1688 | 1.85 MB |
+| `10-getaway-fight.png` | 780×1688 | 1.20 MB |
 | `11-getaway-cliff.png` | 780×1688 | 1.02 MB |
 
 ## Totals

@@ -183,6 +183,9 @@ E("""(async () => { try { const C = CHASE, out = {}; await __go(200, () => C.sta
   await __go(400, () => C.state === 'combat' && C.safeT <= 0); const v0 = __cnt.victory; let guard = 0;
   while (C.state === 'combat' && guard++ < 400) { C.hp = 3; if (C.rounds <= 0 || C.reloadT > 0) { if (C.reloadT <= 0) { C.reloads = Math.max(C.reloads, 1); chaseReload(); } await __go(110, () => C.reloadT <= 0); continue; } const alive = C.riders.filter(r => r.alive && r.state !== 'wait').sort((a, b) => a.d - b.d); if (alive[0]) __fireAt(alive[0]); await __go(20, () => C.state !== 'combat'); }
   await __go(30); out.skip = { state: C.state, shown: __vis('chaseSkip'), cliffSeen: STATE.cliffSeen, victory: __cnt.victory - v0 }; return JSON.stringify(out); } catch (e) { return 'ERR ' + e.stack; } })()""")
+# (the page drawing again first: under SwiftShader the first frames of the ending can hold up the compositor for many seconds,
+#  and Playwright clicks only a button it has seen hold still over two drawn frames; 6.6 s here in v35, over 25 s in one v36 run)
+E("""new Promise(res => { const to = setTimeout(() => res('no frame in 90 s'), 90000); requestAnimationFrame(() => requestAnimationFrame(() => { clearTimeout(to); res(1); })); })""")
 steps.append(["wait", 600])  # (a real moment for the button to settle: Playwright clicks only a button that has stopped moving)
 steps.append(["click", "#chaseSkip"])
 E("""(async () => { const C = CHASE; await __go(5); return JSON.stringify({ state: C.state, title: document.getElementById('resTitle').textContent, scream: !!C.scream, victory: __cnt.victory, rides: STATE.rides, errs: __errs }); })()""")

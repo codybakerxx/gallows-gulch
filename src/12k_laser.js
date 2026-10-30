@@ -32,7 +32,7 @@ function prepLaser(gltf) {
   for (const k of ["glowA", "glowB"]) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: 0x9ad8ff, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false }));
     s.visible = false; s.renderOrder = 8; R.scene.add(s); LASER[k] = s; }
   LASER.glowA.material.depthTest = false;
-  LASER.sparks = pointPool(220, 0.045, 0x8fd6ff, true); LASER.scorch = decalPool(140, scorchTex(), false, 0.16);
+  LASER.sparks = pointPool(220, 0.045, 0x8fd6ff, true); LASER.scorch = decalPool(140, scorchTex(), false, 0.16); LASER.scorch.im.visible = false; // (drawn only once there is a mark)
   LASER.ready = true; resetLaser();
 }
 function laserGlowTex() { const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d"), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
@@ -70,7 +70,7 @@ function resetLaser() {
   const L = LASER; if (!L.ready) return; L.state = "crate"; L.lift = null; L.charge = LASER_CFG.charge; L.rechargeT = 0; L.hold = L.firing = false; L.awake = false; L.hudKey = "";
   L.vm.visible = false; L.crate.visible = false; L.beam.visible = false; gunHud.key = null; const rb = $("reloads"); if (rb) rb.style.display = ""; L.glowA.visible = L.glowB.visible = false; L.mat.emissiveIntensity = L.e0 * 0.12;
   Sound.laser(false); Sound.laserWake(null, false); Sound.laserCharge(false);
-  L.scorch.used = L.scorch.next = 0; L.scorch.im.count = 0; L.sparks.life.fill(0); L.sparks.pts.visible = false;
+  L.scorch.used = L.scorch.next = 0; L.scorch.im.count = 0; L.scorch.im.visible = false; L.sparks.life.fill(0); L.sparks.pts.visible = false;
 }
 // the revolver's empty: it wakes on the crate, lights up and hums, so you might hear where it is
 function laserWake() { const L = LASER; if (!L.ready || L.state !== "crate" || L.awake) return; L.awake = true; Sound.laserWake(L.crate.position, true); }
@@ -128,7 +128,7 @@ function laserBeam(dt) {
     else if (k === "tgt") { const T = tg.T; if (tg.weed || (T.laserT || 0) <= L.t) { if (T) T.laserT = L.t + 0.3; targetShot(tg, at, rd); } }
     else if (k === "bell") { if (L.bellT <= 0) { L.bellT = 0.7; bellShot(at, rd); } }
     else { const n = env.face ? _l2.copy(env.face.normal).transformDirection(env.object.matrixWorld) : _l2.set(0, 1, 0); if (n.dot(rd) > 0) n.negate();
-      if (L.scorchT <= 0 && !(env.object.material === WORLD.winMat)) { L.scorchT = LASER_CFG.scorchGap; decal(L.scorch, at, n, rnd(0.7, 1.2)); }
+      if (L.scorchT <= 0 && !(env.object.material === WORLD.winMat)) { L.scorchT = LASER_CFG.scorchGap; decal(L.scorch, at, n, rnd(0.7, 1.2)); L.scorch.im.visible = true; }
       if (L.envT <= 0) { L.envT = LASER_CFG.envGap; envShot(env, rd, true); } } }
   // sparks and smoke where it strikes; the beam itself and its glow
   for (let i = 0; i < 3; i++) emit(L.sparks, at, _l3.copy(rd).multiplyScalar(-rnd(0.6, 2.2)).add(_l4.set(rnd(-1.4, 1.4), rnd(-0.3, 1.8), rnd(-1.4, 1.4))), rnd(0.12, 0.35));

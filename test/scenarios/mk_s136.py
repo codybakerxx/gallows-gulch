@@ -1,5 +1,6 @@
 # builds test/s136.json: v36, the laser gun on the crate, and horses and crows that fall (or come out as meat).
-#   - the laser lies on the crate at your first cover, out of sight in the usual view and in sight when you look down at it
+#   - the laser lies on the crate at your middle cover, out of sight in the usual views (crouched behind the crate, or up and looking
+#     ahead) and in sight when you look down at it ("seen": how many of its bounding box's corners and middle show, of 9)
 #   - tapping it with a round left in the revolver does nothing but say so
 #   - the town horse shot with the revolver goes down and lies on the ground
 #   - the revolver empty: the laser wakes, a tap picks it up, the fight goes on with it
@@ -19,27 +20,33 @@ steps.append(["wait", 2500]); steps.append(["click", "#startBtn"]); steps.append
 E(open(os.path.join(HERE, "chase_helpers.js")).read())
 E("""window.__check = (name, ok, info) => JSON.stringify({ check: name, ok: !!ok, info, errs: __errs.slice(0, 3) });
 window.__onScreen = p => { R.camera.updateMatrixWorld(); const q = p.clone().project(R.camera); return Math.abs(q.x) < 1 && Math.abs(q.y) < 1 && q.z < 1; };
+window.__seen = o => { o.updateMatrixWorld(); const bb = new THREE.Box3().setFromObject(o), pts = [bb.getCenter(V3())], ro = R.camera.position.clone(); let n = 0; // (how many of its corners and its middle are on the screen with nothing in front)
+  for (const x of [bb.min.x, bb.max.x]) for (const y of [bb.min.y, bb.max.y]) for (const z of [bb.min.z, bb.max.z]) pts.push(V3(x, y, z));
+  for (const p of pts) { if (!__onScreen(p)) continue; const d = p.clone().sub(ro), dist = d.length(), e = sceneryRay(ro, d.normalize(), dist + 1); if (!e || e.distance > dist - 0.02) n++; } return n; };
 window.__tapAt = p => { const r = $('scene').getBoundingClientRect(), q = p.clone().project(R.camera); return { clientX: r.left + (q.x * 0.5 + 0.5) * r.width, clientY: r.top + (-q.y * 0.5 + 0.5) * r.height, cancelable: false, preventDefault() {} }; };
 window.__ray = () => { R.camera.updateMatrixWorld(); return [R.camera.position.clone(), V3(0, 0, -1).applyQuaternion(R.camera.quaternion).normalize()]; };
-window.__track = async (pt, ok, n = 240) => { for (let i = 0; i < n; i++) { __calm(); __aimPt(pt()); await __go(1); const [ro, rd] = __ray(); if (i > 12 && ok(ro, rd)) return true; } return false; };
-window.__horseFirst = (ro, rd) => { const h = townHorseRay(ro, rd), e = sceneryRay(ro, rd, 80); return h && (!e || h.t < e.distance); };
+window.__step = async n => { const RF = window.renderFrame; window.renderFrame = () => {}; try { await __go(n); } finally { window.renderFrame = RF; } return 1; }; // (__go without its one drawn frame at the end: the camera is placed in the tick)
+window.__track = async (pt, ok, n = 240) => { for (let i = 0; i < n; i++) { __calm(); __aimPt(pt()); await __step(1); const [ro, rd] = __ray(); if (i > 12 && ok(ro, rd)) return true; } return false; };
+window.__horseFirst = (ro, rd) => { const h = townHorseRay(ro, rd), e = sceneryRay(ro, rd, 80); if (!h || (e && e.distance < h.t)) return false; // (and nobody, no crow, bottle or bell in the way)
+  for (const E of SIEGE.enemies) { if (!E.alive) continue; const m = rayActor(E.a, ro, rd, E.female, 0.05); if (m && m.t < h.t) return false; }
+  const c = crowRay(ro, rd), t = targetRay(ro, rd), b = bellRay(ro, rd); return !(c && c.t < h.t) && !(t && t.t < h.t) && !(b > 0 && b < h.t); };
 window.__horseInView = () => { const H = LIFE.horse; if (!H.run || !H.grp.visible) return false; const c = H.grp.localToWorld(V3(0, 1.2, 0)), ro = R.camera.position, rd = c.clone().sub(ro), d = rd.length(); rd.normalize(); const e = sceneryRay(ro, rd, d + 1);
   return (!e || e.distance > d - 0.6) && Math.abs(((Math.atan2(rd.x, rd.z) - SIEGE.covers[SIEGE.cover].yaw0 + Math.PI) % TAU + TAU) % TAU - Math.PI) < 1.1; };
 window.__horseUp = async () => { const H = LIFE.horse; H.wait = 0; SIEGE.holding = true; await __go(600, () => { __calm(); return H.run && H.run.seg >= 1 && __horseInView(); });
   return __track(() => H.grp.localToWorld(V3(0, 1.2, 0)), __horseFirst); }; 1""")
 # the laser on the crate
 E("""(async () => { for (let i = 0; i < 100 && !LASER.ready; i++) await new Promise(r => setTimeout(r, 200)); SIEGE_CFG.hitUp = 0; SIEGE_CFG.hitRun = 0; await __siege(); const S = SIEGE, L = LASER;
-  const normal = []; for (const up of [false, true]) for (const pitch of [-0.15, 0, 0.15]) { S.holding = up; S.yaw = S.covers[S.cover].yaw0; S.pitch = pitch; await __go(30, () => { __calm(); return false; }); normal.push(__onScreen(L.crate.position)); }
-  S.holding = true; __aimPt(L.crate.position); await __go(20, () => { __calm(); __aimPt(L.crate.position); return false; }); const seen = __onScreen(L.crate.position), pitch = +S.pitch.toFixed(2);
-  const [ro] = __ray(), to = L.crate.position.clone().sub(ro), d = to.length(), e = sceneryRay(ro, to.normalize(), d + 1), clear = !e || e.distance > d - 0.08;
-  return __check('laser on the crate', L.ready && L.state === 'crate' && L.crate.visible && S.cover === 1 && !normal.some(Boolean) && seen && clear && pitch < -0.5, { cover: S.cover, normal, seen, clear, pitch }); })()""")
+  const normal = []; for (const up of [false, true]) for (const pitch of [-0.15, 0, 0.15]) { S.holding = up; S.yaw = S.covers[S.cover].yaw0; S.pitch = pitch; await __go(30, () => { __calm(); return false; }); normal.push(__seen(L.crate)); }
+  S.holding = true; __aimPt(L.crate.position); await __go(20, () => { __calm(); __aimPt(L.crate.position); return false; }); const seen = __seen(L.crate), pitch = +S.pitch.toFixed(2);
+  return __check('laser on the crate', L.ready && L.state === 'crate' && L.crate.visible && S.cover === 1 && normal.every(n => n <= 1) && seen >= 4 && pitch < -0.5, { cover: S.cover, normal, seen, pitch }); })()""")
 shot("a_crate")
 E("""(async () => { const L = LASER, used = laserTap(__tapAt(L.crate.position)); await __go(2);
   return __check('not while the revolver is loaded', used && L.state === 'crate' && /revolver/.test($('siegeTip').textContent) && !$('siegeTip').hidden, { used, state: L.state, tip: $('siegeTip').textContent }); })()""")
 # the town horse, shot with the revolver
-E("""(async () => { const H = LIFE.horse, S = SIEGE, got = await __horseUp(); const p0 = S.pools.length; S.cool = 0; S.reloadT = 0; S.bullets = 6; fireTap(); await __go(3); const shot = !!H.dead && !H.run;
+E("""(async () => { const H = LIFE.horse, S = SIEGE, p0 = S.pools.length; let got = false, tries = 0;
+  while (!H.dead && tries < 3) { tries++; got = await __horseUp(); S.cool = 0; S.reloadT = 0; S.bullets = 6; fireTap(); await __go(3); } const shot = !!H.dead && !H.run; // (a gunman can step into the line: again, next time it comes through)
   await __go(110, () => { __calm(); return false; }); const c = H.grp.localToWorld(V3(0, 1.15, 0)), fl = groundVis(c.x, c.z);
-  return __check('the horse falls (revolver)', got && shot && H.dead.landed && H.grp.visible && c.y - fl < 0.6 && S.pools.length > p0, { got, shot, landed: H.dead && H.dead.landed, body: +(c.y - fl).toFixed(2), pools: S.pools.length - p0 }); })()""")
+  return __check('the horse falls (revolver)', got && shot && H.dead.landed && H.grp.visible && c.y - fl < 0.6 && S.pools.length > p0, { got, tries, shot, landed: H.dead && H.dead.landed, body: +(c.y - fl).toFixed(2), pools: S.pools.length - p0 }); })()""")
 shot("b_horse_down")
 # out of bullets: the laser wakes; picked up
 E("""(async () => { const S = SIEGE, L = LASER; S.bullets = 0; S.reloads = 0; S.reloadT = 0; siegeDoomed(); await __go(30); const awake = L.awake, phase0 = S.phase; __aimPt(L.crate.position); await __go(20);
