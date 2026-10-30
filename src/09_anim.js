@@ -86,6 +86,7 @@ class Actor {
   gesture(k) { const a = this.act[k]; a.reset(); a.setEffectiveWeight(1); a.play(); }
   setSad(w) { const a = this.act.sad; if (w > 0 && !a.isRunning()) a.play(); a.setEffectiveWeight(w); }
   update(dt) {
+    if (this.frozen) return; // (burning to ash: caught as he stood, 12o)
     this.time += dt;
     if (this.ride) { this.path = null; this.yawTarget = this.yaw; } // in the saddle (the getaway, 12g): the horse carries him; whoever seats him sets pos and yaw
     if (this.path) {

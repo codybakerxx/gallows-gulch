@@ -2,6 +2,7 @@
 // sits on it rather than in it, and the tack: saddle and blanket, a mane and a tail of real hair, reins to the bit ----------
 // The model's gallop is 15 morph targets. Everything here is done in the horse's own frame (its group: metres, y up, nose toward +z).
 const HORSE = { geo: null, M: null, s: 1, at: {}, crest: [], tailSet: null };
+const HORSE_POLL = [1.95, 1.22, 0.55]; // (v37, a standing horse grazing: where the head meets the neck (y, z, metres), and how much of the neck's bow the head turns back there)
 
 // Loop subdivision of an indexed mesh animated by relative morph targets. Each new vertex is a fixed weighted sum of old ones, so the same
 // weights carry every morph target exactly. smooth: 1 = Loop's rules, 0 = a plain midpoint split (no shrinking); in between, a blend.
@@ -75,6 +76,7 @@ function prepHorseRig(g, M) { // where things attach, found once on the bind pos
 // the attached point now, in the horse's frame: its three vertices as the gallop has them this frame
 const _ha = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
 function horsePt(H, at, out) {
+  if (H.stand) return horseStandPt(H, at, out); // (a horse that stands, grazes or walks: 12n)
   const g = HORSE.geo, P = g.attributes.position.array, mt = g.morphAttributes.position, inf = H.mesh.morphTargetInfluences; out.set(0, 0, 0);
   for (let k = 0; k < 3; k++) { const i = at.i[k] * 3, v = _ha[k].set(P[i], P[i + 1], P[i + 2]);
     for (let j = 0; j < mt.length; j++) { const w = inf[j]; if (w) { const d = mt[j].array; v.x += d[i] * w; v.y += d[i + 1] * w; v.z += d[i + 2] * w; } }
@@ -117,14 +119,29 @@ function horseAux(g, M) {
 function horseCoatMat(color, coat) {
   const m = new THREE.MeshPhysicalMaterial({ color, roughness: 0.46, sheen: 0.45, sheenRoughness: 0.4, sheenColor: new THREE.Color(color).multiplyScalar(1.6) });
   m.userData.coat = Object.assign({ points: 1, pointCol: 0x0c0907, blaze: 0, dapple: 0, socks: [0, 0, 0, 0] }, coat);
+  m.userData.U = { neck: { value: 0 }, walk: { value: new THREE.Vector4() }, piv: { value: new THREE.Vector4(1, 0.5, 1, -0.8) }, neckP: { value: new THREE.Vector2(1.25, 0.35) } }; // (v37: a standing horse's head down to graze, its legs walking: 12n)
   m.onBeforeCompile = horseCoatCompile; m.customProgramCacheKey = () => "gulchHorse"; return m;
 }
 function horseCoatCompile(sh) {
   const c = this.userData.coat || {}, S = HORSE.M.elements[5].toFixed(6), TY = HORSE.M.elements[13].toFixed(6);
   sh.uniforms.uCoatA = { value: new THREE.Vector4(c.points ?? 1, c.blaze || 0, c.dapple || 0, 0) }; sh.uniforms.uSocks = { value: new THREE.Vector4(...(c.socks || [0, 0, 0, 0])) };
   sh.uniforms.uPointCol = { value: new THREE.Color(c.pointCol ?? 0x0c0907).convertSRGBToLinear() }; // (as it should look: the coat's own colour is the game's usual, unconverted)
-  sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nattribute vec4 aReg; attribute vec4 aAux; varying vec3 vHp; varying vec4 vReg; varying vec4 vAux;")
-    .replace("#include <begin_vertex>", `#include <begin_vertex>\nvHp = position * ${S} + vec3(0.0, ${TY}, 0.0); vReg = aReg; vAux = aAux;`);
+  const HPOLL = `vec2(${HORSE_POLL[0].toFixed(3)}, ${HORSE_POLL[1].toFixed(3)})`, HCOUNTER = HORSE_POLL[2].toFixed(3);
+  const U = this.userData.U; sh.uniforms.uNeck = U.neck; sh.uniforms.uWalk = U.walk; sh.uniforms.uPiv = U.piv; sh.uniforms.uNeckP = U.neckP;
+  sh.vertexShader = sh.vertexShader.replace("#include <common>", `#include <common>
+    attribute vec4 aReg; attribute vec4 aAux; attribute vec4 aLeg; varying vec3 vHp; varying vec4 vReg; varying vec4 vAux;
+    uniform float uNeck; uniform vec4 uWalk; uniform vec4 uPiv; uniform vec2 uNeckP; // (v37, a standing horse: aLeg = which leg, how much it swings, how much it lifts, how much it bows with the neck)
+    vec2 hRot(vec2 d, float a) { float c = cos(a), s = sin(a); return vec2(d.x * c - d.y * s, d.x * s + d.y * c); }
+    float hOff() { return aLeg.x < 0.5 ? 0.0 : aLeg.x < 1.5 ? 0.25 : aLeg.x < 2.5 ? 0.5 : 0.75; }
+    float hLegA() { return aLeg.y > 0.0 ? uWalk.y * sin(6.2831853 * (uWalk.x + hOff())) * aLeg.y : 0.0; }
+    vec3 hBendP(vec3 q) { vec3 m = q * ${S} + vec3(0.0, ${TY}, 0.0); float a = hLegA();
+      if (a != 0.0) { vec2 pv = (aLeg.x == 1.0 || aLeg.x == 3.0) ? uPiv.xy : uPiv.zw; m.yz = pv + hRot(m.yz - pv, a); m.y += max(0.0, cos(6.2831853 * (uWalk.x + hOff()))) * uWalk.z * aLeg.z; }
+      if (uNeck != 0.0 && aLeg.w > 0.0) { m.yz = ${HPOLL} + hRot(m.yz - ${HPOLL}, -uNeck * ${HCOUNTER} * aAux.w); m.yz = uNeckP + hRot(m.yz - uNeckP, uNeck * aLeg.w); } // (the head turned back at the poll as the neck goes down, so the muzzle meets the ground)
+      return (m - vec3(0.0, ${TY}, 0.0)) / ${S}; }
+    vec3 hBendN(vec3 n) { n.yz = hRot(n.yz, hLegA() + uNeck * (aLeg.w - ${HCOUNTER} * aAux.w * step(0.001, aLeg.w))); return n; }`)
+    .replace("#include <begin_vertex>", `#include <begin_vertex>\nvHp = position * ${S} + vec3(0.0, ${TY}, 0.0); vReg = aReg; vAux = aAux;`)
+    .replace("#include <morphtarget_vertex>", "#include <morphtarget_vertex>\ntransformed = hBendP(transformed);")
+    .replace("#include <morphnormal_vertex>", "#include <morphnormal_vertex>\nobjectNormal = hBendN(objectNormal);");
   sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>
     uniform vec4 uCoatA; uniform vec4 uSocks; uniform vec3 uPointCol; varying vec3 vHp; varying vec4 vReg; varying vec4 vAux;
     float hh3(vec3 p) { p = fract(p * 0.1031); p += dot(p, p.zyx + 31.32); return fract((p.x + p.y) * p.z); }
@@ -344,4 +361,53 @@ function horseTackUpdate(H, dt) {
       for (let k = 0; k <= S; k++) { const t = k / S, x = hand.x + (bit.x - hand.x) * t + sd.x * (1 - t), y = hand.y + (bit.y - hand.y) * t - Math.sin(t * Math.PI) * L * 0.06 + sd.y * (1 - t), z = hand.z + (bit.z - hand.z) * t + sd.z * (1 - t);
         const j = (r * (S + 1) + k) * 2; P.setXYZ(j, x, y + 0.009, z); P.setXYZ(j + 1, x, y - 0.009, z); } }
     P.needsUpdate = true; T.reins.geometry.computeVertexNormals(); }
+}
+
+// ---- a horse that stands (v37: the town's horses that graze and walk, 12n) ----
+// The model only gallops: every one of its 15 poses has legs in the air. A standing horse is made from them: each leg taken from the pose
+// where it's planted straight under the body, the body, neck and head from the average of the gallop, blended across the top of the leg.
+// Its own attribute, aLeg, tells the coat's shader (above) how each vertex walks and bows: which leg (0 near hind, 1 near fore, 2 off hind,
+// 3 off fore), how much it swings about the shoulder or hip, how much it lifts, and how much it goes down with the neck to graze.
+function horseStandPrep() {
+  const g = HORSE.geo, M = HORSE.M, S = M.elements[5], TY = M.elements[13], P = g.attributes.position.array, mt = g.morphAttributes.position, n = g.attributes.position.count, nf = mt.length;
+  const low = g.attributes.aAux.array, frame = (j, i, out) => out.set(P[i * 3] + mt[j].array[i * 3], P[i * 3 + 1] + mt[j].array[i * 3 + 1], P[i * 3 + 2] + mt[j].array[i * 3 + 2]).multiplyScalar(S).add(_hs.set(0, TY, 0));
+  const avg = new Float32Array(n * 3), v = new THREE.Vector3(); for (let i = 0; i < n; i++) { let x = 0, y = 0, z = 0; for (let j = 0; j < nf; j++) { frame(j, i, v); x += v.x; y += v.y; z += v.z; } avg[i * 3] = x / nf; avg[i * 3 + 1] = y / nf; avg[i * 3 + 2] = z / nf; }
+  const legW = new Float32Array(n), leg = new Int8Array(n).fill(-1);
+  for (let i = 0; i < n; i++) { const lo = low[i * 4 + 1]; legW[i] = smoothstep(0.98, 0.72, lo); if (legW[i] <= 0) continue;
+    const hind = avg[i * 3 + 2] < -0.15, off = avg[i * 3] < 0; leg[i] = (off ? 2 : 0) + (hind ? 0 : 1); }
+  // each leg from the pose where its hoof is down and right under its top
+  const pick = [0, 0, 0, 0], pivots = [];
+  for (let L = 0; L < 4; L++) { let best = 1e9;
+    for (let j = 0; j < nf; j++) { let hz = 0, hy = 1e9, hn = 0, tz = 0, tn = 0;
+      for (let i = 0; i < n; i++) { if (leg[i] !== L) continue; frame(j, i, v); const lo = low[i * 4 + 1]; if (lo < 0.12) { hz += v.z; hn++; hy = Math.min(hy, v.y); } else if (legW[i] > 0.3 && legW[i] < 0.7) { tz += v.z; tn++; } }
+      if (!hn || !tn) continue; const sc = Math.abs(hz / hn - tz / tn) + 4 * Math.max(0, hy - 0.05); if (sc < best) { best = sc; pick[L] = j; } } }
+  const pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { if (leg[i] >= 0) frame(pick[leg[i]], i, v); else v.set(avg[i * 3], avg[i * 3 + 1], avg[i * 3 + 2]); const w = legW[i];
+    pos[i * 3] = lerp(avg[i * 3], v.x, w); pos[i * 3 + 1] = lerp(avg[i * 3 + 1], v.y, w); pos[i * 3 + 2] = lerp(avg[i * 3 + 2], v.z, w); }
+  // feet on the ground; where each leg swings from; the neck
+  let ymin = 1e9; for (let i = 0; i < n; i++) ymin = Math.min(ymin, pos[i * 3 + 1]); for (let i = 0; i < n; i++) pos[i * 3 + 1] -= ymin;
+  for (let L = 0; L < 4; L++) { let y = 0, z = 0, k = 0; for (let i = 0; i < n; i++) if (leg[i] === L && legW[i] > 0.35 && legW[i] < 0.65) { y += pos[i * 3 + 1]; z += pos[i * 3 + 2]; k++; } pivots[L] = k ? [y / k, z / k] : [1, 0]; }
+  const aLeg = new Float32Array(n * 4);
+  for (let i = 0; i < n; i++) { const L = leg[i], y = pos[i * 3 + 1], z = pos[i * 3 + 2];
+    if (L >= 0) { const pv = pivots[L]; aLeg[i * 4] = L; aLeg[i * 4 + 1] = legW[i] * smoothstep(pv[0] + 0.1, pv[0] - 0.25, y); aLeg[i * 4 + 2] = legW[i] * smoothstep(0.6, 0.25, y); }
+    else aLeg[i * 4] = -1;
+    aLeg[i * 4 + 3] = (1 - legW[i]) * smoothstep(0.2, 0.95, z) * smoothstep(0.75, 1.05, y); } // (the neck and head: forward of the shoulder, up off the chest)
+  const out = new THREE.BufferGeometry(), raw = new Float32Array(n * 3); for (let i = 0; i < n; i++) { raw[i * 3] = pos[i * 3] / S; raw[i * 3 + 1] = (pos[i * 3 + 1] - TY) / S; raw[i * 3 + 2] = pos[i * 3 + 2] / S; }
+  out.setAttribute("position", new THREE.BufferAttribute(raw, 3)); for (const nm of Object.keys(g.attributes)) if (nm !== "position" && nm !== "normal" && nm !== "aAux") out.setAttribute(nm, g.attributes[nm]);
+  const aux = new Float32Array(g.attributes.aAux.array), dy = HORSE_POLL[0] - 1.22, dz = HORSE_POLL[1] - 0.42, dl = Math.hypot(dy, dz); // (aAux.w: the head, past the poll along the neck)
+  for (let i = 0; i < n; i++) aux[i * 4 + 3] = aLeg[i * 4 + 3] > 0 ? smoothstep(-0.06, 0.08, ((pos[i * 3 + 1] - HORSE_POLL[0]) * dy + (pos[i * 3 + 2] - HORSE_POLL[1]) * dz) / dl) : 0;
+  out.setAttribute("aAux", new THREE.BufferAttribute(aux, 4)); HORSE.standHead = aux;
+  out.setAttribute("aLeg", new THREE.BufferAttribute(aLeg, 4)); out.setIndex(g.index); out.computeVertexNormals(); out.computeBoundingSphere();
+  const fp = [(pivots[1][0] + pivots[3][0]) / 2, (pivots[1][1] + pivots[3][1]) / 2], hp = [(pivots[0][0] + pivots[2][0]) / 2, (pivots[0][1] + pivots[2][1]) / 2];
+  HORSE.stand = { geo: out, pos, aLeg, piv: new THREE.Vector4(fp[0], fp[1], hp[0], hp[1]), pick, neckP: new THREE.Vector2(1.05, 0.3) }; // (the neck bows about the base of the chest: at 1.3 rad the muzzle is at the ground)
+}
+const _hs = new THREE.Vector3();
+// a point on a standing horse (horsePt for it): its three vertices as it stands, bowed with the neck as it grazes (the legs carry no tack)
+function horseStandPt(H, at, out) {
+  const St = HORSE.stand, P = St.pos, A = St.aLeg, a = H.neckA || 0, np = St.neckP, c = Math.cos, s = Math.sin, hd = HORSE.standHead, [py, pz, cf] = HORSE_POLL; out.set(0, 0, 0);
+  for (let k = 0; k < 3; k++) { const i = at.i[k]; let y = P[i * 3 + 1], z = P[i * 3 + 2]; const w = A[i * 4 + 3] * a;
+    if (w) { const b = -a * cf * hd[i * 4 + 3]; if (b) { const ey = y - py, ez = z - pz; y = py + ey * c(b) - ez * s(b); z = pz + ey * s(b) + ez * c(b); }
+      const dy = y - np.x, dz = z - np.y; y = np.x + dy * c(w) - dz * s(w); z = np.y + dy * s(w) + dz * c(w); }
+    out.x += P[i * 3] * at.w[k]; out.y += y * at.w[k]; out.z += z * at.w[k]; }
+  return out;
 }

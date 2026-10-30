@@ -358,6 +358,13 @@ const Sound = (() => {
     zap(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, 0.3, 4 * k), z = ctx.createOscillator(), zg = ctx.createGain(); z.type = "square"; z.frequency.setValueAtTime(500, t); z.frequency.exponentialRampToValueAtTime(2600, t + 0.08); z.frequency.exponentialRampToValueAtTime(300, t + 0.22);
       zg.gain.setValueAtTime(0.0001, t); zg.gain.exponentialRampToValueAtTime(0.35 * Math.min(1, k), t + 0.02); zg.gain.exponentialRampToValueAtTime(0.0001, t + 0.24); const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 3500; z.connect(lp); lp.connect(zg); zg.connect(d); z.start(t); z.stop(t + 0.26);
       noise(t + 0.03, 0.12, 0.5, "bandpass", 1800, 0.7, d); drum(t + 0.02, 220, 80, 0.12, 0.5, d); },
+    // a man burnt to ash (12o): a soft roar of flame that dies, a crackle through it, and a dry hiss as he falls in
+    ash(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, 0.3, 4);
+      const s = ctx.createBufferSource(); s.buffer = buf(1.6, tt => (Math.random() * 2 - 1) * Math.min(1, tt * 12) * Math.exp(-tt * 2.2)); const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.setValueAtTime(700, t); lp.frequency.exponentialRampToValueAtTime(2600, t + 0.3); lp.frequency.exponentialRampToValueAtTime(500, t + 1.5);
+      const g = ctx.createGain(); g.gain.value = 0.5 * k; s.connect(lp); lp.connect(g); g.connect(d); s.start(t);
+      const c = ctx.createBufferSource(); c.buffer = buf(1.4, tt => (Math.random() < 0.012 ? (Math.random() * 2 - 1) : 0) * Math.exp(-tt * 1.4)); const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 1500;
+      const g2 = ctx.createGain(); g2.gain.value = 0.9 * k; c.connect(hp); hp.connect(g2); g2.connect(d); c.start(t + 0.05);
+      noise(t + 0.35, 1.0, 0.22 * k, "bandpass", 3800, 0.5, d); drum(t, 90, 45, 0.25, 0.45 * k, d); },
     slap(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, 0.15, 3); noise(t, 0.08, 0.5 * k, "lowpass", 1400, 0.8, d); drum(t, 130, 60, 0.08, 0.4 * k, d); },
     sizzle(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, 0.15, 2.5), s = ctx.createBufferSource(); s.buffer = buf(1.8, (tt) => (Math.random() < 0.08 ? (Math.random() * 2 - 1) : (Math.random() * 2 - 1) * 0.25) * Math.exp(-tt * 1.6));
       const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 2400; const g = ctx.createGain(); g.gain.value = 0.35 * k; s.connect(hp); hp.connect(g); g.connect(d); s.start(t); },

@@ -91,7 +91,8 @@ function decalPool(n, tex, basic, size) {
 }
 function decal(D, at, n, scale) {
   _tq.setFromUnitVectors(V_Z, n).multiply(_tq2.setFromAxisAngle(V_Z, Math.random() * TAU)); _t3.copy(at).addScaledVector(n, 0.006); // (turned at random about the normal)
-  D.im.setMatrixAt(D.next, _tm.compose(_t3, _tq, _ts.setScalar(scale))); D.next = (D.next + 1) % D.n; D.used = Math.min(D.n, D.used + 1); D.im.count = D.used; D.im.instanceMatrix.needsUpdate = true;
+  const i = D.next; D.im.setMatrixAt(i, _tm.compose(_t3, _tq, _ts.setScalar(scale))); D.next = (D.next + 1) % D.n; D.used = Math.min(D.n, D.used + 1); D.im.count = D.used; D.im.instanceMatrix.needsUpdate = true;
+  return i; // (its slot: a hole in something that later breaks goes with it, 12m)
 }
 
 // ---- the bottles and cans ----
@@ -173,7 +174,9 @@ function updateCans(dt) {
 
 // ---- the street, the buildings and everything else: what was hit decides what happens ----
 function envShot(env, rd, laser) { // (laser: the beam, 12k, which scorches and smokes for itself; here only what's particular to a material)
-  const p = env.point, o = env.object, mat = Array.isArray(o.material) ? o.material[env.face ? env.face.materialIndex : 0] : o.material;
+  const p = env.point, o = env.object, mat = brkSrcMat(Array.isArray(o.material) ? o.material[env.face ? env.face.materialIndex : 0] : o.material), bk = brkFromHit(env); // (bk: a thing that breaks, 12m)
+  const hole = (D, at, nrm, s) => { const i = decal(D, at, nrm, s); if (bk) bk.decals.push([D, i]); };
+  if (bk && !laser) brkHit(bk, 1, p, rd, false); if (bk && !bk.alive) return; // (that was the shot that broke it)
   const n = env.face ? _t1.copy(env.face.normal).transformDirection(o.matrixWorld) : _t1.set(0, 1, 0); if (n.dot(rd) > 0) n.negate(); const nn = n.clone();
   // a gallows lantern: it shatters, swings and goes out
   let lamp = null; for (let q = o; q; q = q.parent) if (q.userData.lamp !== undefined) { lamp = TGT.lamps[q.userData.lamp]; break; }
@@ -189,10 +192,10 @@ function envShot(env, rd, laser) { // (laser: the beam, 12k, which scorches and 
     decal(TGT.cracks, p, nn, rnd(0.8, 1.15)); Sound.clip(siegePick("pane", 3), p, 1.0, 0, 0.35, rnd(0.95, 1.05), 5);
     for (let i = 0; i < 16; i++) debris("glass", p.clone().addScaledVector(nn, 0.02), _t3.copy(nn).multiplyScalar(rnd(0.1, 0.9)).add(_t2.set(rnd(-0.5, 0.5), rnd(-0.6, 0.6), rnd(-0.5, 0.5))), rnd(0.03, 0.07), new THREE.Color(0xc8d4cc));
     return; }
-  if (o.geometry === DRESS.barrelGeo || o.userData.trough) { // a barrel, or the trough: water
-    const top = o.userData.trough && nn.y > 0.7;
+  if (o.geometry === DRESS.barrelGeo || o.userData.trough || (bk && bk.water)) { // a barrel, or the trough: water
+    const top = (o.userData.trough || (bk && bk.kind === "trough")) && nn.y > 0.7;
     if (top) { Sound.splash(p, 1); for (let i = 0; i < 40; i++) emit(TGT.water, p, _t3.set(rnd(-0.8, 0.8), rnd(1.5, 3.4), rnd(-0.8, 0.8)), rnd(0.8, 1.4), rnd(0.6, 0.85)); return; }
-    decal(TGT.holes, p, nn, rnd(0.8, 1.1)); Sound.clip(siegePick("keg", 3), p, 0.95, 0, 0.25, rnd(0.95, 1.05), 4);
+    hole(TGT.holes, p, nn, rnd(0.8, 1.1)); Sound.clip(siegePick("keg", 3), p, 0.95, 0, 0.25, rnd(0.95, 1.05), 4);
     for (let i = 0; i < 5; i++) debris("splinter", p, _t3.copy(nn).multiplyScalar(rnd(0.8, 2.2)).add(_t2.set(rnd(-0.6, 0.6), rnd(0, 1.2), rnd(-0.6, 0.6))), rnd(0.4, 0.8));
     if (TGT.spouts.length < 6) TGT.spouts.push({ p: p.clone().addScaledVector(nn, 0.01), n: nn.clone(), t: 0, life: rnd(4.5, 6.5), acc: 0 });
     return; }
@@ -210,7 +213,7 @@ function envShot(env, rd, laser) { // (laser: the beam, 12k, which scorches and 
   if (laser) { Sound.sizzle(p, 0.35); return; }
   // wood (and anything else): splinters and a hole that stays
   setTimeout(() => { puff(p, 14, 0.6, 0.08, 0.9, 0.6); Sound.clip(siegePick("wood", 4), p, 0.8, 0, 0.3, rnd(0.9, 1.1), 3); }, 40);
-  decal(TGT.holes, p, nn, rnd(0.8, 1.15));
+  hole(TGT.holes, p, nn, rnd(0.8, 1.15));
   for (let i = 0; i < 6; i++) debris("splinter", p.clone().addScaledVector(nn, 0.02), _t3.copy(nn).multiplyScalar(rnd(0.8, 2.6)).add(_t2.set(rnd(-0.8, 0.8), rnd(0, 1.4), rnd(-0.8, 0.8))), rnd(0.3, 0.75));
 }
 function updateTargets(dt) {

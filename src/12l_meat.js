@@ -11,11 +11,14 @@ const HORSE_HC = 1.15; // (the height of the middle of its body: what it rolls a
 
 function horseRayOne(H, ro, rd) {
   if (!H || !H.grp.visible || H.meat) return -1; H.grp.updateMatrixWorld(); let best = -1;
-  for (const [a, b, r] of HORSE_CAPS) { const t = rayCapsule(ro, rd, _mt1.copy(a).applyMatrix4(H.grp.matrixWorld), _mt2.copy(b).applyMatrix4(H.grp.matrixWorld), r); if (t > 0 && (best < 0 || t < best)) best = t; }
+  HORSE_CAPS.forEach(([a, b, r], k) => { _mt1.copy(a); _mt2.copy(b);
+    if (k === 1 && H.stand && H.neckA) { const np = HORSE.stand.neckP; for (const [q, w] of [[_mt1, 0.35], [_mt2, 1]]) { const ang = H.neckA * w, dy = q.y - np.x, dz = q.z - np.y; q.y = np.x + dy * Math.cos(ang) - dz * Math.sin(ang); q.z = np.y + dy * Math.sin(ang) + dz * Math.cos(ang); } } // (a horse grazing: its head is down)
+    const t = rayCapsule(ro, rd, _mt1.applyMatrix4(H.grp.matrixWorld), _mt2.applyMatrix4(H.grp.matrixWorld), r); if (t > 0 && (best < 0 || t < best)) best = t; });
   return best;
 }
 // the town's horse, for a shot in the shootout
-function townHorseRay(ro, rd) { const H = LIFE.horse; if (!H || (!H.run && !H.dead)) return null; const t = horseRayOne(H, ro, rd); return t > 0 ? { t, H } : null; }
+function townHorseRay(ro, rd) { const H = LIFE.horse, t = H && (H.run || H.dead) ? horseRayOne(H, ro, rd) : -1, h = herdRay(ro, rd); // (and the horses about the town: 12n)
+  return t > 0 && (!h || t < h.t) ? { t, H } : h; }
 
 // ---- going down ----
 // the pose part way through the fall (t seconds in): forelegs folding and the nose going down, then over onto its side, the body dropping
@@ -39,7 +42,7 @@ function horseLanded(H, D) { // the body meets the ground: a heavy thump, dust, 
 // the town horse, shot with the revolver
 function horseShot(H, at, rd) {
   if (H.dead) { bloodBurst(at, rd, false); Sound.thud(at, 0.5); return; } // (already down: it's dead)
-  const v = H.run ? H.run.v : 0, dir = V3(Math.sin(H.yaw || 0), 0, Math.cos(H.yaw || 0)); H.dead = horseDown(H, at, rd, v, dir, H.yaw || 0); H.run = null;
+  const v = H.run ? H.run.v : H.walk ? 1.2 : 0, dir = V3(Math.sin(H.yaw || 0), 0, Math.cos(H.yaw || 0)); H.dead = horseDown(H, at, rd, v, dir, H.yaw || 0); H.run = null; H.walk = null;
 }
 function horseFallStep(H, dt) { // (each frame while it's down: 10 updateHorse)
   const D = H.dead; D.t += dt; D.v = Math.max(0, D.v - dt * (D.t < 0.5 ? 3 : 9)); D.base.addScaledVector(D.dir, D.v * dt); D.base.y = groundVis(D.base.x, D.base.z);
@@ -76,7 +79,7 @@ function zapFx(at, size) {
 function crowLaser(c, at, rd) {
   if (c.state === "meat" || c.state === "away") return; const was = c.state, v = was === "fly" && c.fl ? _mt1.subVectors(c.pos, c.fl.prev).divideScalar(Math.max(LASER.dtNow || 0.016, 0.005)).clone() : V3();
   const ctr = c.body.getWorldPosition(V3()); c.state = "meat"; c.meatT = 0; c.fl = null; c.hop = null; c.act = null; c.perch = null; c.meatAt = ctr.clone();
-  zapFx(ctr, 0.45); spawnMeat("leg", ctr, v.clampLength(0, 6).add(V3(rnd(-0.5, 0.5), 1.6, rnd(-0.5, 0.5))), c.s * 0.95);
+  zapFx(ctr, 0.6); spawnMeat("leg", ctr, v.clampLength(0, 6).add(V3(rnd(-0.5, 0.5), 1.8, rnd(-0.5, 0.5))), c.s * 2.4); // (v37: a big drumstick, about 0.6 m)
   if (was !== "dead") { crowsStartle(at, 40, 1.3); SIEGE.crowKills = (SIEGE.crowKills || 0) + 1; }
 }
 function crowMeatStep(c, dt) { c.meatT += dt; const k = 1 - smoothstep(0, 0.1, c.meatT); c.root.scale.setScalar(c.s * Math.max(0.001, k)); c.root.position.lerpVectors(c.meatAt, c.pos, k); if (c.meatT > 0.1) c.root.visible = false; }
@@ -136,7 +139,7 @@ function updateMeat(dt) {
 function horseHurry() { const H = LIFE.horse; if (H && !H.run && !H.dead && !H.meat) H.wait = Math.min(H.wait, 4 + Math.random() * 4); }
 // a new round: the meat's cleared away, and the town horse is up and gone again (it'll come through later)
 function resetMeat() {
-  for (const M of MEAT.list) R.scene.remove(M.m); MEAT.list = [];
+  for (const M of MEAT.list) R.scene.remove(M.m); MEAT.list = []; resetHerd();
   for (const z of MEAT.zaps) { z.t = 1; z.s.visible = false; } if (MEAT.blue) { MEAT.blue.life.fill(0); MEAT.blue.pts.visible = false; }
   const H = LIFE.horse; if (H && (H.dead || H.meat)) { H.dead = H.meat = null; H.run = null; H.grp.visible = false; H.grp.scale.setScalar(1); H.grp.rotation.set(0, 0, 0); horseTackShow(H, false); H.act.timeScale = 1; H.wait = 25 + Math.random() * 20; }
 }

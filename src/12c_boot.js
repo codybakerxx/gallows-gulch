@@ -31,11 +31,13 @@ function wireUI() {
   $("stage").addEventListener("pointerdown", e => {
     if (e.target.closest("button,#hintBox")) return;
     if (chaseTap(e)) return; // the getaway: a drag steers or aims, a click fires (12g)
+    if (SIEGE.on) { lookDown(e, "siege"); if (e.cancelable) e.preventDefault(); return; } // the shootout: a drag turns you, a tap takes cover or the laser (12p, 12d)
     if (siegeTap(e)) return; // the sword, and the shootout that follows (12d)
+    if (revolverTap(e)) return; // the revolver on the barrel, once you've won (12p)
     if (PLAY.on) { playDown(e); return; } // once he hangs, touches handle the body instead of skipping
-    if (STATE.locked) STATE.ts = 6; });
-  window.addEventListener("pointermove", playMove, { passive: false });
-  for (const ev of ["pointerup", "pointercancel"]) window.addEventListener(ev, playUp);
+    lookDown(e, "town"); }); // (a drag looks round; a tap hurries the host along: 12p)
+  window.addEventListener("pointermove", e => { if (!lookMove(e)) playMove(e); }, { passive: false });
+  for (const ev of ["pointerup", "pointercancel"]) window.addEventListener(ev, e => { if (!lookUp(e)) playUp(e); });
   document.addEventListener("keydown", e => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === "Escape") { if (!$("book").hidden) { bookClose(); return; } if ($("menu").hidden) openMenu(); else if (!STATE.over || siegeLive()) { $("menu").hidden = true; Sound.resume(); } return; }
@@ -107,9 +109,9 @@ async function boot() {
   HOST.onStep = stepSnd(true); MAN.onStep = stepSnd(false, 1.25); EXEC.onStep = stepSnd(false, 0.9);
   MAN.onBreath = (a, p) => { if (p > 0.35) Sound.breath(a.ch.bones.Head.getWorldPosition(new THREE.Vector3()), p); };
   KEY_LIGHT = new THREE.PointLight(0xffd9b8, 0, 3.5, 2); R.scene.add(KEY_LIGHT);
-  buildCrowd(); prepHorse(horse); prepBirds(stork); buildSiege(); buildBell(); buildChase(); buildCrows(); buildTargets(); Sound.crowGate = () => !CHASE.on; // (the distant crows are heard about the town, not out on the getaway)
+  buildCrowd(); prepHorse(horse); buildHerd(); prepBirds(stork); buildSiege(); buildGunProp(); buildBell(); buildChase(); buildCrows(); buildTargets(); buildTownBreakables(); Sound.crowGate = () => !CHASE.on; // (the distant crows are heard about the town, not out on the getaway)
   setProgress(0.95, "Saddling up…"); shot("intro", 0); resetScene(); boardDraw();
-  await nextFrame(); siegePrecompile(true); try { R.renderer.compile(R.scene, R.camera); } catch (e) { console.warn("precompile", e); } siegePrecompile(false);
+  await nextFrame(); siegePrecompile(true); ashPrecompile(true); try { R.renderer.compile(R.scene, R.camera); } catch (e) { console.warn("precompile", e); } ashPrecompile(false); siegePrecompile(false);
   Sound.preloadClips(SIEGE_CLIPS);
   for (let i = 0; i < 3; i++) { await nextFrame(); tick(performance.now()); }
   $("loading").hidden = true; openMenu(); shot("wide", 4);
@@ -138,8 +140,8 @@ function tick(now) {
   if (EXEC.gripping && !STATE.trap) EXEC.ik.R.t.copy(GAL.leverTip.getWorldPosition(A1));
   updateWind(dt); updateCrowd(dt, STATE.mood); updatePanic(dt); setTrapOpen(dt, STATE.trap); updateRopeState(T, dt); updateLanterns(dt);
   if (MAN.hang && MAN.hang.caught && MAN.hang.t - MAN.hang.tCatch > 2.5 && Math.random() < dt * 0.3) Sound.ropeCreak(GAL.anchor, 0.35); // the odd creak once he hangs still
-  updateHorse(dt); updateBirds(dt); updateCrows(dt); updateTargets(dt); updateMeat(dt); updateWeed(dt); updateDust(rdt, T); updateTumbleweeds(dt); updateWindmill(dt); updatePuffs(dt); updateFlag(dt); updateSmoke(dt);
-  updateSiege(rdt, dt); updateLaser(rdt, dt); updateBell(rdt, dt); updateChase(rdt, dt); updateCamera(rdt, T, dt); siegeLate(rdt); laserLate(rdt); chaseLate(rdt); updateSky(T, R.camera); Sound.setListener(R.camera); updateBubble(rdt); updatePlay(rdt);
+  updateHorse(dt); updateHerd(dt); updateBirds(dt); updateCrows(dt); updateTargets(dt); updateMeat(dt); updateAsh(dt); updateBreak(dt); updateWeed(dt); updateDust(rdt, T); updateTumbleweeds(dt); updateWindmill(dt); updatePuffs(dt); updateFlag(dt); updateSmoke(dt);
+  updateSiege(rdt, dt); updateLaser(rdt, dt); updateGunProp(rdt); updateBell(rdt, dt); updateChase(rdt, dt); updateCamera(rdt, T, dt); siegeLate(rdt); laserLate(rdt); chaseLate(rdt); updateSky(T, R.camera); Sound.setListener(R.camera); updateBubble(rdt); updatePlay(rdt);
   renderFrame(T);
   if (perf.steps < 7 && $("menu").hidden && $("gfx").value === "auto" && !window.GULCH_PAUSE) { perf.n++; perf.acc += rdt;
     if (perf.n === 150) { const avg = perf.acc / perf.n; perf.n = 0; perf.acc = 0; if (avg > 1 / 27) perfStep(); } }

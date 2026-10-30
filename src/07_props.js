@@ -238,27 +238,27 @@ function boardDraw() {
 function slotBoardPos(i) { const s = BOARD.slots[i]; return { a: px2board(s.x - s.w * 0.35, s.y - BOARD.font * 0.35), b: px2board(s.x + s.w * 0.35, s.y - BOARD.font * 0.35), h: BOARD.font / BOARD.H * LAY.board.h }; }
 function wrongBoardPos(i) { const x = BOARD.wx0 + i * BOARD.wstep + BOARD.wstep / 2; return { a: px2board(x - BOARD.wstep * 0.4, BOARD.wy - BOARD.wfont * 0.35), b: px2board(x + BOARD.wstep * 0.4, BOARD.wy - BOARD.wfont * 0.35), h: BOARD.wfont / BOARD.H * LAY.board.h }; }
 // ---- set dressing ----
-function barrel(x, z, s = 1) { const b = barrelMesh(s); b.position.set(x, 0, z); R.scene.add(b); } // (07c)
+function barrel(x, z, s = 1) { const b = barrelMesh(s); b.position.set(x, 0, z); R.scene.add(b); return b; } // (07c)
 function buildSetDressing() {
   const G0 = new THREE.Group(); R.scene.add(G0); const add0 = R.scene.add.bind(R.scene); R.scene.add = o => G0.add(o);
   try { buildSetDressingInner(); } finally { R.scene.add = add0; }
-  bakeGroup(G0, o => o.material && o.material.roughness < 0.1); for (const c of [...G0.children]) R.scene.add(c); R.scene.remove(G0);
+  bakeGroup(G0, o => (o.material && o.material.roughness < 0.1) || brkSkip(o)); for (const c of [...G0.children]) R.scene.attach(c); R.scene.remove(G0); // (the things that break stay out of it: 12m)
 }
 function buildSetDressingInner() {
-  barrel(-6.0, -3.9); barrel(-6.5, -4.4, 0.95); barrel(-5.95, -4.75, 1.02);
-  for (const [x, z, s, ry] of [[0.2, -6.9, 0.7, 0.3], [0.75, -7.25, 0.55, 1.1], [-6.4, -7.6, 0.8, 0.2]]) { const c = woodBox(s, s, s, MAT.woodDark); c.position.set(x, s / 2, z); c.rotation.y = ry; R.scene.add(c); }
+  brkTag(barrel(-6.0, -3.9), "barrel"); brkTag(barrel(-6.5, -4.4, 0.95), "barrel"); brkTag(barrel(-5.95, -4.75, 1.02), "barrel");
+  for (const [x, z, s, ry] of [[0.2, -6.9, 0.7, 0.3], [0.75, -7.25, 0.55, 1.1], [-6.4, -7.6, 0.8, 0.2]]) { const c = brkTag(woodBox(s, s, s, MAT.woodDark), "crate"); c.position.set(x, s / 2, z); c.rotation.y = ry; R.scene.add(c); }
   // pine coffin leaning on the platform
   const sh = new THREE.Shape([[-0.22, -1], [0.22, -1], [0.3, 0.45], [0.2, 1], [-0.2, 1], [-0.3, 0.45]].map(p => new THREE.Vector2(p[0], p[1])));
   const cg = new THREE.ExtrudeGeometry(sh, { depth: 0.32, bevelEnabled: false }); cg.translate(0, 0, -0.16);
   const uv = cg.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 0.9, uv.getY(i) * 0.9);
-  const coffin = new THREE.Mesh(cg, MAT.wood); coffin.position.set(-5.35, 1.0, -3.85); coffin.rotation.set(-0.12, 0.35, 0); coffin.castShadow = coffin.receiveShadow = true; R.scene.add(coffin);
+  const coffin = brkTag(new THREE.Mesh(cg, MAT.wood), "coffin"); coffin.position.set(-5.35, 1.0, -3.85); coffin.rotation.set(-0.12, 0.35, 0); coffin.castShadow = coffin.receiveShadow = true; R.scene.add(coffin);
   // water trough + hitching rail near the street
-  const tr = woodBox(2.2, 0.5, 0.6, MAT.woodDark); tr.position.set(6.5, 0.25, -7.5); R.scene.add(tr);
-  const wtr = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 0.45), new THREE.MeshStandardMaterial({ color: 0x1a2226, roughness: 0.05, metalness: 0.1 })); wtr.rotation.x = -Math.PI / 2; wtr.position.set(6.5, 0.46, -7.5); R.scene.add(wtr);
-  for (const x of [5.2, 7.8]) { const p = woodBox(0.14, 1.1, 0.14, MAT.woodDark); p.position.set(x, 0.55, -8.4); R.scene.add(p); }
-  const rail = woodBox(2.9, 0.1, 0.1, MAT.wood, true); rail.position.set(6.5, 1.05, -8.4); R.scene.add(rail);
+  { const tg = brkTag(new THREE.Group(), "trough"), tr = woodBox(2.2, 0.5, 0.6, MAT.woodDark); tr.position.set(6.5, 0.25, -7.5); tg.add(tr);
+    const wtr = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 0.45), new THREE.MeshStandardMaterial({ color: 0x1a2226, roughness: 0.05, metalness: 0.1 })); wtr.rotation.x = -Math.PI / 2; wtr.position.set(6.5, 0.46, -7.5); tg.add(wtr); R.scene.add(tg); }
+  { const rg = brkTag(new THREE.Group(), "rail"); for (const x of [5.2, 7.8]) { const p = woodBox(0.14, 1.1, 0.14, MAT.woodDark); p.position.set(x, 0.55, -8.4); rg.add(p); }
+    const rail = woodBox(2.9, 0.1, 0.1, MAT.wood, true); rail.position.set(6.5, 1.05, -8.4); rg.add(rail); R.scene.add(rg); }
   // wagon wheel leaning against a crate
-  const wheel = new THREE.Group(); const rim = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.035, 8, 32), MAT.woodDark); wheel.add(rim);
+  const wheel = brkTag(new THREE.Group(), "wheel"); const rim = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.035, 8, 32), MAT.woodDark); wheel.add(rim);
   for (let i = 0; i < 12; i++) { const s = woodBox(0.03, 1.05, 0.025, MAT.wood); s.rotation.z = i * Math.PI / 12; wheel.add(s); }
   const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.14, 12), MAT.iron); hub.rotation.x = Math.PI / 2; wheel.add(hub);
   wheel.position.set(0.35, 0.56, -6.35); wheel.rotation.set(0, 0.6, 0.12); R.scene.add(wheel);
@@ -266,9 +266,9 @@ function buildSetDressingInner() {
   { const [x, z] = streetPt(7, 6.8); wagon(x, z, Math.atan2(STREET.a[0], STREET.a[1]) + 0.25); }
   { const [x, z] = streetPt(33, -7.2); wagon(x, z, Math.atan2(-STREET.a[0], -STREET.a[1]) - 0.15, true); }
   // hay and sacks by the livery, barrels and crates along the boardwalks
-  for (const [al, sd] of [[36.5, 8.9], [37.6, 9.3]]) { const [x, z] = streetPt(al, sd); const hb = woodBox(1.0, 0.5, 0.6, MAT.hay); hb.position.set(x, 0.25, z); hb.rotation.y = Math.random(); R.scene.add(hb); }
-  for (const [al, sd] of [[12.5, -9.2], [19.8, 8.6], [27.2, -8.8], [22.6, -9.1]]) { const [x, z] = streetPt(al, sd); barrel(x, z, 0.95 + Math.random() * 0.1); }
-  for (const [al, sd, s] of [[13.4, -9.3, 0.6], [20.8, 8.9, 0.5], [21.3, 8.7, 0.42]]) { const [x, z] = streetPt(al, sd); const c = woodBox(s, s, s, MAT.woodDark); c.position.set(x, s / 2, z); c.rotation.y = Math.random() * 2; R.scene.add(c); }
+  for (const [al, sd] of [[36.5, 8.9], [37.6, 9.3]]) { const [x, z] = streetPt(al, sd); const hb = brkTag(woodBox(1.0, 0.5, 0.6, MAT.hay), "hay"); hb.position.set(x, 0.25, z); hb.rotation.y = Math.random(); R.scene.add(hb); }
+  for (const [al, sd] of [[12.5, -9.2], [19.8, 8.6], [27.2, -8.8], [22.6, -9.1]]) { const [x, z] = streetPt(al, sd); brkTag(barrel(x, z, 0.95 + Math.random() * 0.1), "barrel"); }
+  for (const [al, sd, s] of [[13.4, -9.3, 0.6], [20.8, 8.9, 0.5], [21.3, 8.7, 0.42]]) { const [x, z] = streetPt(al, sd); const c = brkTag(woodBox(s, s, s, MAT.woodDark), "crate", { hp: 2 }); c.position.set(x, s / 2, z); c.rotation.y = Math.random() * 2; R.scene.add(c); }
 }
 // a wagon: plank bed, spoked wheels on iron axles, tongue resting on the ground; some carry a canvas bonnet over hoops
 function wagon(x, z, ry, covered) {

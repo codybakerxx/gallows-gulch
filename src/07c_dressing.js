@@ -76,28 +76,28 @@ function buildingProps(grp, w, h, d, pd, name, opt) {
   let seed = 0; for (const ch of name || "x") seed = (seed * 31 + ch.charCodeAt(0)) | 0; const r = rng(seed);
   const deckY = 0.25, front = d / 2 + 0.2;
   // lanterns either side of the door on iron brackets
-  for (const e of [-1, 1]) { const b = bracketMesh(); b.position.set(e * 0.95, 2.45, front); grp.add(b); const l = lanternMesh(); l.position.set(e * 0.95, 2.22, front + 0.3); grp.add(l); }
+  for (const e of [-1, 1]) { const b = bracketMesh(); b.position.set(e * 0.95, 2.45, front); grp.add(b); const l = brkTag(lanternMesh(), "lantern"); l.position.set(e * 0.95, 2.22, front + 0.3); grp.add(l); }
   // a step up onto the porch, in front of the door
   { const st = woodBox(1.7, 0.13, 0.36, MAT.plank, true); st.position.set(0, 0.065, d / 2 + pd + 0.36); grp.add(st); }
   // shutters beside the ground-floor windows, some hanging open at an angle
-  if (!opt.brick && r() < 0.75) for (const sx of [-1, 1]) for (const e of [-1, 1]) { const sh = woodBox(0.48, 1.32, 0.035, MAT.door); const open = r() < 0.25 ? (0.4 + r() * 0.5) * e * sx : 0;
+  if (!opt.brick && r() < 0.75) for (const sx of [-1, 1]) for (const e of [-1, 1]) { const sh = brkTag(woodBox(0.48, 1.32, 0.035, MAT.door), "shutter"); const open = r() < 0.25 ? (0.4 + r() * 0.5) * e * sx : 0;
     sh.position.set(sx * w * 0.3 + e * 0.76, 1.7, front + 0.02); if (open) { sh.rotation.y = open; sh.position.z += 0.12; } grp.add(sh); }
   // a bench against the wall
-  if (r() < 0.7) { const b = benchMesh(1.3 + r() * 0.4), side = r() < 0.5 ? -1 : 1; b.position.set(side * (w * 0.3), deckY, front + 0.32); grp.add(b); }
+  if (r() < 0.7) { const b = brkTag(benchMesh(1.3 + r() * 0.4), "bench"), side = r() < 0.5 ? -1 : 1; b.position.set(side * (w * 0.3), deckY, front + 0.32); grp.add(b); }
   // things stacked at the ends of the porch: crates, sacks, a barrel
   for (const side of [-1, 1]) { if (r() > 0.75 * Math.min(1, k)) continue; const x0 = side * (w / 2 - 0.55), z0 = d / 2 + 0.75 + r() * 0.8, kind = r();
-    if (kind < 0.4) { const s = 0.5 + r() * 0.2, c = woodBox(s, s, s, MAT.woodDark); c.position.set(x0, deckY + s / 2, z0); c.rotation.y = r() * 0.6; grp.add(c);
-      if (r() < 0.6) { const s2 = s * (0.6 + r() * 0.25), c2 = woodBox(s2, s2, s2, MAT.wood); c2.position.set(x0 + (r() - 0.5) * 0.15, deckY + s + s2 / 2, z0); c2.rotation.y = r(); grp.add(c2); } }
-    else if (kind < 0.7) { for (let i = 0; i < 2 + (r() * 2 | 0); i++) { const sk = sackMesh(r); sk.position.set(x0 + (r() - 0.5) * 0.6, deckY, z0 + (r() - 0.5) * 0.5); sk.rotation.y = r() * TAU; sk.scale.setScalar(0.85 + r() * 0.3); grp.add(sk); } }
-    else { const b = barrelMesh(0.9 + r() * 0.15); b.position.set(x0, deckY, z0); grp.add(b); } }
+    if (kind < 0.4) { const s = 0.5 + r() * 0.2, c = brkTag(woodBox(s, s, s, MAT.woodDark), "crate", { hp: 2 }); c.position.set(x0, deckY + s / 2, z0); c.rotation.y = r() * 0.6; grp.add(c);
+      if (r() < 0.6) { const s2 = s * (0.6 + r() * 0.25), c2 = brkTag(woodBox(s2, s2, s2, MAT.wood), "crate", { hp: 2 }); c2.position.set(x0 + (r() - 0.5) * 0.15, deckY + s + s2 / 2, z0); c2.rotation.y = r(); grp.add(c2); } }
+    else if (kind < 0.7) { for (let i = 0; i < 2 + (r() * 2 | 0); i++) { const sk = brkTag(sackMesh(r), "sack"); sk.position.set(x0 + (r() - 0.5) * 0.6, deckY, z0 + (r() - 0.5) * 0.5); sk.rotation.y = r() * TAU; sk.scale.setScalar(0.85 + r() * 0.3); grp.add(sk); } }
+    else { const b = brkTag(barrelMesh(0.9 + r() * 0.15), "barrel"); b.position.set(x0, deckY, z0); grp.add(b); } }
   // weeds along the front of the porch and at the foot of the side walls
   for (let i = 0; i < 4 + (r() * 4 | 0); i++) weedSpot(grp, (r() - 0.5) * (w + 0.4), d / 2 + pd + 0.3 + r() * 0.25, 0.25 + r() * 0.3);
   for (const e of [-1, 1]) for (let i = 0; i < 3 + (r() * 3 | 0); i++) weedSpot(grp, e * (w / 2 + 0.12 + r() * 0.2), (r() - 0.5) * d, 0.3 + r() * 0.4);
   // a rain barrel at a back corner
-  if (r() < 0.6 * k) { const e = r() < 0.5 ? -1 : 1, b = barrelMesh(1.05); b.position.set(e * (w / 2 + 0.45), 0, -d / 2 + 0.6); grp.add(b); }
+  if (r() < 0.6 * k) { const e = r() < 0.5 ? -1 : 1, b = brkTag(barrelMesh(1.05), "barrel"); b.position.set(e * (w / 2 + 0.45), 0, -d / 2 + 0.6); grp.add(b); }
   // wanted posters on the wall and on a porch post
-  const pn = r() * 8 | 0, p1 = new THREE.Mesh(new THREE.PlaneGeometry(0.36, 0.5), posterMat(pn)); p1.position.set(-w * 0.12, 1.5 + r() * 0.2, front - 0.005); p1.rotation.z = (r() - 0.5) * 0.1; grp.add(p1); // (the NOTICE bills are at -0.42 w and 0.12 w)
-  if (r() < 0.6) { const p2 = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.2), posterMat((pn + 3) % 8)); p2.position.set(-w / 2 + 0.2 + (r() < 0.5 ? 0 : 3) * (w - 0.4) / 3, 1.55, d / 2 + pd + 0.185); p2.rotation.z = (r() - 0.5) * 0.08; grp.add(p2); } // (a handbill on a porch post)
+  const pn = r() * 8 | 0, p1 = brkTag(new THREE.Mesh(new THREE.PlaneGeometry(0.36, 0.5), posterMat(pn)), "poster"); p1.position.set(-w * 0.12, 1.5 + r() * 0.2, front - 0.005); p1.rotation.z = (r() - 0.5) * 0.1; grp.add(p1); // (the NOTICE bills are at -0.42 w and 0.12 w)
+  if (r() < 0.6) { const p2 = brkTag(new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.2), posterMat((pn + 3) % 8)), "poster"); p2.position.set(-w / 2 + 0.2 + (r() < 0.5 ? 0 : 3) * (w - 0.4) / 3, 1.55, d / 2 + pd + 0.185); p2.rotation.z = (r() - 0.5) * 0.08; grp.add(p2); } // (a handbill on a porch post)
 }
 
 // ---- the street's litter: instanced, a handful of draw calls ----

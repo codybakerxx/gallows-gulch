@@ -21,7 +21,7 @@ function prepHorse(gltf) {
     const M = new THREE.Matrix4().makeScale(s, s, s).premultiply(new THREE.Matrix4().makeTranslation(0, -bb.min.y * s, 0)), P = g.attributes.position, v = new THREE.Vector3();
     const isTail = q => q.z < -1.27 && q.y > 1.15; let dockI = 0, dBest = 1e9;
     for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(M); if (isTail(v)) continue; const d = v.distanceToSquared(_v1.set(0, 1.62, -1.18)); if (d < dBest) { dBest = d; dockI = i; } }
-    foldTail(g, M, isTail, dockI); g.computeVertexNormals(); morphNormals(g); HORSE.geo = g; HORSE.M = M; HORSE.s = s; horseAux(g, M); prepHorseRig(g, M); }
+    foldTail(g, M, isTail, dockI); g.computeVertexNormals(); morphNormals(g); HORSE.geo = g; HORSE.M = M; HORSE.s = s; horseAux(g, M); prepHorseRig(g, M); horseStandPrep(); } // (and a horse that stands still, for the town's horses: 10b, 12n)
   mesh.geometry = g; mesh.updateMorphTargets();
   // a bay: a warm brown coat with black points, a soft sheen and hair you can see up close (10b)
   const m = horseCoatMat(0x6a3f24, { points: 1, pointCol: 0x0d0a08 });

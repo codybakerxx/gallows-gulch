@@ -2,7 +2,7 @@
 // When he hangs, a sword leaning on a leg of the platform glints, and after four seconds the GAME OVER sign comes up; until you start
 // another round it can still be taken up. Tap it and he's cut down, and you are him: the seven who came to watch him die (six townsfolk and
 // the executioner) draw on you, and two more come up on the roofs behind the false fronts of the sheriff's office and the general store.
-// Six in the gun and one reload (GUN: twelve rounds for the nine of them), and the reload is automatic: the moment the cylinder's empty
+// Eight in the gun and one reload (SIEGE_ROUNDS: sixteen rounds for the nine of them; v37), and the reload is automatic: the moment the cylinder's empty
 // it's open and refilling, and you can't fire till it's done. Every shot spends one, hit or miss. Run dry with the reload spent and any
 // of them still standing and they know it (siegeDoomed): they take turns shooting you, a heart a shot, cover or no cover. Five hearts.
 // You stay down behind cover except while you hold the left half of the pad (Aim): then you rise and drag to aim, and the right half
@@ -14,14 +14,16 @@
 // and a banner says how many you've got left.
 // your revolver and your hearts: the same in the shootout and in the getaway (12g), and drawn the same way in the top bar (gunHud)
 const GUN = { rounds: 6, reloads: 1, reload: 1.6, hearts: 5 }; // (rounds in the cylinder; reloads you get, each automatic when it's empty; seconds a reload takes)
-const SIEGE_CFG = { window: 4.0, bullets: GUN.rounds, health: GUN.hearts, grace: 2.5, telegraph: 0.3, gap: [1.8, 3.0], hitUp: 0.5, hitRun: 0.3, react: 0.3,
+const SIEGE_ROUNDS = 8; // (v37: the town shootout's revolver holds eight; the getaway's still six)
+const SIEGE_CFG = { window: 4.0, bullets: SIEGE_ROUNDS, health: GUN.hearts, grace: 2.5, telegraph: 0.3, gap: [1.8, 3.0], hitUp: 0.5, hitRun: 0.3, react: 0.3,
   speed: [3.0, 3.7], hold: [0.8, 1.9], // how fast they dash between their spots (m/s), and how long they hold each one
-  eye: 1.56, crouchEye: 0.72, sens: 0.0042, yawLim: 1.2, pitchLo: -1.0, pitchHi: 0.5, fireCool: 0.4, runSpeed: 4.2,
+  eye: 1.56, crouchEye: 0.72, sens: 0.0042, yawLim: 9, pitchLo: -1.45, pitchHi: 1.45, // (v37: all the way round, and from your boots to straight up)
+  fireCool: 0.4, runSpeed: 4.2,
   doom: [1.3, 0.85], // out of bullets: the first of them takes aim this long after your last shot, and the next every 0.85 s after
   tauntGap: 7, hideTaunt: 8, // at least 7 s between taunts; 8 s down behind cover and they call you out
   offAim: 0.5, // a man taking aim from outside your view takes this much longer about it: the red arc gives you the time to get down
   roofSpeed: 1.5, duck: -1.15 }; // the men on the roofs: how fast they move bent double behind the false front, and how far down that puts them
-const SIEGE = { on: false, phase: null, winLeft: 0, bullets: GUN.rounds, reloads: GUN.reloads, reloadT: 0, health: GUN.hearts, holding: false, keyAim: false, scanT: 0, upT: 0, enemies: [], cover: 1, cv: 1, crouch: true, run: null, yaw: 0, pitch: 0,
+const SIEGE = { on: false, phase: null, winLeft: 0, bullets: SIEGE_ROUNDS, reloads: GUN.reloads, reloadT: 0, health: GUN.hearts, holding: false, keyAim: false, scanT: 0, upT: 0, enemies: [], cover: 1, cv: 1, crouch: true, run: null, yaw: 0, pitch: 0,
   recoil: 0, cool: 0, nextShot: 0, t: 0, used: {}, spawned: [], pool: [], hiddenCrowd: [], fx: [], pools: [], drops: [], occ: null, aimId: null, hurt: 0, hbT: 0,
   sword: null, vm: null, swing: -1, coughT: 0, flash: 0, flashPos: new THREE.Vector3(), tip: 0, tipNext: null, deadT: 0,
   shots: 0, downT: 0, aims: 0, said: new Set(), tauntT: 0, talkUntil: 0, wordsAt: 0, lastAt: 0, doomT: 0, doomI: 0, doomSaid: false, hitT: 0 };
@@ -48,7 +50,7 @@ const ENEMY_COVER = [["trough", 1.56, -2.28, -0.56], ["crates", -5.82, -1.68, 0.
 const SIEGE_CLIPS = ["shot0", "shot1", "shot2", "far0", "far1", "far2", "far3", "wood0", "wood1", "wood2", "wood3", "whiz0", "whiz1", "whiz2",
   "painm0", "painm1", "painm2", "painm3", "painm4", "painm5", "painm6", "painf0", "painf1", "painf2", "hurt0", "hurt1", "hurt2", "cough0", "cough1",
   "sword0", "cut0", "dry0", "cock0", "cock1", "taunt0", "taunt1", "taunt2", "taunt3", "taunt4", "taunt5", "taunt6",
-  "neck0", "crows", "flap0", "flap1", "glass0", "glass1", "glass2", "pane0", "pane1", "pane2", "tin0", "tin1", "tin2", "ric0", "ric1", "ric2", "keg0", "keg1", "keg2", "horse0", "horse1", "horse2"]; // (v35: the neck, the crows, the things to shoot: 10c, 12j; v36: a horse shot, 12l)
+  "neck0", "crows", "flap0", "flap1", "glass0", "glass1", "glass2", "pane0", "pane1", "pane2", "tin0", "tin1", "tin2", "ric0", "ric1", "ric2", "keg0", "keg1", "keg2", "horse0", "horse1", "horse2", "smash0", "smash1", "smash2"]; // (v35: the neck, the crows, the things to shoot: 10c, 12j; v36: a horse shot, 12l)
 const rnd = (a, b) => a + Math.random() * (b - a);
 // a clip from a set, never the same one twice in a siege while any are left unplayed
 function siegePick(prefix, n) { const u = SIEGE.used[prefix] || (SIEGE.used[prefix] = new Set()); if (u.size >= n) u.clear();
@@ -142,14 +144,15 @@ function buildEnemyCover(list) {
   const grp = S.props = new THREE.Group(); grp.visible = !!S.on; R.scene.add(grp);
   const add0 = R.scene.add.bind(R.scene); R.scene.add = o => grp.add(o);
   try { for (const [kind, x, z, ry] of list) { const sx = Math.cos(ry), sz = -Math.sin(ry); // (its own left-right)
-    if (kind === "trough") { const t = woodBox(1.8, 0.6, 0.56, MAT.woodDark); t.position.set(x, 0.3, z); t.rotation.y = ry; t.userData.trough = true; R.scene.add(t);
-      const w = new THREE.Mesh(new THREE.PlaneGeometry(1.64, 0.42), new THREE.MeshStandardMaterial({ color: 0x1a2226, roughness: 0.05, metalness: 0.1 }));
-      w.rotation.set(-Math.PI / 2, 0, ry); w.position.set(x, 0.605, z); w.userData.trough = true; R.scene.add(w); } // (the water just over the box's top, so it shows)
+    if (kind === "trough") { const tg = brkTag(new THREE.Group(), "trough", { hp: 6 }), t = woodBox(1.8, 0.6, 0.56, MAT.woodDark); t.position.set(x, 0.3, z); t.rotation.y = ry; t.userData.trough = true; tg.add(t);
+      const w = new THREE.Mesh(new THREE.PlaneGeometry(1.64, 0.42), S.troughWater || (S.troughWater = new THREE.MeshStandardMaterial({ color: 0x1a2226, roughness: 0.05, metalness: 0.1 })));
+      w.rotation.set(-Math.PI / 2, 0, ry); w.position.set(x, 0.605, z); w.userData.trough = true; tg.add(w); R.scene.add(tg); } // (the water just over the box's top, so it shows)
     else if (kind === "crates") { for (const [o, h, y, r] of [[-0.37, 0.72, 0.36, 0.05], [0.38, 0.72, 0.36, -0.08], [-0.3, 0.5, 0.97, 0.35]]) {
-      const b = woodBox(h, h, h, MAT.woodDark); b.position.set(x + sx * o, y, z + sz * o); b.rotation.y = ry + r; R.scene.add(b); } }
-    else for (const o of [-0.31, 0.31]) barrel(x + sx * o, z + sz * o, 1.04); } }
+      const b = brkTag(woodBox(h, h, h, MAT.woodDark), "crate", { hp: h > 0.6 ? 4 : 3 }); b.position.set(x + sx * o, y, z + sz * o); b.rotation.y = ry + r; R.scene.add(b); } }
+    else for (const o of [-0.31, 0.31]) brkTag(barrel(x + sx * o, z + sz * o, 1.04), "barrel"); } }
   finally { R.scene.add = add0; }
   grp.traverse(o => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; } });
+  if (typeof buildBreakables === "function") { buildBreakDebrisOnce(); buildBreakables(brkCollect(grp), grp); } // (they break: 12m)
 }
 // the steel catching the light: a sheen sweeps hilt to tip in 1.1 s, rests 0.8 s, sweeps again; four sparks pop at the edges at random
 function swordShine(rdt, on) {
@@ -198,8 +201,8 @@ async function startSiege() {
   const late = SIEGE.phase === "late"; // cut down after the GAME OVER sign came up: the round he lost isn't held against your streak
   if (late && STATE.streakLost != null) { STATE.streak = STATE.streakLost; savePrefs(); } swordShine(0, false);
   bellReset(); // (the bell's mark is for this shootout only: 12f)
-  const S = SIEGE; S.on = true; S.phase = "cut"; S.sword.glint.visible = false; S.t = 0; S.used = {}; showSiegeUI("cut"); for (const C of S.covers) C.grp.visible = true; S.props.visible = true; resetTargets(); showTargets(true); crowsGather(); resetLaser(); horseHurry();
-  S.bullets = GUN.rounds; S.reloads = GUN.reloads; S.reloadT = 0; S.health = GUN.hearts; gunHud.key = null; S.hurt = 0; S.deadT = 0; S.cool = 0; S.recoil = 0; S.holding = S.keyAim = false; S.aimId = null; S.scanT = 0; S.upT = 0; S.vm.kick = 0;
+  const S = SIEGE; S.on = true; S.phase = "cut"; S.sword.glint.visible = false; S.t = 0; S.used = {}; showSiegeUI("cut"); for (const C of S.covers) C.grp.visible = true; S.props.visible = true; resetTargets(); showTargets(true); crowsGather(); resetLaser(); horseHurry(); breakReset(); // (all of it whole: 12m)
+  S.bullets = SIEGE_ROUNDS; S.reloads = GUN.reloads; S.reloadT = 0; S.health = GUN.hearts; gunHud.key = null; S.hurt = 0; S.deadT = 0; S.cool = 0; S.recoil = 0; S.holding = S.keyAim = false; S.aimId = null; S.scanT = 0; S.upT = 0; S.vm.kick = 0;
   S.shots = 0; S.downT = 0; S.aims = 0; S.said.clear(); S.tauntT = 0; S.talkUntil = 0; S.wordsAt = S.lastAt = 0; S.doomT = S.doomI = 0; S.doomSaid = false; S.hitT = 0;
   $("doomMsg").hidden = $("hitMsg").hidden = true;
   stopBodyPlay(); STATE.locked = true; STATE.ts = 1; SLOW.t = 99; $("skip").hidden = true; showHintBox(false); $("sign").hidden = true;
@@ -423,7 +426,7 @@ function sceneryRay(ro, rd, far) {
     const shown = o => { for (let q = o; q; q = q.parent) if (!q.visible) return false; return true; };
     S.occ = []; R.scene.traverse(o => { if (o.isMesh && !o.isSkinnedMesh && !o.isInstancedMesh && !o.morphTargetInfluences && !skip.has(o) && shown(o) && o.geometry && !(o.material && (o.material.transparent || o.material.isShaderMaterial || o.material.side === THREE.BackSide)) && !o.userData.dyn) S.occ.push(o); }); } // (not the sky)
   const rc = S.rc || (S.rc = new THREE.Raycaster()); rc.set(ro, rd); rc.far = far; rc.near = 0.05;
-  const h = rc.intersectObjects(S.occ, false); return h.length ? h[0] : null;
+  const h = rc.intersectObjects(S.occ, false); for (const q of h) if (brkHitAlive(q)) return q; return null; // (past anything shot to pieces: 12m)
 }
 function fireTap() {
   const S = SIEGE; if (S.phase !== "fight" && S.phase !== "doomed" && S.phase !== "cleared") return;
@@ -662,9 +665,10 @@ function nudgeAim() { // Fire pressed while you're down: show where to press fir
 }
 function aimDown(e) { const S = SIEGE; if (!S.on) return; S.aimId = e.pointerId; S.aimX = e.clientX; S.aimY = e.clientY; peek(true); $("padAim").classList.add("on"); try { e.currentTarget.setPointerCapture(e.pointerId); } catch (er) {} e.preventDefault(); }
 function aimMove(e) { const S = SIEGE; if (e.pointerId !== S.aimId || (S.phase !== "fight" && S.phase !== "doomed" && S.phase !== "cleared")) return;
-  const k = SIEGE_CFG.sens * (CAM.fov / 52); S.yaw -= (e.clientX - S.aimX) * k; S.pitch -= (e.clientY - S.aimY) * k; S.aimX = e.clientX; S.aimY = e.clientY;
-  const C = S.covers[S.cover]; let d = ((S.yaw - C.yaw0 + Math.PI) % TAU + TAU) % TAU - Math.PI; d = clamp(d, -SIEGE_CFG.yawLim, SIEGE_CFG.yawLim); S.yaw = C.yaw0 + d;
-  S.pitch = clamp(S.pitch, SIEGE_CFG.pitchLo, SIEGE_CFG.pitchHi); e.preventDefault(); }
+  siegeTurn(e.clientX - S.aimX, e.clientY - S.aimY); S.aimX = e.clientX; S.aimY = e.clientY; e.preventDefault(); }
+// a drag turns the view: slow drags finely, a quick flick a long way (v37: all the way round, so a thumb on the pad can turn you to face behind)
+function siegeTurn(dx, dy) { const S = SIEGE, k = SIEGE_CFG.sens * (CAM.fov / 52) * (1 + Math.min(2.5, Math.hypot(dx, dy) / 14));
+  S.yaw -= dx * k; S.pitch = clamp(S.pitch - dy * k, SIEGE_CFG.pitchLo, SIEGE_CFG.pitchHi); }
 function aimUp(e) { if (e.pointerId === SIEGE.aimId) { SIEGE.aimId = null; peek(false); $("padAim").classList.remove("on"); } }
 function updatePlayer(rdt, dt) {
   const S = SIEGE, C = S.covers[S.cover];
@@ -677,7 +681,7 @@ function updatePlayer(rdt, dt) {
     base = R0.via ? V3().copy(R0.from).multiplyScalar((1 - e) * (1 - e)).addScaledVector(R0.via, 2 * e * (1 - e)).addScaledVector(R0.to, e * e) : V3().lerpVectors(R0.from, R0.to, e);
     base.y = lerp(S.run.from.y, 1.42, Math.min(1, S.run.t * (R0.look ? 2.2 : 3))) + Math.abs(Math.sin(S.run.t * Math.PI * 4)) * 0.05;
 
-    if (S.run.t >= 1) { const pick = S.run.pick; S.cover = S.run.to_i; S.run = null; S.cv = 0.6; if (pick) laserTake(); const C2 = S.covers[S.cover], d = ((S.yaw - C2.yaw0 + Math.PI) % TAU + TAU) % TAU - Math.PI; S.yaw = C2.yaw0 + clamp(d, -SIEGE_CFG.yawLim, SIEGE_CFG.yawLim); } }
+    if (S.run.t >= 1) { const pick = S.run.pick; S.cover = S.run.to_i; S.run = null; S.cv = 0.6; if (pick) laserTake(); } }
   if (!S.run) { S.cv += ((S.crouch ? 1 : 0) - S.cv) * Math.min(1, dt * 9); base = V3().copy(S.covers[S.cover].stand); base.y = lerp(SIEGE_CFG.eye, SIEGE_CFG.crouchEye, Ease.inOut(clamp(S.cv, 0, 1)));
     if (S.cv < 0.5) base.addScaledVector(S.covers[S.cover].side, 0.08 * (1 - S.cv)); }
   if (S.phase === "dead") { S.deadT += rdt; const k = Ease.inOut(Math.min(1, S.deadT / 0.9)); base.y = lerp(base.y, 0.32, k); }
@@ -712,7 +716,7 @@ async function siegeWin() {
 }
 function showSiegeSign(won) {
   STATE.locked = false; STATE.ts = 1; $("skip").hidden = true;
-  const t = $("signTitle"); t.textContent = won ? "YOU SURVIVED" : "GAME OVER"; t.className = won ? "" : "lose"; signAgain(won); $("signWord").textContent = STATE.word; signMeaning(STATE.word, false); // (he hanged: the word was missed)
+  const t = $("signTitle"); t.textContent = won ? "YOU SURVIVED" : "GAME OVER"; t.className = won ? "" : "lose"; signAgain(won); $("signWord").textContent = STATE.word; signMeaning(STATE.word, !!SIEGE.fromRevolver); // (he hanged: the word was missed; unless you'd won it and took up the revolver, 12p)
   const n = SIEGE.enemies.length, N = NUM_WORDS[n] || String(n);
   $("signLine").textContent = won ? `${SIEGE.shots <= n ? `${N} shots, ${N.toLowerCase()} down` : `${N} down in ${SIEGE.shots} shots`} · Streak: ${STATE.streak} · Best: ${STATE.best}` : SIEGE.loseLine || SIEGE_LINES.lose;
   $("sign").hidden = false; $("againBtn").focus({ preventScroll: true });
@@ -750,7 +754,7 @@ function showSiegeUI(mode) {
   $("pad").hidden = !pad; $("kb").classList.toggle("siege", mode !== "off"); $("hp").hidden = $("reloads").hidden = !(pad || mode === "end"); if (mode === "off") gunHud.key = null;
   $("left").hidden = mode !== "off"; $("hud").classList.toggle("siege", mode !== "off"); // in the shootout the cylinder alone shows what's loaded: no number beside it
   $("hintBtn").style.display = mode === "off" ? "" : "none"; $("siegeTip").hidden = mode !== "fight"; $("padAim").classList.remove("on", "nudge"); // (the hint button: out of the bar altogether, so the count of gunmen left has room)
-  if (mode === "fight") { $("siegeTip").textContent = SIEGE_TIP; SIEGE.tip = 5; SIEGE.tipNext = SIEGE_TIP2 = `Six in the gun, one reload · ${siegeMen()} gunmen, two on the roofs`; $("kb").classList.add("up"); }
+  if (mode === "fight") { $("siegeTip").textContent = SIEGE_TIP; SIEGE.tip = 5; SIEGE.tipNext = SIEGE_TIP2 = `Eight in the gun, one reload · ${siegeMen()} gunmen, two on the roofs`; $("kb").classList.add("up"); }
 }
 const NUM_WORDS = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve"];
 const siegeMen = () => 7 + ROOF_MEN.filter(m => WORLD.roofs.some(q => q.name === m.roof)).length; // the six townsfolk, the executioner, the men on the roofs
@@ -768,14 +772,14 @@ function heartsHud(hp) {
 }
 // the gun in the top bar, the same in the shootout and the getaway: the cylinder (gold chambers loaded; while it reloads they fill one by
 // one, reloadK 0 → 1, else -1), and beside it the spare speedloader, there while you've a reload left. Redrawn only when something shows different
-function gunHud(loaded, reloads, reloadK, hp, total = GUN.reloads) { // (total: the reloads this section started with: a speedloader for each, gold while it's still there)
-  const n = GUN.rounds, shown = reloadK >= 0 ? Math.min(n, Math.floor(reloadK * (n + 1))) : loaded, key = `${shown}|${reloads}|${reloadK >= 0}|${total}`;
+function gunHud(loaded, reloads, reloadK, hp, total = GUN.reloads, n = GUN.rounds) { // (total: the reloads this section started with: a speedloader for each, gold while it's still there; n: chambers)
+  const shown = reloadK >= 0 ? Math.min(n, Math.floor(reloadK * (n + 1))) : loaded, key = `${shown}|${reloads}|${reloadK >= 0}|${total}|${n}`, cr = n > 6 ? 8.4 : 10, cR = n > 6 ? 26.5 : 25;
   if (gunHud.key !== key) { gunHud.key = key;
     let s = `<circle r="46" fill="#3a3430" stroke="#14110f" stroke-width="3"/><circle r="40" fill="none" stroke="#5b524a" stroke-width="1.5"/><g style="transform:rotate(${-(n - shown) * 360 / n}deg)">`;
-    for (let i = 0; i < n; i++) { const a = i / n * TAU - Math.PI / 2, x = (Math.cos(a) * 25).toFixed(1), y = (Math.sin(a) * 25).toFixed(1), f = i < shown;
-      s += `<circle cx="${x}" cy="${y}" r="10" fill="${f ? "#d8a246" : "#0e0b09"}" stroke="#6b5a45" stroke-width="2"/>` + (f ? `<circle cx="${x}" cy="${y}" r="3.6" fill="#9c6f22"/>` : ""); }
+    for (let i = 0; i < n; i++) { const a = i / n * TAU - Math.PI / 2, x = (Math.cos(a) * cR).toFixed(1), y = (Math.sin(a) * cR).toFixed(1), f = i < shown;
+      s += `<circle cx="${x}" cy="${y}" r="${cr}" fill="${f ? "#d8a246" : "#0e0b09"}" stroke="#6b5a45" stroke-width="2"/>` + (f ? `<circle cx="${x}" cy="${y}" r="${(cr * 0.36).toFixed(1)}" fill="#9c6f22"/>` : ""); }
     $("cyl").innerHTML = s + `</g><circle r="7" fill="#262120"/>`;
-    const rb = $("reloads"), spare = reloads > 0, left = reloads === 1 ? "one reload left" : `${reloads} reloads left`; let d = ""; for (let i = 0; i < n; i++) { const a = i / n * TAU - Math.PI / 2; d += `<circle cx="${(12 + Math.cos(a) * 6).toFixed(1)}" cy="${(12 + Math.sin(a) * 6).toFixed(1)}" r="2.5"/>`; }
+    const rb = $("reloads"), spare = reloads > 0, left = reloads === 1 ? "one reload left" : `${reloads} reloads left`; let d = ""; for (let i = 0; i < n; i++) { const a = i / n * TAU - Math.PI / 2; d += `<circle cx="${(12 + Math.cos(a) * 6.3).toFixed(1)}" cy="${(12 + Math.sin(a) * 6.3).toFixed(1)}" r="${n > 6 ? 2 : 2.5}"/>`; }
     const px = total > 1 ? 18 : 22; rb.classList.toggle("many", total > 1);
     rb.innerHTML = Array.from({ length: Math.max(1, total) }, (_, i) => `<svg viewBox="0 0 24 24" width="${px}" height="${px}" aria-hidden="true" class="${i < reloads ? "full" : "spent"}"><circle cx="12" cy="12" r="10.5" fill="#3a3430" stroke="#14110f" stroke-width="1.5"/><g fill="${i < reloads ? "#d8a246" : "#0e0b09"}" stroke="#6b5a45" stroke-width=".8">${d}</g></svg>`).join("");
     rb.classList.toggle("used", !spare); rb.title = spare ? left[0].toUpperCase() + left.slice(1) : "No reloads left"; rb.setAttribute("aria-label", rb.title);
@@ -785,7 +789,7 @@ function gunHud(loaded, reloads, reloadK, hp, total = GUN.reloads) { // (total: 
 }
 const narrowHud = () => R.w < 460; // (a phone held upright: shorter words beside the gun and the hearts)
 function siegeHud() {
-  const S = SIEGE; if (laserHeld()) { laserHud(); heartsHud(S.health); } else gunHud(S.bullets, S.reloads, S.reloadT > 0 ? 1 - S.reloadT / GUN.reload : -1, S.health);
+  const S = SIEGE; if (laserHeld()) { laserHud(); heartsHud(S.health); } else gunHud(S.bullets, S.reloads, S.reloadT > 0 ? 1 - S.reloadT / GUN.reload : -1, S.health, GUN.reloads, SIEGE_ROUNDS);
   const n2 = S.enemies.filter(E => E.alive).length; $("meta").textContent = !S.on ? $("meta").textContent : laserHeld() ? laserMeta(n2) : S.reloadT > 0 ? (narrowHud() ? "" : "Reloading…") : narrowHud() ? `${n2} left` : `${n2} gunm${n2 === 1 ? "a" : "e"}n left`;
 }
 
@@ -807,7 +811,7 @@ function updateSiege(rdt, dt) {
   if (S.hitT > 0) { S.hitT -= rdt; if (S.hitT <= 0) $("hitMsg").hidden = true; }
   for (const a of S.roofActors) if (a.root.visible) a.update(dt); // (the crowd and the executioner are updated with the town)
   updateEnemies(dt); updateBlood(dt); siegeBodies();
-  if (S.reloadT > 0) { S.reloadT -= dt; if (S.reloadT <= 0) { S.reloadT = 0; S.bullets = GUN.rounds; Sound.clip(siegePick("cock", 2), null, 0.75, 0, 0.05); } siegeHud(); } // (the chambers fill one by one in the top bar)
+  if (S.reloadT > 0) { S.reloadT -= dt; if (S.reloadT <= 0) { S.reloadT = 0; S.bullets = SIEGE_ROUNDS; Sound.clip(siegePick("cock", 2), null, 0.75, 0, 0.05); } siegeHud(); } // (the chambers fill one by one in the top bar)
   if (S.phase === "fight" || S.phase === "doomed" || S.phase === "dead" || S.phase === "cleared") updatePlayer(rdt, dt);
   // out of bullets: a word from one of them, then they take turns, one shot every 0.85 s, each a heart, till you're down
   if (S.phase === "doomed") { S.doomT += dt;
@@ -870,8 +874,8 @@ function siegeLate(rdt) {
 function siegeLive() { return (SIEGE.on && (SIEGE.phase === "cut" || SIEGE.phase === "fight" || SIEGE.phase === "doomed" || SIEGE.phase === "cleared")) || chaseLive(); }
 // back to the start for a new round
 function resetSiege() {
-  const S = SIEGE; if (!S.sword) return; showTargets(false); resetLaser(); S.doomFirst = S.doomGap = null;
-  S.phase = null; S.sword.glint.visible = false; swordShine(0, false); S.sword.held = false; S.sword.group.visible = true; for (const C of S.covers) C.grp.visible = false; if (S.props) S.props.visible = false; S.sword.group.position.copy(S.sword.rest.p); S.sword.group.quaternion.copy(S.sword.rest.q);
+  const S = SIEGE; if (!S.sword) return; showTargets(false); resetLaser(); resetAsh(); breakReset(); /* (anyone burnt to ash whole again, the broken things whole: 12o, 12m) */ S.doomFirst = S.doomGap = null;
+  S.phase = null; S.fromRevolver = false; if (GUNPROP.gun) GUNPROP.gun.visible = true; S.sword.glint.visible = false; swordShine(0, false); S.sword.held = false; S.sword.group.visible = true; for (const C of S.covers) C.grp.visible = false; if (S.props) S.props.visible = false; S.sword.group.position.copy(S.sword.rest.p); S.sword.group.quaternion.copy(S.sword.rest.q);
   $("clearMsg").hidden = true; bellReset(); chaseReset(); // (and a getaway, if one was under way: 12g)
   if (!S.on) return; S.on = false;
   for (const E of S.enemies) { const a = E.a; a.hang = null; a.siege = false; a.pre = null; a.setIK("R", null, 0); a.setIK("L", null, 0); a.setGrip("R", 0); a.setGrip("L", 0); a.act.idle.timeScale = 1; R.scene.remove(E.gun);

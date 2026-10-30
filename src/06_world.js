@@ -385,7 +385,7 @@ function buildTown() {
     const arm = woodBox(1.6, 0.14, 0.14, MAT.woodDark); arm.position.set(x, y + 6.6, z); WORLD.town.add(arm); wp.push(V3(x - 0.6, y + 6.7, z), V3(x + 0.6, y + 6.7, z));
     if (i < 3) WORLD.farPerches.push(V3(x + (i % 2 ? 0.45 : -0.45), y + 6.67, z)); }
   { const [fx, fz] = streetPt(16.5, -10.2); buildFlag(fx, fz); }
-  bakeGroup(WORLD.town); R.scene.remove(WORLD.town);
+  bakeGroup(WORLD.town, brkSkip); for (const o of brkCollect(WORLD.town)) R.scene.attach(o); R.scene.remove(WORLD.town); // (the things on the porches that break stay whole and separate: 12m)
   for (let s = 0; s < 2; s++) { const pts = []; for (let i = 0; i < wp.length / 2 - 1; i++) { const a = wp[i * 2 + s], b = wp[i * 2 + 2 + s]; for (let k = 0; k <= 8; k++) { const t = k / 8; pts.push(V3(lerp(a.x, b.x, t), lerp(a.y, b.y, t) - Math.sin(t * Math.PI) * 0.45, lerp(a.z, b.z, t))); } }
     R.scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), wireMat)); }
 }

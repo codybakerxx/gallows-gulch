@@ -1,10 +1,11 @@
 // ---------- THE LASER (v36): the ARC-09 MK III ----------
 // A futuristic pistol, modelled in another chat from a photo of a zip-tie gun (assets/models/ARC09.glb, packed small for the game by
 // tools/pack_arc09.py). It lies on its side on the left-hand crate of the middle cover in the town shootout, down by your left hip, where
-// you'd have to look down and to the side to see it. While the revolver has rounds it's dark and won't come up. When the last bullet's
-// gone it wakes: its charge lights come up and it hums there on the crate, and the gunmen give you a little longer before they finish
-// you. Tap it (from the crates; from the other cover a tap runs you over to it) and you take it up. Hold Fire and it throws a blue beam
-// with a hum: a man the beam touches goes down in a moment, a crow or a horse comes out as meat (12l); it scorches what it touches.
+// you'd have to look down and to the side to see it. It can be taken up at any time (v37; in v36 only once the revolver was empty): tap
+// it (from the crates; from the other cover a tap runs you over to it). If the revolver runs dry while it's still there, it wakes: its
+// charge lights come up and it hums there on the crate, and the gunmen give you a little longer before they finish you. Hold Fire and
+// it throws a blue beam with a hum: a man the beam touches burns to ash (12o), a crow or a horse comes out as meat (12l); it scorches
+// what it touches and breaks what it's held on (12m).
 // It holds 20 s of firing. When that's spent it takes 7 s to charge itself again. It goes back on the crate for the next shootout.
 const LASER_CFG = { charge: 20, recharge: 7, kill: 0.08, envGap: 0.28, scorchGap: 0.05, hold: 0.8 };
 const LASER = { ready: false, geo: null, mat: null, e0: 3, crate: null, vm: null, state: "crate", lift: null, charge: LASER_CFG.charge, rechargeT: 0, hold: false, firing: false,
@@ -20,7 +21,7 @@ function prepLaser(gltf) {
       for (let i = 0; i < n; i++) { arr[i * it] = a.getX(i); arr[i * it + 1] = a.getY(i); if (it > 2) arr[i * it + 2] = a.getZ(i); } g.setAttribute(nm, new THREE.BufferAttribute(arr, it)); }
     g.setIndex(new THREE.BufferAttribute(new Uint32Array(src.index.array), 1)); g.applyMatrix4(o.matrixWorld); parts.push({ geo: g }); });
   const geo = mergeGeos(parts); geo.clearGroups(); geo.setAttribute("uv2", geo.attributes.uv); geo.translate(-0.05, 0, 0); geo.rotateY(-Math.PI / 2); geo.computeBoundingSphere();
-  mat.side = THREE.DoubleSide; LASER.e0 = mat.emissiveIntensity || 3; mat.emissiveIntensity = LASER.e0 * 0.12; LASER.geo = geo; LASER.mat = mat;
+  mat.side = THREE.DoubleSide; LASER.e0 = mat.emissiveIntensity || 3; mat.emissiveIntensity = LASER.e0 * 0.3; /* (its lights faintly on: it can be taken up any time) */ LASER.geo = geo; LASER.mat = mat;
   // on the crate: on its side, the barrel toward the street and off to your left
   const crate = LASER.crate = new THREE.Mesh(geo, mat); crate.castShadow = true; crate.receiveShadow = true; crate.userData.dyn = true; crate.visible = false; R.scene.add(crate);
   { const C = SIEGE.covers[1], [cx, cz] = COVERS[1].at, dir = C.side.clone().multiplyScalar(-0.75).addScaledVector(C.away, -0.55).normalize();
@@ -65,10 +66,10 @@ function setBeam(a, b, k) {
 // ---- states ----
 const laserHeld = () => LASER.ready && (LASER.state === "held" || LASER.state === "lift");
 const revolverSpent = () => { const S = SIEGE; return S.bullets <= 0 && S.reloads <= 0 && S.reloadT <= 0; };
-const laserAvail = () => LASER.ready && LASER.state === "crate" && SIEGE.on && revolverSpent();
+const laserAvail = () => LASER.ready && LASER.state === "crate" && SIEGE.on; // (v37: any time)
 function resetLaser() {
   const L = LASER; if (!L.ready) return; L.state = "crate"; L.lift = null; L.charge = LASER_CFG.charge; L.rechargeT = 0; L.hold = L.firing = false; L.awake = false; L.hudKey = "";
-  L.vm.visible = false; L.crate.visible = false; L.beam.visible = false; gunHud.key = null; const rb = $("reloads"); if (rb) rb.style.display = ""; L.glowA.visible = L.glowB.visible = false; L.mat.emissiveIntensity = L.e0 * 0.12;
+  L.vm.visible = false; L.crate.visible = false; L.beam.visible = false; gunHud.key = null; const rb = $("reloads"); if (rb) rb.style.display = ""; L.glowA.visible = L.glowB.visible = false; L.mat.emissiveIntensity = L.e0 * 0.3;
   Sound.laser(false); Sound.laserWake(null, false); Sound.laserCharge(false);
   L.scorch.used = L.scorch.next = 0; L.scorch.im.count = 0; L.scorch.im.visible = false; L.sparks.life.fill(0); L.sparks.pts.visible = false;
 }
@@ -80,7 +81,6 @@ function laserTap(e) {
   const r = $("scene").getBoundingClientRect(), p = _l1.copy(L.crate.position).project(R.camera); if (p.z > 1 || Math.abs(p.x) > 1.05 || Math.abs(p.y) > 1.05) return false;
   const sx = r.left + (p.x * 0.5 + 0.5) * r.width, sy = r.top + (-p.y * 0.5 + 0.5) * r.height, rad = Math.max(46, 0.13 / Math.max(0.3, L.crate.position.distanceTo(R.camera.position)) * r.height);
   if (Math.hypot(e.clientX - sx, e.clientY - sy) > rad) return false;
-  if (!revolverSpent()) { const t = $("siegeTip"); t.textContent = "Not while there's a round left in the revolver"; t.hidden = false; S.tip = Math.max(S.tip, 2); return true; }
   if (S.run) return true;
   if (S.cover !== 1) { const C = S.covers[1]; S.run = { from: CAM.pos.clone(), to: C.stand.clone(), t: 0, dur: Math.max(0.5, CAM.pos.distanceTo(C.stand) / SIEGE_CFG.runSpeed), to_i: 1, pick: true }; S.crouch = true; return true; }
   laserTake(); return true;
@@ -122,13 +122,14 @@ function laserBeam(dt) {
   L.bellT -= dt; L.envT -= dt; L.scorchT -= dt; L.smokeT -= dt;
   for (const E of S.enemies) if (E.alive && (!man || man.E !== E)) E.laserT = 0;
   if (first) { const k = first[1];
-    if (k === "man") { const E = man.E; E.laserT = (E.laserT || 0) + dt; if (E.laserT >= LASER_CFG.kill) { shotHits(E, man.part, at, rd); Sound.sizzle(at, 0.8); if (!S.enemies.some(q => q.alive) && (S.phase === "fight" || S.phase === "doomed")) siegeWin(); } }
+    if (k === "man") { const E = man.E; E.laserT = (E.laserT || 0) + dt; if (E.laserT >= LASER_CFG.kill) { ashHit(E, at, rd); if (!S.enemies.some(q => q.alive) && (S.phase === "fight" || S.phase === "doomed")) siegeWin(); } }
     else if (k === "crow") crowLaser(cr.c, at, rd);
     else if (k === "horse") horseLaser(hr.H, at, rd);
     else if (k === "tgt") { const T = tg.T; if (tg.weed || (T.laserT || 0) <= L.t) { if (T) T.laserT = L.t + 0.3; targetShot(tg, at, rd); } }
     else if (k === "bell") { if (L.bellT <= 0) { L.bellT = 0.7; bellShot(at, rd); } }
     else { const n = env.face ? _l2.copy(env.face.normal).transformDirection(env.object.matrixWorld) : _l2.set(0, 1, 0); if (n.dot(rd) > 0) n.negate();
-      if (L.scorchT <= 0 && !(env.object.material === WORLD.winMat)) { L.scorchT = LASER_CFG.scorchGap; decal(L.scorch, at, n, rnd(0.7, 1.2)); L.scorch.im.visible = true; }
+      const bk = brkFromHit(env); if (bk) brkHit(bk, dt * 4, at, rd, true); // (a thing that breaks burns through in under a second: 12m)
+      if (L.scorchT <= 0 && !(env.object.material === WORLD.winMat) && (!bk || bk.alive)) { L.scorchT = LASER_CFG.scorchGap; const di = decal(L.scorch, at, n, rnd(0.7, 1.2)); if (bk) bk.decals.push([L.scorch, di]); L.scorch.im.visible = true; }
       if (L.envT <= 0) { L.envT = LASER_CFG.envGap; envShot(env, rd, true); } } }
   // sparks and smoke where it strikes; the beam itself and its glow
   for (let i = 0; i < 3; i++) emit(L.sparks, at, _l3.copy(rd).multiplyScalar(-rnd(0.6, 2.2)).add(_l4.set(rnd(-1.4, 1.4), rnd(-0.3, 1.8), rnd(-1.4, 1.4))), rnd(0.12, 0.35));

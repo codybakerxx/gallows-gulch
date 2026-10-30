@@ -25,12 +25,12 @@ const SLOW = { t: 99, hold: 0.32, ease: 0.7, k: 0.25 };
 function slowK(rdt) { SLOW.t += rdt; const S = SLOW; return S.t < S.hold ? S.k : S.t < S.hold + S.ease ? lerp(S.k, 1, Ease.inOut((S.t - S.hold) / S.ease)) : 1; }
 function shotSet() { return R.w / R.h < 1 ? SHOTS.P : SHOTS.L; }
 function shot(name, dur = 1.2) {
-  const S = shotSet()[name]; if (!S) return; CAM.name = name; CAM.follow = null; // (a camera someone else drives, like the getaway's: a resize leaves it alone)
+  const S = shotSet()[name]; if (!S) return; CAM.name = name; CAM.follow = null; lookHome(); // (looking round: back to the action, 12p) // (a camera someone else drives, like the getaway's: a resize leaves it alone)
   if (dur <= 0) { CAM.pos.set(...S[0]); CAM.tgt.set(...S[1]); CAM.fov = S[2]; CAM.to = null; return; }
   CAM.from = { pos: CAM.pos.clone(), tgt: CAM.tgt.clone(), fov: CAM.fov }; CAM.to = { pos: V3(...S[0]), tgt: V3(...S[1]), fov: S[2] }; CAM.t = 0; CAM.dur = dur;
 }
 // a shot that tracks a moving subject; fn() returns { pos, tgt, fov }
-function follow(name, fn, dur = 1.0) { CAM.name = name; CAM.to = null; CAM.follow = fn; CAM.from = { pos: CAM.pos.clone(), tgt: CAM.tgt.clone(), fov: CAM.fov }; CAM.t = 0; CAM.dur = dur; }
+function follow(name, fn, dur = 1.0) { lookHome(); CAM.name = name; CAM.to = null; CAM.follow = fn; CAM.from = { pos: CAM.pos.clone(), tgt: CAM.tgt.clone(), fov: CAM.fov }; CAM.t = 0; CAM.dur = dur; }
 function faceShot() { // close-up on the condemned man's face, a little off his right cheek
   const B = MAN.ch.bones, h = B.Head.getWorldPosition(new THREE.Vector3()), f = V3(Math.sin(MAN.yaw), 0, Math.cos(MAN.yaw)), r = V3(-f.z, 0, f.x), P = R.w / R.h < 1;
   return { pos: h.clone().addScaledVector(f, P ? 0.78 : 0.74).addScaledVector(r, 0.24).add(V3(0, 0.02, 0)), tgt: h.clone().add(V3(0, P ? 0.0 : 0.03, 0)).addScaledVector(r, 0.02), fov: P ? 36 : 27 };
@@ -50,7 +50,7 @@ function updateCamera(rdt, t, sdt) { // sdt: scene time, so camera moves keep pa
   if (CAM.flash > 0) { CAM.flash = Math.max(0, CAM.flash - rdt * 0.9); R.grade.uniforms.flash.value = CAM.flash * CAM.flash / 0.38; }
   if (CAM.kv || CAM.ky) { const h = Math.min(rdt, 1 / 30); CAM.kv += (-CAM.ky * 110 - CAM.kv * 10) * h; CAM.ky += CAM.kv * h; if (Math.abs(CAM.ky) < 2e-4 && Math.abs(CAM.kv) < 2e-3) CAM.ky = CAM.kv = 0; } // a jolt: dips and springs back
   R.camera.position.set(CAM.pos.x + Math.sin(t * 0.7) * n + (Math.random() - 0.5) * s, CAM.pos.y + CAM.ky + Math.sin(t * 0.9 + 1) * n * 0.7 + (Math.random() - 0.5) * s, CAM.pos.z + Math.sin(t * 0.5 + 2) * n);
-  R.camera.lookAt(CAM.tgt.x + Math.sin(t * 0.6) * n, CAM.tgt.y + CAM.ky * 1.6 + Math.sin(t * 0.8) * n * 0.5, CAM.tgt.z);
+  R.camera.lookAt(CAM.tgt.x + Math.sin(t * 0.6) * n, CAM.tgt.y + CAM.ky * 1.6 + Math.sin(t * 0.8) * n * 0.5, CAM.tgt.z); lookApply(rdt); // (and turned as far as you've dragged: 12p)
   if (Math.abs(R.camera.fov - CAM.fov) > 0.01) { R.camera.fov = CAM.fov; R.camera.updateProjectionMatrix(); }
   // soft key light for face close-ups (the sun is behind him)
   const want = CAM.name === "face" || CAM.name === "noose" || CAM.name === "hang" ? 1 : 0; CAM.key += (want - CAM.key) * Math.min(1, dt * 3);
