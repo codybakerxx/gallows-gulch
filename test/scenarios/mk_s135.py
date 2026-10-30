@@ -27,7 +27,7 @@ E("""(async () => { STATE.misses = STATE.maxWrong - 1; STATE.hintShown = true; M
   const miss = [...'QZXJVKWYFBPGMHUDCLNRSTOIEA'].filter(c => !STATE.word.includes(c) && !STATE.guessed.has(c)); __snd.length = 0; guess(miss[0]);
   await __go(3000, () => MAN.hang && MAN.hang.caught); const tc = performance.now() / 1000; await __go(90);
   const h0 = (__snd.find(e => e[1] === 'hush') || [tc - 1.5])[0], calling = Sound.crowsCalling;
-  const nearE = __snd.filter(e => e[0] >= h0 && e[0] < tc + 1.5), near = nearE.map(e => e[1] + (e[2] ? ':' + e[2] : '') + (e[3] ? ' (hushed)' : '')), snap = near.includes('clip:neck0');
+  const nearE = __snd.filter(e => e[0] >= h0 && e[0] < tc + 1.5), near = nearE.map(e => e[1] + (e[2] ? ':' + e[2] : '') + (e[3] && /flap|crowCall|caw/.test(e[1]) ? ' (hushed)' : '')), snap = near.includes('clip:neck0');
   const bad = nearE.filter(e => /glint|bell/.test(e[1]) || (/flap|crowCall|caw/.test(e[1]) && !e[3])).map(e => e[1]); // (a crow's call or wings asked for while Sound.hush is on make no sound)
   return __check('the snap', snap && !bad.length && !calling, { near, bad, calling }); })()""")
 E("""(async () => { SIEGE_CFG.hitUp = 0; SIEGE_CFG.hitRun = 0; const iv = setInterval(() => { if (!STATE.trap && STATE.locked) STATE.ts = 6; }, 10); await __go(3000, () => SIEGE.phase === 'window'); clearInterval(iv); STATE.ts = 1; await __go(4);
