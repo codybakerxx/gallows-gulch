@@ -56,13 +56,13 @@ function prepBirds(gltf) {
     mesh.material = new THREE.MeshStandardMaterial({ color: 0x141110, roughness: 0.9 }); mesh.frustumCulled = false; mesh.castShadow = true;
     scn.scale.setScalar(1.9 / span); const grp = new THREE.Group(); grp.add(scn); R.scene.add(grp);
     const mixer = new THREE.AnimationMixer(scn); const act = mixer.clipAction(gltf.animations[0]); act.play(); act.timeScale = 0.55; act.time = i * 0.4;
-    LIFE.birds.push({ grp, mixer, r: 16 + i * 9, h: 26 + i * 7, a: i * 2.4, w: (0.11 - i * 0.03) * (i ? -1 : 1), caw: 6 + i * 5 });
+    LIFE.birds.push({ grp, mixer, r: 16 + i * 9, h: 26 + i * 7, a: i * 2.4, w: (0.11 - i * 0.03) * (i ? -1 : 1), caw: 20 + i * 25 });
   }
 }
 function updateBirds(dt) {
   for (const b of LIFE.birds) { b.a += b.w * dt; const x = LAY.plat.x + Math.cos(b.a) * b.r, z = LAY.plat.z + Math.sin(b.a) * b.r, y = b.h + Math.sin(b.a * 2) * 1.5;
     b.grp.position.set(x, y, z); b.grp.rotation.set(0, -b.a + (b.w > 0 ? 0 : Math.PI), (b.w > 0 ? -0.35 : 0.35));
-    b.mixer.update(dt * (0.6 + 0.4 * Math.max(0, Math.sin(b.a * 3)))); b.caw -= dt; if (b.caw < 0) { b.caw = 9 + Math.random() * 14; Sound.crowCall(b.grp.position.clone(), { v: b.v || (b.v = Sound.crowVoice()), ref: 14, far: 0.12, gain: 0.6 }); } }
+    b.mixer.update(dt * (0.6 + 0.4 * Math.max(0, Math.sin(b.a * 3)))); b.caw -= dt; if (b.caw < 0) { b.caw = 40 + Math.random() * 40; Sound.crowCall(b.grp.position.clone(), { v: b.v || (b.v = Sound.crowVoice()), ref: 14, far: 0.12, gain: 0.6 }); } }
 }
 function buildWeed() {
   const r = rng(12), parts = [];

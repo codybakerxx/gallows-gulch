@@ -51,7 +51,7 @@ function makeCrow(G, M, i) {
     const m = new THREE.Mesh(G.wingG, M.wing); m.castShadow = true; p.add(m); return p; });
   root.traverse(o => { if (o.isMesh) { o.receiveShadow = true; o.userData.crow = i; o.userData.dyn = true; } }); root.visible = false; R.scene.add(root); // (dyn: not scenery a shot stops at, 12d sceneryRay; crowRay finds them)
   return { i, root, body, head, wings, s, voice: Sound.crowVoice(), state: "away", t: 3 + i * 4 + Math.random() * 6, pos: new THREE.Vector3(), yaw: 0, yawT: 0,
-    perch: null, u: 0, hop: null, act: null, idle: 1, cawT: 6 + Math.random() * 20, since: 0, scareT: 0,
+    perch: null, u: 0, hop: null, act: null, idle: 1, cawT: 10 + Math.random() * 40, since: 0, scareT: 0,
     bodyPitch: 0.42, bodyPitchT: 0.42, headYaw: 0, headYawT: 0, headPitch: -0.3, headPitchT: -0.3, spread: 0, spreadT: 0, flap: 0, flapPh: Math.random() * TAU, wingL: 0, wingR: 0,
     fl: null, v: new THREE.Vector3(), w: new THREE.Vector3(), q: new THREE.Quaternion(), rest: false, bounced: 0, dripT: 0, deadT: 0 };
 }
@@ -130,7 +130,7 @@ function crowReturn(c) {
   const sp = crowPickPerch(c); if (!sp) { c.t = 4 + Math.random() * 6; return; }
   const a = Math.atan2(sp.p.z - LAY.plat.z, sp.p.x - LAY.plat.x) + (Math.random() - 0.5) * 2.2;
   c.pos.set(LAY.plat.x + Math.cos(a) * 60, 14 + Math.random() * 10, LAY.plat.z + Math.sin(a) * 60); crowFlyTo(c, sp, { sound: false }); c.fl.dur *= 0.8;
-  if (Math.random() < 0.5) crowCaw(c, false, 2);
+  if (Math.random() < 0.25) crowCaw(c, false, 1);
 }
 function crowFly(c, dt) {
   const F = c.fl; F.t += dt; const s = Math.min(1, F.t / F.dur), e = s * s * (3 - 2 * s), m = 1 - e;
@@ -170,7 +170,7 @@ function crowPerch(c, dt) {
     else if (r < 0.9) c.act = { kind: "preen", t: 0, dur: 1 + Math.random() * 1.2, side: Math.random() < 0.5 ? -1 : 1 };
     else if (r < 0.93) c.act = { kind: "stretch", t: 0, dur: 0.9, side: Math.random() < 0.5 ? -1 : 1 };
     else if (c.since > 10 && Math.random() < 0.5) crowFlyTo(c, Math.random() < 0.12 ? null : crowPickPerch(c)); }
-  if (c.cawT <= 0 && !c.act) { c.cawT = 14 + Math.random() * 36; crowCaw(c); }
+  if (c.cawT <= 0 && !c.act) { c.cawT = 25 + Math.random() * 45; crowCaw(c); } // (v38: each bird calls less often, and 03 crowCall keeps the town quiet of crows between calls)
 }
 // a hop: along the perch (or anywhere about on the ground), turning to face the way it goes or right round
 function crowHop(c, dist, away, turn) {
@@ -184,13 +184,14 @@ function crowHop(c, dist, away, turn) {
   c.hop = { from, to, t: 0, dur: turn ? 0.18 : 0.2 + dist * 0.25, h: turn ? 0.03 : 0.05 + dist * 0.12, wings: !turn && (dist > 0.25 || Math.random() < 0.3) };
 }
 // a call; another bird may answer it (depth: how far down a chain of answers this is)
-function crowCaw(c, alarm = false, depth = 0) {
+function crowCaw(c, alarm = false, depth = 0, answer = false) {
+  if (!answer && !Sound.crowFree(alarm)) return; // (another crow was heard a moment ago: this one keeps quiet, beak and all)
   const n = alarm ? 3 + (Math.random() * 3 | 0) : [1, 2, 2, 3, 3, 3, 4, 4][Math.random() * 8 | 0];
   if (c.state === "perch" && !c.hop) c.act = { kind: "caw", t: 0, dur: n * c.voice.period * (alarm ? 0.72 : 1) + 0.2, per: c.voice.period * (alarm ? 0.72 : 1), n };
-  Sound.crowCall(c.pos.clone(), { v: c.voice, n, alarm, gain: 0.6 }).then(len => {
-    if (depth >= 2 || Math.random() > (alarm ? 0.5 : 0.42)) return;
+  Sound.crowCall(c.pos.clone(), { v: c.voice, n, alarm, gain: 0.6, answer }).then(len => {
+    if (len <= 0 || depth >= 1 || Math.random() > (alarm ? 0.2 : 0.22)) return; // (one answer at most, now and then)
     const others = CROWS.list.filter(o => o !== c && (o.state === "perch" || o.state === "fly")); if (!others.length) return;
-    const o = others[Math.random() * others.length | 0]; setTimeout(() => { if (o.state === "perch" || o.state === "fly") crowCaw(o, alarm && Math.random() < 0.5, depth + 1); }, (len + 0.25 + Math.random() * 1.2) * 1000); });
+    const o = others[Math.random() * others.length | 0]; setTimeout(() => { if (o.state === "perch" || o.state === "fly") crowCaw(o, alarm && Math.random() < 0.5, depth + 1, true); }, (len + 0.25 + Math.random() * 1.2) * 1000); });
 }
 // something loud at `at`: within r the birds flinch, call out, move to another perch or leave, the closer the likelier (k: how loud;
 // later: seconds before any of them calls out, so as not to talk over something)
@@ -202,7 +203,7 @@ function crowsStartle(at, r, k = 1, later = 0) {
     if (d < 2.5 * k || u < 0.18 * p) crowLeave(c, later > 0); // (with `later`, they go without a sound of wings too)
     else if (u < 0.5 * p) crowFlyTo(c, crowPickPerch(c, true), { fast: true, sound: !later });
     else { c.bodyPitchT = 0.1; c.spread = Math.max(c.spread, 0.5); c.headYawT = (Math.random() - 0.5) * 1.6; if (!c.hop && Math.random() < 0.6) crowHop(c, 0.15, false, Math.random() < 0.3); c.idle = 0.6; }
-    if (called < 2 && Math.random() < 0.55 * Math.min(1, p + 0.3)) { called++; setTimeout(() => { if (c.state === "perch" || c.state === "fly") crowCaw(c, true, 1); }, later * 1000 + 120 + Math.random() * 500); } }
+    if (called < 1 && Math.random() < 0.4 * Math.min(1, p + 0.3)) { called++; setTimeout(() => { if (c.state === "perch" || c.state === "fly") crowCaw(c, true, 1); }, later * 1000 + 120 + Math.random() * 500); } }
 }
 // the shootout's started: a few that had gone come back to see what the noise is
 function crowsGather() { CROWS.list.forEach((c, i) => { if (c.state === "away") c.t = Math.min(c.t, 3 + i * 2.5 + Math.random() * 3); }); }

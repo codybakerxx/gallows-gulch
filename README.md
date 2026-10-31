@@ -183,7 +183,7 @@ or **Play Again** after one ends.
 - A spoken host: 42 recorded lines, with matching subtitles, that react to every letter. Plus gunmen's taunts and
   positional sound effects.
 - A looping soundtrack that brightens as the noose gets closer. Footsteps, wind and a crowd murmur are synthesized
-  live. The crows' calls are real crows, strung into calls as the game goes.
+  live. The crows' calls are real crows, strung into calls as the game goes, with a quiet spell after each.
 - 382 vocabulary words, each with a definition written for the game.
 - Graphics tiers (Fast, Balanced, High, Ultra, or Auto). Auto starts phones on High and computers on Ultra, and steps
   down by itself if frames run long. High adds bloom, soft shadows, ambient occlusion, light shafts, volumetric light,

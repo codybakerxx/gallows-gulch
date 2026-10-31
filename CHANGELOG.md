@@ -2,6 +2,14 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v38
+- **Fewer crows.** They were heard far too often: the perched birds, the unseen ones out past the town and the
+  vultures overhead each called every few seconds between them, and every shot set some off. Now, once a crow has been
+  heard, the town is quiet of crows for 10–20 s before the next (an alarm after a shot needs 2.5–4.5 s), each bird calls
+  less often (the perched ones every 25–70 s, the unseen ones every 28–60 s, the vultures every 40–80 s), a call is
+  answered now and then by one other bird at most, and a shot or a slam sets off one alarm at most. A bird that would
+  have called while another was heard keeps its beak shut too.
+
 ## v37
 - **Look round.** In the hangman part, a drag on the picture turns your head, all the way round and up and down; the
   game turns you back each time it cuts to a new view. In the shootout you can now turn all the way round and look from

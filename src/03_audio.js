@@ -137,9 +137,16 @@ const Sound = (() => {
   // a bird's own voice: the pitch it calls at, how fast it repeats, whether it's one of the long, drawn callers, and the few caws it uses
   function crowVoice() { const long = Math.random() < 0.22, pick = []; for (let i = 0; i < 5; i++) pick.push(Math.random());
     return { rate: 0.9 + Math.random() * 0.2, period: long ? 1.2 + Math.random() * 0.3 : 0.48 + Math.random() * 0.14, long, pick, last: -1 }; }
-  // one call: returns (as a promise) how many seconds from now it ends, so another bird can answer it
+  // how often crows are heard, whoever's calling (v38: they were heard far too often): after a call, and any answer to it, the town is
+  // quiet of crows for 10–20 s before the next one; an alarm (after a shot, the bell, the trap) needs only 2.5–4.5 s, so a shootout
+  // isn't one long squawk. An answer (o.answer) comes in under the call it answers.
+  const crowLim = { next: 0, nextAlarm: 0 }, CROW_GAP = [10, 20], CROW_ALARM_GAP = [2.5, 4.5];
+  function crowFree(alarm) { return !!ctx && !hushed() && now() >= (alarm ? crowLim.nextAlarm : crowLim.next); }
+  // one call: returns (as a promise) how many seconds from now it ends, so another bird can answer it (0 or less: it wasn't heard)
   function crowCall(pos, o = {}) {
     if (!ctx || hushed()) return Promise.resolve(0);
+    if (!o.answer && !crowFree(o.alarm)) return Promise.resolve(-1);
+    { const t = now() + (o.delay || 0) + 4; crowLim.next = Math.max(crowLim.next, t); crowLim.nextAlarm = Math.max(crowLim.nextAlarm, t); } // (booked now: two birds in the same moment don't both get through)
     return crowCaws().then(C => { if (!C || !ctx) return 0;
       const v = o.v || (o.v = crowVoice()), set = v.long && C.long.length ? C.long : C.short; if (!set.length) return 0;
       const alarm = !!o.alarm, far = o.far || 0, n = o.n || (alarm ? 4 + (Math.random() * 3 | 0) : [1, 2, 2, 3, 3, 3, 4, 4, 5][Math.random() * 9 | 0]);
@@ -157,20 +164,21 @@ const Sound = (() => {
         s.start(t, off, dur); end = t + dur / rate; t += per * (0.92 + Math.random() * 0.16);
       }
       crowBank.live = crowBank.live.filter(L => L.end > now()); crowBank.live.push({ cg, end });
+      crowLim.next = Math.max(crowLim.next, end + CROW_GAP[0] + Math.random() * (CROW_GAP[1] - CROW_GAP[0])); crowLim.nextAlarm = Math.max(crowLim.nextAlarm, end + CROW_ALARM_GAP[0] + Math.random() * (CROW_ALARM_GAP[1] - CROW_ALARM_GAP[0]));
       return end - now(); });
   }
   // the crows round the town that you never see: three or four birds out past the buildings, each always from about the same way
   // and with its own voice, calling now and then and answering one another
   const crowAmb = { on: true, t: null, birds: null };
   function crowAmbient() {
-    clearTimeout(crowAmb.t); crowAmb.t = setTimeout(crowAmbient, (12 + Math.random() * 26) * 1000);
+    clearTimeout(crowAmb.t); crowAmb.t = setTimeout(crowAmbient, (28 + Math.random() * 32) * 1000);
     if (!ctx || ctx.state !== "running" || !crowAmb.on || (api.crowGate && !api.crowGate())) return;
     if (!crowAmb.birds) crowAmb.birds = Array.from({ length: 4 }, (_, i) => ({ v: crowVoice(), a: i * 1.6 + Math.random(), r: 40 + Math.random() * 50, h: 6 + Math.random() * 14 }));
     const B = crowAmb.birds, first = B[Math.random() * B.length | 0], where = b => V3(lisPos.x + Math.cos(b.a) * b.r, b.h, lisPos.z + Math.sin(b.a) * b.r);
     crowCall(where(first), { v: first.v, far: clamp((first.r - 30) / 60, 0.25, 1), gain: 0.6 }).then(len => {
-      if (Math.random() < 0.55) { const other = B.filter(b => b !== first)[Math.random() * (B.length - 1) | 0];
-        crowCall(where(other), { v: other.v, far: clamp((other.r - 30) / 60, 0.25, 1), gain: 0.6, delay: len + 0.35 + Math.random() * 1.4 }).then(l2 => {
-          if (Math.random() < 0.3) crowCall(where(first), { v: first.v, far: clamp((first.r - 30) / 60, 0.25, 1), gain: 0.55, delay: l2 + 0.3 + Math.random() * 1.2 }); }); } });
+      if (len > 0 && Math.random() < 0.35) { const other = B.filter(b => b !== first)[Math.random() * (B.length - 1) | 0];
+        crowCall(where(other), { v: other.v, far: clamp((other.r - 30) / 60, 0.25, 1), gain: 0.6, delay: len + 0.35 + Math.random() * 1.4, answer: true }).then(l2 => {
+          if (l2 > 0 && Math.random() < 0.12) crowCall(where(first), { v: first.v, far: clamp((first.r - 30) / 60, 0.25, 1), gain: 0.55, delay: l2 + 0.3 + Math.random() * 1.2, answer: true }); }); } });
   }
   // ---- ambience ----
   function startAmbience() {
@@ -304,7 +312,7 @@ const Sound = (() => {
     applause(pos) { if (!ctx) return; const t = now(), d = at(pos, 0.5, 6); for (let i = 0; i < 260; i++) { const tt = t + Math.random() * 2.8 * Math.pow(Math.random(), 0.5); noise(tt, 0.03, 0.08 + Math.random() * 0.1, "bandpass", 900 + Math.random() * 1600, 1.1, d); }
       for (let k = 0; k < 6; k++) { const tt = t + 0.3 + Math.random() * 2.2; noise(tt, 0.35, 0.05, "lowpass", 600, 0.7, d); } }, // a few whoops/stomps, no whistles
     // crows: a call from a bird at pos (o: { v: its voice from crowVoice, n caws, alarm, far 0..1, gain, ref, delay }); resolves to when it ends
-    crowCall, crowVoice, caw(pos) { return crowCall(pos, { ref: 12 }); },
+    crowCall, crowVoice, crowFree, caw(pos) { return crowCall(pos, { ref: 12 }); },
     set crowsAmbient(on) { crowAmb.on = on; }, crowGate: null,
     // wings: a crow taking off (two recordings, pitched to the bird and a little different each time)
     hush(sec) { hushUntil = Math.max(hushUntil, performance.now() / 1000 + sec); // (and any crow mid-call stops)
