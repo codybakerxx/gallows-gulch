@@ -2,9 +2,9 @@
 #   - in the hangman part a drag on the picture looks round (all the way) and the next shot the director cuts to turns you back
 #   - a revolver on a barrel, off to the side (out of the view the round ends on): it shines; taken up after the win (v39: in your hand,
 #     12q; the shot at a townsman that starts the shootout), the shootout starts with you running from it to the nearest cover, the saved
-#     man gone, eight in the gun (v39: from the start of a round too: mk_s139)
+#     man gone, a full gun (v39: from the start of a round too: mk_s139)
 #   - the shootout: you can turn all the way round (a drag on the picture, crouched or up) and look from your boots to straight up; a tap
-#     without a drag still takes cover; the revolver holds eight, and its reload is eight
+#     without a drag still takes cover; the revolver holds seven (v40; eight in v37), and its reload is the same
 #   - the laser can be taken up with rounds left in the revolver; a man in its beam burns to ash: he's gone in under two seconds and a heap
 #     of ash is left where he stood; a crow comes out as a drumstick more than twice the crow's size
 #   - the town's horses: standing on the ground, grazing ones with their heads down, a walker that moves; one shot with the revolver goes
@@ -48,7 +48,7 @@ shot("a_revolver")
 E("""(async () => { const p = GUNPROP.gun.getWorldPosition(V3()).project(R.camera), r = $('scene').getBoundingClientRect(); __ptr('pointerdown', r.left + (p.x * 0.5 + 0.5) * r.width, r.top + (-p.y * 0.5 + 0.5) * r.height);
   await __go(80, () => ARMED.on && !ARMED.lift); const armed = ARMED.on, b0 = ARMED.bullets, pick = await __armShoot(); // (v39: in your hand first; a townsman shot starts it)
   await __go(300, () => SIEGE.phase === 'fight' && !SIEGE.run); __calm(); const S = SIEGE, cyl = document.querySelectorAll('#cyl circle[r="8.4"]').length;
-  return __check('taken up: the shootout from the revolver', armed && b0 === 8 && pick && S.on && S.fromRevolver && S.phase === 'fight' && !GUNPROP.gun.visible && !MAN.root.visible && S.bullets === 7 && cyl === 8 && S.enemies.length >= 7, { armed, first: b0, shot: pick && pick.name, on: S.on, from: S.fromRevolver, phase: S.phase, cover: S.cover, bullets: S.bullets, chambers: cyl, man: MAN.root.visible, enemies: S.enemies.length }); })()""")
+  return __check('taken up: the shootout from the revolver', armed && b0 === SIEGE_ROUNDS && pick && S.on && S.fromRevolver && S.phase === 'fight' && !GUNPROP.gun.visible && !MAN.root.visible && S.bullets === SIEGE_ROUNDS - 1 && cyl === SIEGE_ROUNDS && S.enemies.length >= 7, { armed, first: b0, shot: pick && pick.name, on: S.on, from: S.fromRevolver, phase: S.phase, cover: S.cover, bullets: S.bullets, chambers: cyl, man: MAN.root.visible, enemies: S.enemies.length }); })()""")
 # ---- the shootout ----
 E("""(async () => { const S = SIEGE; SIEGE_CFG.hitUp = 0; SIEGE_CFG.hitRun = 0; S.holding = false; await __go(30, () => { __calm(); return false; }); const y0 = S.yaw;
   await __drag(-700, 0, 20); const crouchTurn = __dy(S.yaw, y0); S.holding = true; await __go(30, () => { __calm(); return false; });
@@ -57,7 +57,7 @@ E("""(async () => { const S = SIEGE; SIEGE_CFG.hitUp = 0; SIEGE_CFG.hitRun = 0; 
   return __check('the shootout: all the way round, boots to sky', Math.abs(crouchTurn) > 0.6 && Math.abs(total) > TAU && up > 1.4 && down < -1.4, { crouchTurn: +crouchTurn.toFixed(2), total: +total.toFixed(2), up: +up.toFixed(2), down: +down.toFixed(2) }); })()""")
 E("""(async () => { const S = SIEGE; S.bullets = SIEGE_ROUNDS; const b0 = S.bullets; S.yaw = S.covers[S.cover].yaw0; /* (a full cylinder: one went into the townsman) */ S.pitch = 1.3; await __go(40, () => { __calm(); return false; }); for (let i = 0; i < b0; i++) { S.cool = 0; fireTap(); await __go(2); }
   const reloading = S.reloadT > 0, spent = S.bullets === 0; await __go(200, () => { __calm(); return S.reloadT <= 0; });
-  return __check('eight in the gun, and the reload is eight', b0 === 8 && spent && reloading && S.bullets === 8 && S.reloads === 0 && /(Eight|left) in the gun/.test(SIEGE_TIP2), { first: b0, reloading, after: S.bullets, tip: SIEGE_TIP2 }); })()""")
+  return __check('a full gun (v40: seven), and the reload is the same', b0 === SIEGE_ROUNDS && spent && reloading && S.bullets === SIEGE_ROUNDS && S.reloads === 0 && /(Seven|left) in the gun/.test(SIEGE_TIP2), { first: b0, reloading, after: S.bullets, tip: SIEGE_TIP2 }); })()""")
 # the laser, with rounds still in the revolver
 E("""(async () => { const S = SIEGE, L = LASER, b = S.bullets; if (S.cover !== 1) { const C = S.covers[1]; S.run = { from: CAM.pos.clone(), to: C.stand.clone(), t: 0, dur: 0.6, to_i: 1 }; await __go(80, () => { __calm(); return !S.run; }); }
   S.holding = true; __aimPt(L.crate.position); await __go(30, () => { __calm(); __aimPt(L.crate.position); return false; });

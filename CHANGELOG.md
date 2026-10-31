@@ -2,6 +2,25 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v40
+- **Close the menu.** The menu has a red X at its top right that closes it, as well as Resume.
+- **Put the end signs away.** GAME OVER, YOU SAVED HIM, YOU SURVIVED and the getaway's results (The End, Captured)
+  each have a button to hide them. With the sign away, drag anywhere to look round: all the way round, and from your
+  boots to the sky. **Show the sign** brings it back. A touch on a hanging body still handles it, and the revolver on
+  the barrel can still be taken up.
+- **No more floating scenery at the end.** The getaway's trail curls back, and the canyon at its end reached the town:
+  with the ground cut away for the canyon, the town's buildings, props and grass were left hanging in the air over
+  the drop in the long views of the fall. Anything over the canyon is put away while it's there.
+- **Straight back to town.** Returning to the hangman from the getaway (or starting a new round from its results) no
+  longer flies the camera back across the desert, through hills and scenery; you're in town at once, fading in from
+  black. A retry of the getaway fades in too.
+- **The neck snap on time.** The sound is decoded ahead of time, so it no longer plays a beat after he reaches the end
+  of the rope (it was being decoded at that moment).
+- **Seven in the gun.** The town shootout's revolver holds seven, one fewer, and its reload is seven (14 rounds).
+- **Two strikes in the run.** The first thing you ride into, trip on or clip warns you ("One more and they've got
+  you"); the second and they have you. They don't take you back now: a shot from behind, and you go over the side
+  into the dirt while your horse runs on. The results say **Shot Down**.
+
 ## v39
 - **The revolver from the start.** The revolver on the barrel can be taken up from the first moment of a round, not
   only after a win (it shines whenever it's there for the taking). Tap it and you're standing at the barrel with it in

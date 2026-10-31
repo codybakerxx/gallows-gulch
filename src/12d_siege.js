@@ -2,7 +2,7 @@
 // When he hangs, a sword leaning on a leg of the platform glints, and after four seconds the GAME OVER sign comes up; until you start
 // another round it can still be taken up. Tap it and he's cut down, and you are him: the seven who came to watch him die (six townsfolk and
 // the executioner) draw on you, and two more come up on the roofs behind the false fronts of the sheriff's office and the general store.
-// Eight in the gun and one reload (SIEGE_ROUNDS: sixteen rounds for the nine of them; v37), and the reload is automatic: the moment the cylinder's empty
+// Seven in the gun and one reload (SIEGE_ROUNDS: fourteen rounds for the nine of them; v37 had eight, v40 seven), and the reload is automatic: the moment the cylinder's empty
 // it's open and refilling, and you can't fire till it's done. Every shot spends one, hit or miss. Run dry with the reload spent and any
 // of them still standing and they know it (siegeDoomed): they take turns shooting you, a heart a shot, cover or no cover. Five hearts.
 // You stay down behind cover except while you hold the left half of the pad (Aim): then you rise and drag to aim, and the right half
@@ -14,7 +14,7 @@
 // and a banner says how many you've got left.
 // your revolver and your hearts: the same in the shootout and in the getaway (12g), and drawn the same way in the top bar (gunHud)
 const GUN = { rounds: 6, reloads: 1, reload: 1.6, hearts: 5 }; // (rounds in the cylinder; reloads you get, each automatic when it's empty; seconds a reload takes)
-const SIEGE_ROUNDS = 8; // (v37: the town shootout's revolver holds eight; the getaway's still six)
+const SIEGE_ROUNDS = 7; // (the town shootout's revolver: eight in v37, one fewer a load in v40; the getaway's still six)
 const SIEGE_CFG = { window: 4.0, bullets: SIEGE_ROUNDS, health: GUN.hearts, grace: 2.5, telegraph: 0.3, gap: [1.8, 3.0], hitUp: 0.5, hitRun: 0.3, react: 0.3,
   speed: [3.0, 3.7], hold: [0.8, 1.9], // how fast they dash between their spots (m/s), and how long they hold each one
   eye: 1.56, crouchEye: 0.72, sens: 0.0042, yawLim: 9, pitchLo: -1.45, pitchHi: 1.45, // (v37: all the way round, and from your boots to straight up)
@@ -720,7 +720,7 @@ async function siegeWin() {
   enterCleared(); // no bell: the street is yours, gun still in hand (12f)
 }
 function showSiegeSign(won) {
-  STATE.locked = false; STATE.ts = 1; $("skip").hidden = true;
+  freeReset(); STATE.locked = false; STATE.ts = 1; $("skip").hidden = true;
   const t = $("signTitle"); t.textContent = won ? "YOU SURVIVED" : "GAME OVER"; t.className = won ? "" : "lose"; signAgain(won); $("signWord").textContent = STATE.word; signMeaning(STATE.word, !!SIEGE.fromRevolver); // (he hanged: the word was missed; unless you'd won it and took up the revolver, 12p)
   const n = SIEGE.enemies.length, N = NUM_WORDS[n] || String(n);
   $("signLine").textContent = won ? `${SIEGE.shots <= n ? `${N} shots, ${N.toLowerCase()} down` : `${N} down in ${SIEGE.shots} shots`} · Streak: ${STATE.streak} · Best: ${STATE.best}` : SIEGE.loseLine || SIEGE_LINES.lose;
@@ -760,7 +760,7 @@ function showSiegeUI(mode) {
   $("left").hidden = mode !== "off"; $("hud").classList.toggle("siege", mode !== "off"); // in the shootout the cylinder alone shows what's loaded: no number beside it
   $("hintBtn").style.display = mode === "off" ? "" : "none"; $("siegeTip").hidden = mode !== "fight"; $("padAim").classList.remove("on", "nudge"); // (the hint button: out of the bar altogether, so the count of gunmen left has room)
   if (mode === "fight") { $("siegeTip").textContent = SIEGE_TIP; SIEGE.tip = 5; const b = SIEGE.bullets, r = SIEGE.reloads; // (v39: from the barrel, with what's left in it)
-    SIEGE.tipNext = SIEGE_TIP2 = `${b >= SIEGE_ROUNDS ? "Eight in the gun" : b ? `${NUM_WORDS[b]} left in the gun` : "Nothing in the gun"}, ${r === 1 ? "one reload" : r ? `${r} reloads` : "no reload"} · ${siegeMen()} gunmen, two on the roofs`; $("kb").classList.add("up"); }
+    SIEGE.tipNext = SIEGE_TIP2 = `${b >= SIEGE_ROUNDS ? `${NUM_WORDS[SIEGE_ROUNDS]} in the gun` : b ? `${NUM_WORDS[b]} left in the gun` : "Nothing in the gun"}, ${r === 1 ? "one reload" : r ? `${r} reloads` : "no reload"} · ${siegeMen()} gunmen, two on the roofs`; $("kb").classList.add("up"); }
 }
 const NUM_WORDS = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve"];
 const siegeMen = () => 7 + ROOF_MEN.filter(m => WORLD.roofs.some(q => q.name === m.roof)).length; // the six townsfolk, the executioner, the men on the roofs

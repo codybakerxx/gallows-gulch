@@ -1,6 +1,6 @@
 # builds test/s139.json: v39.
 #   - the revolver on the barrel is there for the taking from the start of a round (before any guess), shining; a tap puts it in your
-#     hand at the barrel: the Aim | Fire pad and Put it back instead of the letters, guessing blocked, eight in the gun
+#     hand at the barrel: the Aim | Fire pad and Put it back instead of the letters, guessing blocked, a full gun (seven, v40)
 #   - a drag turns you; a shot at nothing human starts nothing (a bullet gone); Put it back and the round goes on (a guess works)
 #   - taken up again, a townsman shot: the shootout from the barrel, the hangman and the rope skipped: he's down, the condemned man gone,
 #     what's left in the gun carried over, and you run for the nearest cover, facing the street when you get there
@@ -41,16 +41,16 @@ E("""(async () => { await __go(200, () => !STATE.locked); const live = gunPropLi
 shot("a_revolver_at_start")
 E("""(async () => { const xy = __tapAt(GUNPROP.gun.localToWorld(V3(0, 0.02, 0.04))); await __go(2); const lifting = !!ARMED.lift; await __go(60, () => !ARMED.lift);
   const A = ARMED, kbHidden = getComputedStyle(document.querySelector('.krow')).visibility === 'hidden', n = STATE.guessed.size; guess('E'); guess('A'); const blocked = STATE.guessed.size === n, d = R.camera.position.distanceTo(GUNPROP.gun.getWorldPosition(V3()));
-  return __check('a tap: in your hand at the barrel', A.on && lifting && !GUNPROP.gun.visible && SIEGE.vm.gun.visible && __vis('pad') && __vis('armBack') && kbHidden && blocked && !SIEGE.on && A.bullets === 8 && d < 2 && document.querySelectorAll('#cyl circle[r="8.4"]').length === 8,
+  return __check('a tap: in your hand at the barrel', A.on && lifting && !GUNPROP.gun.visible && SIEGE.vm.gun.visible && __vis('pad') && __vis('armBack') && kbHidden && blocked && !SIEGE.on && A.bullets === SIEGE_ROUNDS && d < 2 && document.querySelectorAll('#cyl circle[r="8.4"]').length === SIEGE_ROUNDS,
     { xy, on: A.on, lifting, pad: __vis('pad'), putBack: __vis('armBack'), kbHidden, guessingBlocked: blocked, bullets: A.bullets, fromBarrel: +d.toFixed(2) }); })()""")
 shot("b_in_hand")
 E("""(async () => { const y0 = ARMED.yaw; await __drag(-300, 0); const turned = ARMED.yaw - y0; ARMED.yaw = y0; await __go(3); return __check('a drag turns you', Math.abs(turned) > 0.4, { turned: +turned.toFixed(2) }); })()""")
-E("""(async () => { const A = ARMED; A.pitch = 0.7; await __go(3); A.cool = 0; armedFire(); await __go(20); return __check('a shot in the air: no shootout, a bullet gone', !SIEGE.on && A.on && A.bullets === 7, { siege: SIEGE.on, bullets: A.bullets }); })()""")
+E("""(async () => { const A = ARMED; A.pitch = 0.7; await __go(3); A.cool = 0; armedFire(); await __go(20); return __check('a shot in the air: no shootout, a bullet gone', !SIEGE.on && A.on && A.bullets === SIEGE_ROUNDS - 1, { siege: SIEGE.on, bullets: A.bullets }); })()""")
 E("""(async () => { $('armBack').click(); await __go(80, () => !ARMED.on); const ok = !ARMED.on && GUNPROP.gun.visible && !SIEGE.vm.gun.visible && !STATE.locked && !__vis('pad') && !__vis('armBack');
   const kb = getComputedStyle(document.querySelector('.krow')).visibility !== 'hidden', n = STATE.guessed.size, c = [...'ETAOINSHRDLU'].find(q => !STATE.guessed.has(q)); guess(c); const g = STATE.guessed.size === n + 1;
   await __go(1500, () => !STATE.locked || STATE.over); return __check('Put it back: the round goes on', ok && kb && g, { ok, letters: kb, guessed: g, view: CAM.name }); })()""")
 E("""(async () => { await __go(200, () => gunPropLive()); armedStart(); await __go(60, () => !ARMED.lift); const b0 = ARMED.bullets, pick = await __armShoot(); const S = SIEGE, E = pick && S.enemies.find(q => q.a === pick);
-  return __check('a townsman shot: the shootout from the barrel', pick && S.on && S.phase === 'fight' && E && !E.alive && !ARMED.on && b0 === 7 && S.bullets === 6 && !MAN.root.visible && S.enemies.length >= 7 && !!S.run && STATE.over && !STATE.lastWon,
+  return __check('a townsman shot: the shootout from the barrel', pick && S.on && S.phase === 'fight' && E && !E.alive && !ARMED.on && b0 === SIEGE_ROUNDS - 1 && S.bullets === SIEGE_ROUNDS - 2 && !MAN.root.visible && S.enemies.length >= 7 && !!S.run && STATE.over && !STATE.lastWon,
     { shot: pick && pick.name, on: S.on, phase: S.phase, dead: E && !E.alive, carried: [b0, S.bullets], man: MAN.root.visible, enemies: S.enemies.length, running: !!S.run }); })()""")
 shot("c_townsman_shot")
 E("""(async () => { const S = SIEGE; await __go(300, () => { __calm(); return !S.run; }); const d = __dy(__yawOf(), S.covers[S.cover].yaw0);
@@ -66,7 +66,7 @@ shot("d_revolver_on_crate")
 E("""(async () => { window.__cam = null; await __go(1); return 1; })()""")
 E("""(async () => { const S = SIEGE, L = LASER; L.charge = 12.5; for (let i = 0; i < 20; i++) { __aimPt(L.rev.position); await __go(1, () => { __calm(); return false; }); }
   __tapAt(L.rev.localToWorld(V3(0, 0.02, 0.05))); await __go(2); const lifting = !!S.vm.lift; await __go(40, () => { __calm(); return false; }); const cyl = document.querySelectorAll('#cyl circle[r="8.4"]').length;
-  return __check('a tap on the revolver: swapped back', L.state === 'crate' && L.crate.visible && !L.rev.visible && lifting && !S.vm.lift && Math.abs(L.charge - 12.5) < 0.01 && !laserHeld() && cyl === 8, { state: L.state, laserOnCrate: L.crate.visible, revolver: L.rev.visible, lifting, charge: +L.charge.toFixed(2), chambers: cyl }); })()""")
+  return __check('a tap on the revolver: swapped back', L.state === 'crate' && L.crate.visible && !L.rev.visible && lifting && !S.vm.lift && Math.abs(L.charge - 12.5) < 0.01 && !laserHeld() && cyl === SIEGE_ROUNDS, { state: L.state, laserOnCrate: L.crate.visible, revolver: L.rev.visible, lifting, charge: +L.charge.toFixed(2), chambers: cyl }); })()""")
 E("""(async () => { const S = SIEGE, L = LASER; for (let i = 0; i < 10; i++) { __aimPt(L.crate.position); await __go(1, () => { __calm(); return false; }); } __tapAt(L.crate.position); await __go(40, () => { __calm(); return false; });
   return __check('and the laser again, its charge kept', L.state === 'held' && L.rev.visible && Math.abs(L.charge - 12.5) < 0.01, { state: L.state, charge: +L.charge.toFixed(2) }); })()""")
 # ---- the steak, and meat to ash ----

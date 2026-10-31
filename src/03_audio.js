@@ -59,7 +59,7 @@ const Sound = (() => {
     if (!init()) return; resume();
     if (!silentEl) { silentEl = new Audio(); silentEl.src = AUDIO + "silence.mp3"; silentEl.loop = true; silentEl.preload = "auto"; silentEl.setAttribute("playsinline", ""); silentEl.setAttribute("webkit-playsinline", ""); }
     if (!muted && silentEl.paused) silentEl.play().catch(() => {});
-    if (!unlocked) { const b = ctx.createBuffer(1, 1, 22050), s0 = ctx.createBufferSource(); s0.buffer = b; s0.connect(ctx.destination); s0.start(0); unlocked = true; }
+    if (!unlocked) { const b = ctx.createBuffer(1, 1, 22050), s0 = ctx.createBufferSource(); s0.buffer = b; s0.connect(ctx.destination); s0.start(0); unlocked = true; setTimeout(() => clipBuffer("neck0"), 400); } // (the snap decoded early: v40)
   }
   // the file is fetched at boot, but decoded only once the AudioContext exists (created inside the first tap, which iOS needs)
   function loadSong(url) {
@@ -293,6 +293,7 @@ const Sound = (() => {
       clipBuffer("neck0").then(b => { if (!ctx) return; if (b) { api.clip("neck0", n, 1.6, 0, 0.05, 1, 5); return; }
         const t = now(); noise(t, 0.045, 1.0, "highpass", 1900, 0.7, at(k, 0.05)); drum(t, 100, 45, 0.11, 0.75, at(n, 0.04, 3)); api.crack(n, 2.6, 0.05); }); },
     preloadClips,
+    prime(names) { for (const nm of names) clipBuffer(nm); }, // (fetched and decoded ahead, so the first time it plays it's on the moment: the neck, v40)
     clip(nm, pos, gain = 1, delay = 0, wet = 0.22, rate = 1, ref = 3) { if (!ctx) return; clipBuffer(nm).then(b => { if (!b || !ctx) return; const t = now() + delay, s = ctx.createBufferSource(); s.buffer = b;
       s.playbackRate.value = rate; const g = ctx.createGain(); g.gain.value = gain; s.connect(g); g.connect(at(pos, wet, ref)); s.start(t); }); },
     // the player's own heartbeat once he's hurt

@@ -21,7 +21,7 @@ function lookApply(rdt) {
   R.camera.lookAt(_lk2.copy(R.camera.position).add(_lk1.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch))));
 }
 // the director cut to a new shot: back to it
-function lookHome() { if (LOOK.yaw || LOOK.pitch) LOOK.ease = true; }
+function lookHome() { if (LOOK.yaw || LOOK.pitch) { LOOK.ease = true; LOOK.yaw = ((LOOK.yaw + Math.PI) % TAU + TAU) % TAU - Math.PI; } } // (the short way round)
 // a finger (or the mouse) down on the picture: a drag looks round, a tap is a tap (decided when it lifts)
 function lookDown(e, mode) { LOOK.drag = { id: e.pointerId, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: false, mode }; }
 function lookMove(e) {
@@ -30,6 +30,7 @@ function lookMove(e) {
   const dx = e.clientX - D.x, dy = e.clientY - D.y; D.x = e.clientX; D.y = e.clientY;
   if (D.mode === "siege") { if (SIEGE.on && !SIEGE.run && (SIEGE.phase === "fight" || SIEGE.phase === "doomed" || SIEGE.phase === "cleared")) siegeTurn(dx, dy); }
   else if (D.mode === "armed") armedTurn(dx, dy); // (the revolver from the barrel in your hand: 12q)
+  else if (D.mode === "free") freeTurn(dx, dy); // (behind a sign put away: v40)
   else { const k = 0.0042 * (CAM.fov / 52) * (1 + Math.min(2.5, Math.hypot(dx, dy) / 14)); LOOK.ease = false; LOOK.yaw -= dx * k; LOOK.pitch = clamp(LOOK.pitch - dy * k, -1.35, 1.35); }
   if (e.cancelable) e.preventDefault(); return true;
 }
@@ -78,3 +79,41 @@ function revolverTap(e) {
   if (Math.hypot(e.clientX - sx, e.clientY - sy) > rad) return false;
   if (e.cancelable) e.preventDefault(); armedStart(); return true; // (in your hand: 12q)
 }
+
+// ---- v40: the end signs put away, and looking round behind them ----
+// Each end sign (GAME OVER, YOU SAVED HIM, YOU SURVIVED, and the getaway's results) has a button to hide it. Hidden, a drag anywhere turns
+// the view, all the way round and up and down, from wherever the game had it (a touch on a hanging body still handles the body, and the
+// revolver on the barrel can still be taken up); Show the sign brings it back and turns you back. The menu has a red X to close it.
+const FREE = { on: false, which: null, yaw: 0, pitch: 0, ease: false, hintT: 0 };
+function buildFreeLook() {
+  const b = document.createElement("button"); b.id = "signShow"; b.type = "button"; b.hidden = true;
+  b.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" style="vertical-align:-3px;margin-right:6px"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Show the sign';
+  b.addEventListener("click", e => { e.stopPropagation(); signRestore(); }); $("stage").appendChild(b);
+  const h = document.createElement("div"); h.id = "lookHint"; h.hidden = true; h.textContent = "Drag to look round"; $("stage").appendChild(h);
+  for (const m of document.querySelectorAll(".signMin")) m.addEventListener("click", e => { e.stopPropagation(); signMinimize(m.closest(".overlay")); });
+  $("menuClose").addEventListener("click", () => { $("menu").hidden = true; Sound.resume(); });
+}
+function signMinimize(el) {
+  if (!el || el.hidden) return; FREE.on = true; FREE.which = el; FREE.yaw = FREE.pitch = 0; FREE.ease = false; LOOK.drag = null; el.hidden = true;
+  const f = $("chaseFade"); if (el.id === "chaseRes" && f && !f.hidden) { FREE.fade = f.style.opacity; f.style.opacity = 0; } // (the getaway's results darken the view behind them: not while you look)
+  $("signShow").hidden = false; const h = $("lookHint"); h.hidden = false; h.style.opacity = 1; FREE.hintT = 3;
+}
+function signRestore() {
+  if (!FREE.on) return; const el = FREE.which; FREE.on = false; FREE.which = null; FREE.ease = true; FREE.yaw = ((FREE.yaw + Math.PI) % TAU + TAU) % TAU - Math.PI; /* (the short way back, not unwinding every turn) */ LOOK.drag = null; $("signShow").hidden = true; $("lookHint").hidden = true;
+  if (el && el.id === "chaseRes" && FREE.fade != null) { $("chaseFade").style.opacity = FREE.fade; } FREE.fade = null;
+  if (el) { el.hidden = false; const b = el.querySelector(".sign-actions button"); if (b) b.focus({ preventScroll: true }); }
+}
+// a sign coming up (or a new round, a new ride): straight back to the game's view
+function freeReset() { FREE.on = false; FREE.which = null; FREE.yaw = FREE.pitch = 0; FREE.ease = false; if ($("signShow")) { $("signShow").hidden = true; $("lookHint").hidden = true; } }
+function freeTurn(dx, dy) { const k = 0.0042 * (R.camera.fov / 52) * (1 + Math.min(2.5, Math.hypot(dx, dy) / 14)); FREE.ease = false; FREE.yaw -= dx * k; FREE.pitch = clamp(FREE.pitch - dy * k, -1.45, 1.45); }
+// last, after everything that places the camera (12c tick): turn it by as far as you've dragged
+function freeApply(rdt) {
+  if (FREE.hintT > 0 && (FREE.hintT -= rdt) <= 0.6) { const h = $("lookHint"); h.style.opacity = Math.max(0, FREE.hintT / 0.6).toFixed(2); if (FREE.hintT <= 0) h.hidden = true; }
+  if (FREE.ease) { const k = Math.exp(-rdt * 6); FREE.yaw *= k; FREE.pitch *= k; if (Math.abs(FREE.yaw) + Math.abs(FREE.pitch) < 0.002) { FREE.yaw = FREE.pitch = 0; FREE.ease = false; } }
+  if (!FREE.yaw && !FREE.pitch) return; const c = R.camera, f = _lk1.set(0, 0, -1).applyQuaternion(c.quaternion);
+  const yaw = Math.atan2(f.x, f.z) + FREE.yaw, pitch = clamp(Math.asin(clamp(f.y, -1, 1)) + FREE.pitch, -1.5, 1.5);
+  c.up.set(0, 1, 0); c.lookAt(_lk2.copy(c.position).add(_lk1.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)))); c.updateMatrixWorld();
+}
+// the screen fades in from black (back from the getaway to the town: no flight across the desert to get there)
+function fadeIn(sec = 0.7) { const f = $("chaseFade"); if (!f) return; f.hidden = false; f.style.transition = "none"; f.style.opacity = 1; void f.offsetWidth;
+  f.style.transition = `opacity ${sec}s ease-out`; f.style.opacity = 0; clearTimeout(fadeIn.t); fadeIn.t = setTimeout(() => { f.hidden = true; f.style.transition = ""; }, sec * 1000 + 80); }

@@ -58,7 +58,7 @@ and no rope to cut. The host and the condemned man aren't targets. Put it back a
 
 **The shootout.** Now you're the stranger, behind cover, and nine gunmen are out for you: seven in the street and
 two on the rooftops, behind the false fronts of the sheriff's office and the general store.
-- Your revolver holds **8 rounds**, and you get **one reload**: 16 rounds in all. The reload is automatic: when the
+- Your revolver holds **7 rounds**, and you get **one reload**: 14 rounds in all. The reload is automatic: when the
   cylinder empties it refills by itself, and you can't fire until it's done. The speedloader beside the cylinder shows
   whether your reload is still there.
 - You have **5 hearts**. Hearts you lose show as empty outlines.
@@ -135,8 +135,10 @@ grass between them. Nothing on the screen to press.
   jump, so every row makes you move left or right (and some make you jump as well).
 - Ride into something and the horse shies off it into an open lane; trip over something low and you stumble; clip
   something changing lane and you're bounced back. Each costs ground, and the posse gains.
+- **Two strikes.** The first thing you hit warns you; hit a second and they've caught you: a shot from behind and you
+  go off the horse into the dirt.
 - The bar at the top shows how close they are. Once they're close they shoot at you (dirt kicks up ahead) and the
-  screen's edges pulse red. Let them catch you and you're captured.
+  screen's edges pulse red.
 
 **The turn.** Halfway, a shot whistles past your shoulder. You twist round in the saddle and draw. The horse goes on
 the same way, keeping to the trail, and nobody can hurt you while you turn.
@@ -164,10 +166,14 @@ the same way, keeping to the trail, and nobody can hurt you while you turn.
 filmed in a few shots. You can skip it after the first time. Then **Retry chase** (straight back in the saddle) or
 **Return to Hangman**.
 
+**The signs at the end.** Every end sign (GAME OVER, YOU SAVED HIM, YOU SURVIVED, and the getaway's results) has a
+button at its top right to put it away. With it away, drag anywhere to look round, all the way round and from your
+boots to the sky; **Show the sign** brings it back. The menu has a red **X** to close it.
+
 The run takes about 55 seconds and the fight about 20–40, depending on your shooting. The run's numbers (lanes,
 speeds, jumps, the course, what a hit costs) are in `RUN` at the top of `src/12h_runner.js`; the fight's and the
 posse's in `CHASE_CFG` at the top of `src/12g_chase.js`; the canyon and the shots of the end in `CANYON` and `CINE` in
-`src/12i_canyon.js`. The gun and the hearts are in `GUN` at the top of `src/12d_siege.js` (the town shootout's eight rounds in `SIEGE_ROUNDS`), and the laser's charge
+`src/12i_canyon.js`. The gun and the hearts are in `GUN` at the top of `src/12d_siege.js` (the town shootout's seven rounds in `SIEGE_ROUNDS`), and the laser's charge
 and recharge in `LASER_CFG` at the top of `src/12k_laser.js`.
 
 </details>

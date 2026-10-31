@@ -163,7 +163,7 @@ function buildChaseUI() {
   el("chaseRet", '<svg viewBox="0 0 44 44" width="44" height="44" aria-hidden="true"><circle cx="22" cy="22" r="12" fill="none" stroke="#000" stroke-opacity=".55" stroke-width="3.2"/><circle cx="22" cy="22" r="12" fill="none" stroke="#f4ead8" stroke-width="1.6"/><path d="M22 4v8M22 32v8M4 22h8M32 22h8" stroke="#f4ead8" stroke-width="1.6" stroke-linecap="round"/><circle cx="22" cy="22" r="1.9" fill="#e2483a"/></svg>');
   el("chaseTip", ""); el("chaseMsg", ""); el("chaseFade", ""); el("cineBars", "", $("app")).hidden = false;
   el("chaseSkip", "Skip", st, "button").type = "button";
-  el("chaseRes", `<div class="sign"><div class="chain l"></div><div class="chain r"></div><h2 id="resTitle"></h2><p id="resLine"></p><dl id="resStats"></dl><p id="resScore"></p>
+  el("chaseRes", `<div class="sign"><button class="signMin" type="button" aria-label="Hide the results and look round" title="Hide"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 13h12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button><div class="chain l"></div><div class="chain r"></div><h2 id="resTitle"></h2><p id="resLine"></p><dl id="resStats"></dl><p id="resScore"></p>
     <div class="sign-actions"><button id="resRetry" type="button">Retry chase</button><button id="resHome" type="button">Return to Hangman</button></div></div>`, $("app"));
   $("chaseRes").classList.add("overlay", "sign-wrap");
   // the bottom panel, in the fight only: Aim | Fire, as in the shootout (in the run there's nothing to press: the whole screen takes swipes)
@@ -235,7 +235,7 @@ function startGetaway() {
   STATE.locked = true; Sound.rush(0); Sound.preloadClips(CHASE_CLIPS); CHASE.on = true; chaseBegin(true);
 }
 function chaseBegin(first) {
-  const C = CHASE, K = CHASE_CFG; chaseClear(); CAM.dof = null;
+  const C = CHASE, K = CHASE_CFG; chaseClear(); freeReset(); CAM.dof = null;
   C.seed = (C.seed * 9301 + 49297) % 233280 || 7; C.rng = rng(C.seed); C.state = "off"; chaseState("mount"); C.first = first && C.firstMount; C.firstMount = false;
   C.s = C.s0 = 0; C.lat = 0; C.latV = 0; C.latA = C.latAs = 0; C.speed = 0; C.gap = C.gapShow = K.pursuit.gap0; C.rows = []; C.nextRow = RUN.first; C.courseEnd = RUN.first + RUN.course; C.turnAt = C.courseEnd + 30; runBegin();
   C.hp = GUN.hearts; C.rounds = GUN.rounds; C.reloads = K.reloads; C.reloadT = 0; C.doom = null; gunHud.key = null;
@@ -252,6 +252,7 @@ function chaseBegin(first) {
   chaseUI("mount"); $("hud").classList.add("chase"); $("meta").textContent = ""; Sound.duck(0.25, 1.2);
   // the first time: the posse comes into view down the street, shouting, while you find a horse; a retry: straight into the saddle
   C.mount = { dur: C.first ? K.mount : K.retryMount, from: { pos: R.camera.position.clone(), q: R.camera.quaternion.clone() }, shouted: false };
+  if (!first) fadeIn(0.6); // (a retry: from the results straight into the saddle, out of black, v40)
   if (C.first) { const [sx, sz] = streetPt(40, -4); Sound.clip("shout0", V3(sx, 2, sz), 1.4, 0.5, 0.3, 1, 18); }
 }
 function chaseClear() { // everything the last run left: obstacles, rows, dust, lasso, ragdolls, the canyon
@@ -553,17 +554,31 @@ function chaseHorseLaser(R0, at, rd) {
 // caught: by the gap closing in the ride, or the last heart in the fight
 function chaseCapture(from) {
   const C = CHASE; if (!chaseState("captured")) return; C.cap = { t: 0, from }; C.attacker = null; C.lasso.fly = null; chaseUI("cine"); $("chaseRet").hidden = true; SLOW.t = 0;
-  chaseMsg(`<b>Captured</b><span>${from === "ride" ? "They ran you down" : from === "ammo" ? "An empty gun and riders still coming" : "That's the last of your luck"}</span>`, 2.4, "captured"); Sound.stinger(); Sound.rush(0);
+  if (from === "ride") { // (v40: caught in the run, they don't take you back: a shot from behind, and you go off the horse into the dirt)
+    R.camera.updateMatrixWorld(); const H = C.horse, dir = V3(Math.sin(H.yaw), 0, Math.cos(H.yaw)), side = Math.random() < 0.5 ? -1 : 1, R0 = C.riders[0];
+    C.cap.fall = { t: 0, p: R.camera.position.clone(), q: R.camera.quaternion.clone(), v: dir.multiplyScalar(C.speed * 0.8), side, r: V3(1, 0, 0).applyQuaternion(R.camera.quaternion).setY(0).normalize() }; /* (r: the view's right: he rolls and falls the same way) */ $("chaseTip").hidden = true;
+    Sound.clip(siegePick("far", 4), R0 && R0.H.grp.position, 1.2, 0, 0.35, rnd(0.95, 1.05), 9); Sound.thud(R.camera.position, 0.9); Sound.clip(siegePick("painm", 7), null, 1.1, 0.06, 0.1, rnd(0.95, 1.02), 3);
+    C.hurt = 1; CAM.shake = Math.max(CAM.shake, reduceMotion() ? 0.3 : 1.4); setTimeout(() => { if (C.state === "captured") Sound.thud(R.camera.position, 1); }, 650); }
+  chaseMsg(from === "ride" ? "<b>Shot</b><span>They caught up with you</span>" : `<b>Captured</b><span>${from === "ammo" ? "An empty gun and riders still coming" : "That's the last of your luck"}</span>`, 2.4, "captured"); Sound.stinger(); Sound.rush(0);
+}
+// shot off the horse in the run: carried on a little, over sideways and down into the dirt, looking up at the sky as the horse runs on
+function chaseFallCam(rdt) {
+  const F = CHASE.cap.fall, cam = R.camera; F.t += rdt; const t = F.t, k = (1 - Math.exp(-t * 2.2)) / 2.2, p = _c1.copy(F.p).addScaledVector(F.v, k);
+  p.addScaledVector(F.r, -F.side * 1.6 * Ease.out(Math.min(1, t / 0.7))); // (off to the side he's going over, clear of the horse)
+  const g = groundVis(p.x, p.z) + 0.32; p.y = Math.max(g, F.p.y + 1.1 * t - 4.9 * t * t); const land = clamp((F.p.y - p.y) / Math.max(0.1, F.p.y - g), 0, 1);
+  cam.position.copy(p); cam.quaternion.copy(F.q).multiply(_cq1.setFromEuler(_ce.set(0.95 * Ease.inOut(Math.min(1, t / 0.9)), 0, F.side * 1.25 * Ease.inOut(Math.min(1, t / 0.8)), "YXZ")));
+  if (land > 0.98 && !F.landed) { F.landed = true; kickDust(_c2.copy(p).setY(g - 0.3), 14, 1.2, 1.4, 1.2, 1.5); }
+  cam.updateMatrixWorld();
 }
 function updateCaptured(rdt, dt) { const C = CHASE, K = CHASE_CFG; C.cap.t += rdt; C.speed = Math.max(0, C.speed - dt * 8); C.s += C.speed * dt; placeHorse(C.horse, C.s, C.lat, 0, C.speed, dt, 0);
   $("hurt").style.opacity = Math.min(1, C.cap.t).toFixed(2); if (C.cap.t > K.capture) { const f = clamp((C.cap.t - K.capture) / 0.6, 0, 1); $("chaseFade").hidden = false; $("chaseFade").style.opacity = f.toFixed(3); if (f >= 1) chaseResults(false); } }
 // the results: what you did, the score, and where to go from here
 function chaseResults(won) {
-  const C = CHASE; if (!chaseState("results")) return; C.cine = null; chaseUI("cine"); CAM.dof = null; R.grade.uniforms.zoomBlur.value = 0; $("chaseSkip").hidden = true; $("chaseMsg").hidden = true; Sound.rush(0); C.result = won ? "won" : "captured";
+  const C = CHASE; if (!chaseState("results")) return; freeReset(); C.cine = null; chaseUI("cine"); CAM.dof = null; R.grade.uniforms.zoomBlur.value = 0; $("chaseSkip").hidden = true; $("chaseMsg").hidden = true; Sound.rush(0); C.result = won ? "won" : "captured";
   const S = C.stats, acc = S.shots ? Math.min(100, Math.round(S.hits / S.shots * 100)) : 0, score = (won ? 1000 : 0) + S.downed * 150 + (won ? Math.round(acc * 3) : 0) + (won && !S.bumps ? 200 : 0) + Math.round(Math.max(0, C.s) / 10);
   STATE.bestRide = Math.max(STATE.bestRide || 0, score); if (won) STATE.rides = (STATE.rides || 0) + 1; savePrefs();
-  $("resTitle").textContent = won ? "The End" : "Captured"; $("resTitle").className = won ? "" : "lose";
-  $("resLine").textContent = won ? "You killed every last one. Should've watched the road." : C.cap && C.cap.from === "ride" ? "They ran you down and dragged you back to town. The rope was still warm." : C.cap && C.cap.from === "ammo" ? "Eighteen rounds, and not enough of them hit anything. They took their time." : "Shot out of the saddle. They took you back to town, what was left of you.";
+  $("resTitle").textContent = won ? "The End" : C.cap && C.cap.from === "ride" ? "Shot Down" : "Captured"; $("resTitle").className = won ? "" : "lose";
+  $("resLine").textContent = won ? "You killed every last one. Should've watched the road." : C.cap && C.cap.from === "ride" ? "They caught you on the trail and shot you out of the saddle. The rope was still warm." : C.cap && C.cap.from === "ammo" ? "Eighteen rounds, and not enough of them hit anything. They took their time." : "Shot out of the saddle. They took you back to town, what was left of you.";
   const row = (k, v) => `<dt>${k}</dt><dd>${v}</dd>`;
   $("resStats").innerHTML = row("Riders downed", `${S.downed} of ${C.riders.length}`) + row("Shots", `${S.shots}${S.shots ? ` · ${acc}% hit` : ""}`) + row("Collisions", S.bumps) + row("Time", `${Math.round(S.t)} s`) + (won ? row("Getaway", "Complete") : "");
   $("resScore").textContent = `Score: ${score} · Best: ${STATE.bestRide}`;
@@ -574,6 +589,7 @@ function chaseResults(won) {
 function chaseLate(rdt) {
   const C = CHASE; if (!C.on || C.state === "results") { if (C.on) placeChaseCamera(rdt, true); return; }
   placeChaseCamera(rdt, false);
+  if (C.state === "captured" && C.cap && C.cap.fall) chaseFallCam(rdt); // (shot in the run: off the horse, v40)
   const cam = R.camera, S = SIEGE, L = LASER, useL = C.laser && L.ready, vm = useL ? L.vm : S.vm.gun, fight = C.state === "combat";
   if (useL) S.vm.gun.visible = false;
   // the revolver (or the laser, v39): drawn during the turn, up while you fight, raised and twirled (fired into the sky) when the last one falls

@@ -10,7 +10,8 @@ const RUN = {
   horse: { half: 0.42, front: 1.45, back: 1.15 },       // the horse for collisions: half its width; nose and rump from the saddle (m)
   hit: { crash: 14, trip: 9, scrape: 5 },               // metres the posse gains when you ride into something, trip on it, or clip it changing lane
   slow: { crash: 0.42, trip: 0.62, scrape: 0.86 }, recover: 1.5, ghost: 0.55, // how hard each checks the horse; seconds back to full speed; seconds after a hit when nothing else can
-  fire: [1.6, 3.4], swipe: 26                           // seconds between the posse's shots once they're close; pixels a finger must travel for a swipe
+  fire: [1.6, 3.4], swipe: 26,                          // seconds between the posse's shots once they're close; pixels a finger must travel for a swipe
+  strikes: 2                                            // v40: the second thing you ride into, trip on or clip and they have you (they shoot you out of the saddle: 12g)
 };
 // what can be in a lane: tall things you go round, low things you jump (low: their height), long ones that fill a lane for a while
 const RUN_KINDS = {
@@ -267,6 +268,7 @@ function runPosseShot() {
 // you rode into something: what it costs depends on how
 function runHit(ob, how) {
   const C = CHASE, p = ob.o.position; ob.hit = true; C.ghostT = RUN.ghost; C.stats.bumps++; C.gap -= RUN.hit[how]; C.hitT = 0; C.slowK = RUN.slow[how];
+  const last = C.stats.bumps >= RUN.strikes; if (last) C.gap = 0; // (that's the second: updateRide hands you over, 12g chaseCapture)
   kickDust(p, how === "crash" ? 18 : 10, 2, 2, 1.3, 1.6); Sound.thud(p, how === "scrape" ? 0.5 : 0.95); Sound.horseSnort(C.horse.grp.position);
   if (how === "scrape") { const from = C.shift.back; C.shift = { from: C.lat, to: RUN.lanes[from + 1], t: 0, back: C.lane }; C.lane = from; CAM.shake = Math.max(CAM.shake, reduceMotion() ? 0.2 : 0.7); } // (bounced back into the lane you came from)
   else { CAM.shake = Math.max(CAM.shake, reduceMotion() ? 0.3 : how === "crash" ? 1.8 : 1.2); CAM.kv = how === "crash" ? -2.2 : -1.5;
@@ -276,8 +278,8 @@ function runHit(ob, how) {
       let best = null; for (const k of [C.lane - 1, C.lane + 1, C.lane - 2, C.lane + 2]) { if (k < -1 || k > 1) continue; const lat = RUN.lanes[k + 1];
         if (!C.obs.some(o => o.run && !o.hit && !o.low && Math.abs(o.lat - lat) < o.halfLat + 0.3 && Math.abs(o.s - C.s) < o.halfS + 3)) { best = k; break; } }
       if (best !== null) { C.shift = { from: C.lat, to: RUN.lanes[best + 1], t: -0.08, back: C.lane }; C.lane = best; } C.ghostT = RUN.ghost + 0.4; } }
-  const near = C.gap <= K_near(); chaseMsg(how === "scrape" ? "<b>Close!</b><span>" + (near ? "They're right behind you" : "They're gaining") + "</span>"
-    : `<b>Whoa!</b><span>${near ? "They're right behind you" : "They're gaining"}</span>`, 1.3, "bump");
+  if (last) return; const left = RUN.strikes - C.stats.bumps, warn = left === 1 ? "One more and they've got you" : `${left} more and they've got you`;
+  chaseMsg(how === "scrape" ? `<b>Close!</b><span>${warn}</span>` : `<b>Whoa!</b><span>${warn}</span>`, 1.6, "bump");
   if (C.t - (C.shoutAt ?? -9) > 6) { C.shoutAt = C.t; Sound.clip("shout2", C.riders[0].H.grp.position, 1.2, 0.5, 0.2, 1, 10); }
 }
 const K_near = () => CHASE_CFG.pursuit.near;

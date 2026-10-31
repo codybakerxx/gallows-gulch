@@ -83,13 +83,30 @@ function placeCanyon(sEdge) {
   const M = new THREE.Matrix4().makeBasis(n.clone().multiplyScalar(half), V3(0, 1, 0), h.clone().multiplyScalar(W)).setPosition(e.x, 0, e.z); WORLD.canyonU.inv.value.copy(M).invert(); WORLD.canyonU.size.value.set(half, W); WORLD.canyonU.on.value = 1;
   canyonClearScenery(true);
 }
-// the desert's bushes and rocks (12h) that would stand over the drop: tucked away while the canyon's there
+// the desert's bushes and rocks (12h) that would stand over the drop: tucked away while the canyon's there. v40: and anything else that
+// would be left hanging over it with the ground cut away from under it. The trail curls back, and the canyon's far end reaches the town:
+// its buildings, porches, props and tufts were left floating over the drop in the long views of the fall. All of it goes while the canyon's
+// there (an instanced mesh loses just the copies over the drop), and comes back with the town
 function canyonClearScenery(on) {
   const C = CHASE, Mi = new THREE.Matrix4(), Z = new THREE.Matrix4().makeScale(0, 0, 0), v = new THREE.Vector3(), A = C.canyonAt;
+  const over = (x, z, m = 2.5) => { const dx = x - A.p.x, dz = z - A.p.z, lx = dx * A.n.x + dz * A.n.z, lz = dx * A.h.x + dz * A.h.z; return Math.abs(lx) < A.half + m + 1 && lz > canyonRim(lx, false) - m && lz < A.W + canyonRim(lx, true) + m; };
+  if (!on) { for (const o of C.canyonHid || []) o.visible = true; C.canyonHid = [];
+    for (const im of C.canyonIm || []) if (im.userData.canyonSaved) { im.instanceMatrix.array.set(im.userData.canyonSaved); im.instanceMatrix.needsUpdate = true; } C.canyonIm = []; }
   for (const im of C.scenery || []) { if (on && !im.userData.saved) im.userData.saved = im.instanceMatrix.array.slice(); if (!on) { if (im.userData.saved) { im.instanceMatrix.array.set(im.userData.saved); im.instanceMatrix.needsUpdate = true; } continue; }
-    let ch = false; for (let i = 0; i < im.count; i++) { im.getMatrixAt(i, Mi); v.setFromMatrixPosition(Mi); const dx = v.x - A.p.x, dz = v.z - A.p.z, lx = dx * A.n.x + dz * A.n.z, lz = dx * A.h.x + dz * A.h.z;
-      if (Math.abs(lx) < A.half + 3 && lz > canyonRim(lx, false) - 2.5 && lz < A.W + canyonRim(lx, true) + 2.5) { im.setMatrixAt(i, Z); ch = true; } }
+    let ch = false; for (let i = 0; i < im.count; i++) { im.getMatrixAt(i, Mi); v.setFromMatrixPosition(Mi); if (over(v.x, v.z)) { im.setMatrixAt(i, Z); ch = true; } }
     if (ch) im.instanceMatrix.needsUpdate = true; }
+  if (!on) return;
+  // everything else standing in the scene: not the canyon, the river, the sky or the ground (cut by the canyon's own shader), nor anything that moves
+  const keep = new Set([C.canyon, C.river, ...(C.scenery || [])]), mov = [C.horse && C.horse.grp, MAN && MAN.root, ...(C.riders || []).flatMap(R0 => [R0.a.root, R0.H.grp, R0.gun])];
+  for (const r of mov) if (r) r.traverse(o => keep.add(o));
+  C.canyonHid = []; C.canyonIm = [];
+  R.scene.traverse(o => { if (!o.isMesh || keep.has(o) || !o.visible || o.userData.dyn || o.isSkinnedMesh || !o.frustumCulled || !o.geometry) return; // (not the effects drawn in world space: beams, ropes, the trail's ribbon)
+    if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere(); const bs = o.geometry.boundingSphere; o.updateMatrixWorld();
+    if (o.isInstancedMesh) { let ch = false; for (let i = 0; i < o.count; i++) { o.getMatrixAt(i, Mi); Mi.premultiply(o.matrixWorld); v.setFromMatrixPosition(Mi); if (!over(v.x, v.z)) continue;
+        if (!ch) { ch = true; o.userData.canyonSaved = o.instanceMatrix.array.slice(); C.canyonIm.push(o); } o.setMatrixAt(i, Z); }
+      if (ch) o.instanceMatrix.needsUpdate = true; return; }
+    if (bs.radius * o.matrixWorld.getMaxScaleOnAxis() > 250) return; // (the ground, the sky, the far mesas' plain)
+    v.copy(bs.center).applyMatrix4(o.matrixWorld); if (over(v.x, v.z, 6)) { o.visible = false; C.canyonHid.push(o); } });
 }
 function canyonClear() { const C = CHASE; if (C.canyon) C.canyon.visible = false; if (C.river) C.river.visible = false; WORLD.canyonU.on.value = 0; if (C.canyonAt) canyonClearScenery(false); canyonShadow(false); for (const p of C.pebbles || []) p.m.visible = false; }
 // at the end the sun's shadows cover the whole canyon (the rim's shadow down the far wall, the depths in shade), not just round the horse

@@ -19,6 +19,7 @@ function armedStart() {
   const A = ARMED, G = GUNPROP, S = SIEGE; if (A.on || S.on || CHASE.on || !G.gun) return;
   if (A.round !== STATE.roundId) { A.round = STATE.roundId; A.bullets = SIEGE_ROUNDS; A.reloads = GUN.reloads; A.reloadT = 0; A.shots = 0; } // (a full gun each round; within one, what's fired stays fired)
   A.on = true; A.t = 0; A.cool = 0; A.back = null; LOOK.drag = null; LOOK.yaw = LOOK.pitch = 0; LOOK.ease = false;
+  if (FREE.on) { const el = FREE.which; freeReset(); if (el) el.hidden = false; } // (a sign put away: it comes back with the gun put back)
   A.sign = !$("sign").hidden; A.hint = !$("hintBox").hidden; $("sign").hidden = true; $("skip").hidden = true; showHintBox(false); STATE.locked = true; // (no guessing with a gun in your hand)
   R.camera.updateMatrixWorld(); const f = _ar1.set(0, 0, -1).applyQuaternion(R.camera.quaternion);
   A.from = { pos: CAM.pos.clone(), tgt: CAM.tgt.clone(), fov: CAM.fov, name: CAM.name, follow: CAM.follow, cpos: R.camera.position.clone(), yaw: Math.atan2(f.x, f.z), pitch: Math.asin(clamp(f.y, -1, 1)) };
