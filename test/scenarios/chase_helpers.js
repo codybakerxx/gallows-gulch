@@ -1,4 +1,4 @@
-// shared by mk_s131.py, mk_s132.py, mk_s133.py and screens.py: steps the game's clock without drawing, sets up a shootout, aims, rides and fights the getaway
+// shared by mk_s131.py, mk_s132.py, mk_s133.py, mk_s137.py, mk_s139.py and screens.py: steps the game's clock without drawing, sets up a shootout, aims, rides and fights the getaway
 window.__errs = window.__errs || [];
 window.__go = async (n, until) => { window.GULCH_PAUSE = true; const RF = window.renderFrame; window.renderFrame = () => {}; let t = performance.now(); last = t;
   try { for (let i = 0; i < n; i++) { t += 1000 / 60; tick(t); await null; await null; if (until && until()) break; } } finally { window.renderFrame = RF; } t += 16.7; tick(t); return 1; };
@@ -30,6 +30,14 @@ window.__lastOne = async (bullets, reloads = 0) => { const S = SIEGE; await __up
   for (const q of S.enemies) if (q.alive && q !== pick) shotHits(q, SIEGE_PARTS[2], q.a.ch.bones.Spine2.getWorldPosition(V3()), V3(0, -0.2, -1).normalize());
   await __go(3, () => { __calm(); return false; }); for (let i = 0; i < 3; i++) { __aimPt(pick.a.ch.bones.Spine2.getWorldPosition(V3())); await __go(1); }
   S.bullets = bullets; S.reloads = reloads; S.cool = 0; const would = __wouldHit() === pick; fireTap(); return { would, killed: !pick.alive, bulletsLeft: S.bullets, phase: S.phase, alive: S.enemies.filter(q => q.alive).length }; };
+// v39: the revolver from the barrel in your hand (12q): look at a point; find a townsman (or the executioner) with nothing in the way and shoot him
+window.__armAt = p => { const c = R.camera.position; ARMED.yaw = Math.atan2(p.x - c.x, p.z - c.z); ARMED.pitch = Math.atan2(p.y - c.y, Math.hypot(p.x - c.x, p.z - c.z)); };
+window.__armShoot = async () => { const A = ARMED; let pick = null;
+  for (const a of [...LIFE.crowd.filter(q => q.root.visible), EXEC]) { for (let i = 0; i < 3; i++) { __armAt(a.ch.bones.Spine2.getWorldPosition(V3())); await __go(1); }
+    R.camera.updateMatrixWorld(); const ro = R.camera.position.clone(), rd = V3(0, 0, -1).applyQuaternion(R.camera.quaternion), h = rayActor(a, ro, rd, false), e = sceneryRay(ro, rd, 80);
+    let block = false; for (const o of [HOST, MAN, ...LIFE.crowd.filter(q => q !== a && q.root.visible), EXEC].filter(q => q !== a)) { const hh = rayActor(o, ro, rd, false, 0.06); if (hh && h && hh.t < h.t) block = true; }
+    if (h && (!e || h.t < e.distance) && !block) { pick = a; break; } }
+  if (!pick) return null; A.cool = 0; armedFire(); await __go(2); return pick; };
 // counters on the transitions that must happen once
 window.__cnt = { sg: 0, victory: 0, results: 0, capture: 0, tracks: [], begins: 0 };
 if (!window.__wrapped) { window.__wrapped = true;

@@ -7,8 +7,11 @@
 // it throws a blue beam with a hum: a man the beam touches burns to ash (12o), a crow or a horse comes out as meat (12l); it scorches
 // what it touches and breaks what it's held on (12m).
 // It holds 20 s of firing. When that's spent it takes 7 s to charge itself again. It goes back on the crate for the next shootout.
+// v39: taking it up leaves the revolver on the crate where it lay; tap the revolver there and you've swapped back (the laser goes back on
+// the crate, its charge kept, and you can swap again). The beam turns meat on the ground to ash as well (12o). And if it's the gun in your
+// hand when the street's cleared, it's the gun you ride out with: the getaway's fight is fought with it (12g chaseBeam).
 const LASER_CFG = { charge: 20, recharge: 7, kill: 0.08, envGap: 0.28, scorchGap: 0.05, hold: 0.8 };
-const LASER = { ready: false, geo: null, mat: null, e0: 3, crate: null, vm: null, state: "crate", lift: null, charge: LASER_CFG.charge, rechargeT: 0, hold: false, firing: false,
+const LASER = { ready: false, geo: null, mat: null, e0: 3, crate: null, rev: null, vm: null, state: "crate", lift: null, charge: LASER_CFG.charge, rechargeT: 0, hold: false, firing: false,
   envT: 0, bellT: 0, scorchT: 0, smokeT: 0, beam: null, glowA: null, glowB: null, sparks: null, scorch: null, muz: new THREE.Vector3(), end: new THREE.Vector3(), hudKey: "", awake: false, t: 0, lastSecs: -1 };
 const LASER_MUZZLE = new THREE.Vector3(0, 0, 0.246); // (the emitter's mouth, in the gun's own frame once it's turned barrel-forward)
 const _l1 = new THREE.Vector3(), _l2 = new THREE.Vector3(), _l3 = new THREE.Vector3(), _l4 = new THREE.Vector3(), _lq = new THREE.Quaternion();
@@ -26,6 +29,9 @@ function prepLaser(gltf) {
   const crate = LASER.crate = new THREE.Mesh(geo, mat); crate.castShadow = true; crate.receiveShadow = true; crate.userData.dyn = true; crate.visible = false; R.scene.add(crate);
   { const C = SIEGE.covers[1], [cx, cz] = COVERS[1].at, dir = C.side.clone().multiplyScalar(-0.75).addScaledVector(C.away, -0.55).normalize();
     crate.position.set(cx, 0.8 + 0.027, cz).addScaledVector(C.side, -0.5).addScaledVector(C.away, 0.18); crate.rotation.set(0, Math.atan2(dir.x, dir.z), Math.PI / 2, "YXZ"); crate.updateMatrixWorld(true); }
+  // the revolver, left on the crate where the laser lay while you have the laser (v39)
+  const rev = LASER.rev = revolver(true); rev.traverse(o => { if (o.isMesh) { o.castShadow = true; o.userData.dyn = true; } }); rev.visible = false; R.scene.add(rev);
+  rev.position.copy(crate.position).add(V3(0, -0.002, 0)); rev.quaternion.copy(crate.quaternion); rev.updateMatrixWorld(true);
   // in your hand
   const vm = LASER.vm = new THREE.Group(), vmMesh = new THREE.Mesh(geo, mat); vmMesh.frustumCulled = false; vm.add(vmMesh); vm.visible = false; R.scene.add(vm);
   // the beam, the glow at each end of it, blue sparks and scorch marks
@@ -69,7 +75,7 @@ const revolverSpent = () => { const S = SIEGE; return S.bullets <= 0 && S.reload
 const laserAvail = () => LASER.ready && LASER.state === "crate" && SIEGE.on; // (v37: any time)
 function resetLaser() {
   const L = LASER; if (!L.ready) return; L.state = "crate"; L.lift = null; L.charge = LASER_CFG.charge; L.rechargeT = 0; L.hold = L.firing = false; L.awake = false; L.hudKey = "";
-  L.vm.visible = false; L.crate.visible = false; L.beam.visible = false; gunHud.key = null; const rb = $("reloads"); if (rb) rb.style.display = ""; L.glowA.visible = L.glowB.visible = false; L.mat.emissiveIntensity = L.e0 * 0.3;
+  L.vm.visible = false; L.crate.visible = false; L.rev.visible = false; L.beam.visible = false; gunHud.key = null; SIEGE.vm.lift = null; const rb = $("reloads"); if (rb) rb.style.display = ""; L.glowA.visible = L.glowB.visible = false; L.mat.emissiveIntensity = L.e0 * 0.3;
   Sound.laser(false); Sound.laserWake(null, false); Sound.laserCharge(false);
   L.scorch.used = L.scorch.next = 0; L.scorch.im.count = 0; L.scorch.im.visible = false; L.sparks.life.fill(0); L.sparks.pts.visible = false;
 }
@@ -93,31 +99,49 @@ function laserTake() {
     for (const E of S.enemies) if (E.alive && E.state === "pause" && E.t > 50) E.t = rnd(0.3, 1.2); }
   const t = $("siegeTip"); t.textContent = "Hold Fire for the beam · 20 s, then it charges itself"; t.hidden = false; S.tip = 3.2; siegeHud();
 }
-function laserTrigger(on) { const L = LASER, S = SIEGE; L.hold = on; if (on && laserHeld() && (S.crouch || S.run || S.cv > 0.5)) nudgeAim(); }
+function laserTrigger(on) { const L = LASER, S = SIEGE; L.hold = on; if (on && laserHeld() && !CHASE.on && (S.crouch || S.run || S.cv > 0.5)) nudgeAim(); }
+// v39: the revolver you left on the crate. A tap on it (a run to it from the other cover) and it's back in your hand, the laser back on the crate
+function revTap(e) {
+  const L = LASER, S = SIEGE; if (!L.ready || !laserHeld() || !L.rev.visible || S.phase === "won" || S.phase === "dead" || S.phase === "cut") return false;
+  const r = $("scene").getBoundingClientRect(), c = L.rev.localToWorld(_l2.set(0, 0.02, 0.05)), p = _l1.copy(c).project(R.camera); if (p.z > 1 || Math.abs(p.x) > 1.05 || Math.abs(p.y) > 1.05) return false;
+  const sx = r.left + (p.x * 0.5 + 0.5) * r.width, sy = r.top + (-p.y * 0.5 + 0.5) * r.height, rad = Math.max(46, 0.13 / Math.max(0.3, c.distanceTo(R.camera.position)) * r.height);
+  if (Math.hypot(e.clientX - sx, e.clientY - sy) > rad) return false;
+  if (S.run) return true;
+  if (S.cover !== 1) { const C = S.covers[1]; S.run = { from: CAM.pos.clone(), to: C.stand.clone(), t: 0, dur: Math.max(0.5, CAM.pos.distanceTo(C.stand) / SIEGE_CFG.runSpeed), to_i: 1, pick: "rev" }; S.crouch = true; return true; }
+  revTake(); return true;
+}
+function revTake() {
+  const L = LASER, S = SIEGE; if (!laserHeld()) return; L.state = "crate"; L.lift = null; L.hold = L.firing = false; L.hudKey = ""; L.awake = false;
+  Sound.laser(false); L.beam.visible = false; L.glowA.visible = L.glowB.visible = false; L.vm.visible = false; L.mat.emissiveIntensity = L.e0 * 0.3;
+  S.vm.lift = { t: 0, p: L.rev.position.clone(), q: L.rev.quaternion.clone() }; L.rev.visible = false; Sound.clip("cock0", null, 0.9, 0, 0.05); // (off the crate and into your hand: 12d siegeLate)
+  gunHud.key = null; const rb = $("reloads"); if (rb) rb.style.display = ""; $("gun").classList.remove("reloading"); siegeHud();
+  const t = $("siegeTip"); t.textContent = S.bullets + S.reloads > 0 ? "The revolver again · the laser waits on the crate" : "The revolver's empty · the laser's on the crate"; t.hidden = false; S.tip = 2.6;
+}
 
 // ---- per frame ----
 function updateLaser(rdt, dt) {
   const L = LASER, S = SIEGE; if (!L.ready) return; L.t += rdt;
-  const live = S.on && (S.phase === "fight" || S.phase === "doomed" || S.phase === "cleared");
+  const chase = CHASE.on && CHASE.laser, live = chase ? CHASE.state === "combat" : S.on && (S.phase === "fight" || S.phase === "doomed" || S.phase === "cleared");
   L.crate.visible = S.on && L.state === "crate" && S.phase !== "chase" && S.covers[1].grp.visible;
+  L.rev.visible = S.on && laserHeld() && S.phase !== "chase" && S.covers[1].grp.visible && !S.vm.lift; // (the revolver where the laser lay: v39)
+  if (L.rechargeT > 0) { L.rechargeT -= dt; L.charge = LASER_CFG.charge * clamp(1 - L.rechargeT / LASER_CFG.recharge, 0, 1); // (it charges on the crate too)
+    if (L.rechargeT <= 0) { L.rechargeT = 0; L.charge = LASER_CFG.charge; Sound.laserCharge(false); if (L.state !== "crate") Sound.laserReady(); } }
   if (L.state === "crate") { if (L.awake) L.mat.emissiveIntensity = L.e0 * (0.55 + 0.35 * Math.sin(L.t * 5.2)); return; } // (awake on the crate: its lights pulse)
-  if (L.rechargeT > 0) { L.rechargeT -= dt; L.charge = LASER_CFG.charge * clamp(1 - L.rechargeT / LASER_CFG.recharge, 0, 1);
-    if (L.rechargeT <= 0) { L.rechargeT = 0; L.charge = LASER_CFG.charge; Sound.laserCharge(false); Sound.laserReady(); } }
-  const up = !S.crouch && !S.run && S.cv < 0.5, on = live && L.state === "held" && L.hold && up && L.rechargeT <= 0 && L.charge > 0 && $("menu").hidden && STATE.ts > 0;
-  if (on !== L.firing) { L.firing = on; Sound.laser(on); if (on) S.shots++; }
+  const up = chase || (!S.crouch && !S.run && S.cv < 0.5), on = live && L.state === "held" && L.hold && up && L.rechargeT <= 0 && L.charge > 0 && $("menu").hidden && (chase || STATE.ts > 0);
+  if (on !== L.firing) { L.firing = on; Sound.laser(on); if (on) { if (chase) CHASE.stats.shots++; else S.shots++; } }
   L.mat.emissiveIntensity = L.e0 * (L.rechargeT > 0 ? 0.15 + 0.25 * (0.5 + 0.5 * Math.sin(L.t * 9)) : 0.35 + 0.65 * L.charge / LASER_CFG.charge) * (L.firing ? 1.2 + 0.2 * Math.sin(L.t * 47) : 1);
-  L.dtNow = dt; if (L.firing) { L.charge = Math.max(0, L.charge - dt); // (the beam itself is drawn and does its work after the camera has moved: laserLate)
+  L.dtNow = dt; if (L.firing) { L.charge = Math.max(0, L.charge - dt); // (the beam itself is drawn and does its work after the camera has moved: laserLate, or 12g chaseLate)
     if (L.charge <= 0) { L.firing = false; L.rechargeT = LASER_CFG.recharge; Sound.laser(false); Sound.laserEmpty(); Sound.laserCharge(true);
-      const t = $("siegeTip"); t.textContent = "Charge spent · recharging (7 s)"; t.hidden = false; S.tip = 2.4; } }
+      if (chase) chaseTip("Charge spent · recharging (7 s)", 2.4); else { const t = $("siegeTip"); t.textContent = "Charge spent · recharging (7 s)"; t.hidden = false; S.tip = 2.4; } } }
   updatePoints(L.sparks, dt, true, 0.8);
-  laserHud();
+  if (!chase) laserHud(); // (the getaway draws its own top bar: 12g chaseHud)
 }
 // the beam this frame: what it touches first, and what that does
 function laserBeam(dt) {
   const L = LASER, S = SIEGE; R.camera.updateMatrixWorld(); const ro = R.camera.position.clone(), rd = V3(0, 0, -1).applyQuaternion(R.camera.quaternion).normalize();
   let man = null; for (const E of S.enemies) { if (!E.alive) continue; const far = E.a.ch.bones.Spine2.getWorldPosition(_l1).distanceTo(ro), h = rayActor(E.a, ro, rd, E.female, clamp((far - 12) * 0.007, 0, 0.12)); if (h && (!man || h.t < man.t)) man = Object.assign(h, { E }); }
-  const env = sceneryRay(ro, rd, 80), bt = bellRay(ro, rd), cr = crowRay(ro, rd), tg = targetRay(ro, rd), hr = townHorseRay(ro, rd), cands = [];
-  if (bt > 0) cands.push([bt, "bell"]); if (man) cands.push([man.t, "man"]); if (cr) cands.push([cr.t, "crow"]); if (tg) cands.push([tg.t, "tgt"]); if (hr) cands.push([hr.t, "horse"]); if (env) cands.push([env.distance, "env"]);
+  const env = sceneryRay(ro, rd, 80), bt = bellRay(ro, rd), cr = crowRay(ro, rd), tg = targetRay(ro, rd), hr = townHorseRay(ro, rd), mt = meatRay(ro, rd), cands = [];
+  if (bt > 0) cands.push([bt, "bell"]); if (man) cands.push([man.t, "man"]); if (cr) cands.push([cr.t, "crow"]); if (tg) cands.push([tg.t, "tgt"]); if (hr) cands.push([hr.t, "horse"]); if (mt) cands.push([mt.t, "meat"]); if (env) cands.push([env.distance, "env"]);
   cands.sort((a, b) => a[0] - b[0]); const first = cands[0], at = first ? ro.clone().addScaledVector(rd, first[0]) : ro.clone().addScaledVector(rd, 80);
   L.bellT -= dt; L.envT -= dt; L.scorchT -= dt; L.smokeT -= dt;
   for (const E of S.enemies) if (E.alive && (!man || man.E !== E)) E.laserT = 0;
@@ -125,6 +149,7 @@ function laserBeam(dt) {
     if (k === "man") { const E = man.E; E.laserT = (E.laserT || 0) + dt; if (E.laserT >= LASER_CFG.kill) { ashHit(E, at, rd); if (!S.enemies.some(q => q.alive) && (S.phase === "fight" || S.phase === "doomed")) siegeWin(); } }
     else if (k === "crow") crowLaser(cr.c, at, rd);
     else if (k === "horse") horseLaser(hr.H, at, rd);
+    else if (k === "meat") meatLaser(mt.M, at, rd, dt); // (a drumstick or a steak on the ground: to ash, 12o)
     else if (k === "tgt") { const T = tg.T; if (tg.weed || (T.laserT || 0) <= L.t) { if (T) T.laserT = L.t + 0.3; targetShot(tg, at, rd); } }
     else if (k === "bell") { if (L.bellT <= 0) { L.bellT = 0.7; bellShot(at, rd); } }
     else { const n = env.face ? _l2.copy(env.face.normal).transformDirection(env.object.matrixWorld) : _l2.set(0, 1, 0); if (n.dot(rd) > 0) n.negate();
@@ -164,6 +189,6 @@ function laserHud() {
     $("cyl").innerHTML = `<circle r="46" fill="#1b222c" stroke="#0b0e14" stroke-width="3"/><circle r="36" fill="none" stroke="#2c3747" stroke-width="8"/>${arc}<path d="M5 -25 L-13 4 L-1 4 L-5 25 L13 -6 L1 -6 Z" fill="${rech ? "#d8a246" : "#cfefff"}"/>`;
     const rb = $("reloads"); if (rb) rb.style.display = "none"; $("gun").classList.remove("reloading");
     $("gun").title = rech ? "Laser recharging" : `Laser: ${Math.ceil(L.charge)} s of charge`; $("gun").setAttribute("aria-label", $("gun").title); }
-  const secs = rech ? -1 : Math.ceil(L.charge - 1e-6); if (secs !== L.lastSecs) { L.lastSecs = secs; siegeHud(); }
+  const secs = rech ? -1 : Math.ceil(L.charge - 1e-6); if (secs !== L.lastSecs) { L.lastSecs = secs; if (!CHASE.on) siegeHud(); }
 }
 function laserMeta(n2) { const L = LASER, narrow = narrowHud(); return L.rechargeT > 0 ? (narrow ? "Charging" : "Recharging…") : (narrow ? `${Math.ceil(L.charge)} s · ${n2} left` : `${Math.ceil(L.charge)} s of charge · ${n2} gunm${n2 === 1 ? "a" : "e"}n left`); }

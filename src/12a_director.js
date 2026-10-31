@@ -46,7 +46,7 @@ function updateCamera(rdt, t, sdt) { // sdt: scene time, so camera moves keep pa
     if (CAM.t < 1) { CAM.t = Math.min(1, CAM.t + dt / CAM.dur); const e = Ease.inOut(CAM.t); CAM.pos.lerpVectors(CAM.from.pos, f.pos, e); CAM.tgt.lerpVectors(CAM.from.tgt, f.tgt, e); CAM.fov = lerp(CAM.from.fov, f.fov, e); }
     else { const k = 1 - Math.exp(-dt * 7); CAM.pos.lerp(f.pos, k); CAM.tgt.lerp(f.tgt, 1 - Math.exp(-dt * 10)); CAM.fov = f.fov; } }
   else if (CAM.to) { CAM.t = Math.min(1, CAM.t + dt / CAM.dur); const e = Ease.inOut(CAM.t); CAM.pos.lerpVectors(CAM.from.pos, CAM.to.pos, e); CAM.tgt.lerpVectors(CAM.from.tgt, CAM.to.tgt, e); CAM.fov = lerp(CAM.from.fov, CAM.to.fov, e); if (CAM.t >= 1) CAM.to = null; }
-  const close = CAM.name === "face" ? 0.35 : CAM.name === "siege" ? 0.1 : 1, n = 0.014 * close, s = CAM.shake * 0.06 * (STATE.reduceMotion ? 0.25 : 1); CAM.shake = Math.max(0, CAM.shake - rdt * 2.5);
+  const close = CAM.name === "face" ? 0.35 : CAM.name === "siege" || CAM.name === "armed" ? 0.1 : 1, n = 0.014 * close, s = CAM.shake * 0.06 * (STATE.reduceMotion ? 0.25 : 1); CAM.shake = Math.max(0, CAM.shake - rdt * 2.5);
   if (CAM.flash > 0) { CAM.flash = Math.max(0, CAM.flash - rdt * 0.9); R.grade.uniforms.flash.value = CAM.flash * CAM.flash / 0.38; }
   if (CAM.kv || CAM.ky) { const h = Math.min(rdt, 1 / 30); CAM.kv += (-CAM.ky * 110 - CAM.kv * 10) * h; CAM.ky += CAM.kv * h; if (Math.abs(CAM.ky) < 2e-4 && Math.abs(CAM.kv) < 2e-3) CAM.ky = CAM.kv = 0; } // a jolt: dips and springs back
   R.camera.position.set(CAM.pos.x + Math.sin(t * 0.7) * n + (Math.random() - 0.5) * s, CAM.pos.y + CAM.ky + Math.sin(t * 0.9 + 1) * n * 0.7 + (Math.random() - 0.5) * s, CAM.pos.z + Math.sin(t * 0.5 + 2) * n);

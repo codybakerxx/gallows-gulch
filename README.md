@@ -49,9 +49,12 @@ the edge of town, some behind you. Each time the game cuts to a new view (a gues
 **When he hangs.** A sword glints, stuck in the ground under the gallows. Tap it within 4 seconds, or even after the GAME OVER sign comes
 up, to cut him down and fight for the round.
 
-**When you save him.** Somewhere off to the side, out of the view the round ends on, a revolver lies on a barrel. Once
-you've won it catches the light. Look round, find it and tap it, and the town turns on you: the same shootout, as the
-stranger.
+**The revolver on the barrel.** Somewhere off to the side, out of the view the round ends on, a revolver lies on a
+barrel, catching the light. Look round, find it and tap it, any time the host isn't busy (from the very start of a
+round, or after you've saved him), and it's in your hand: the letters give way to an Aim and Fire pad and a **Put it
+back** button. Drag to look round and shoot what you like; the crowd jumps at every shot. Shoot one of the townsfolk
+or the executioner and the town turns on you: the shootout, right there, as the stranger, with no hangman to finish
+and no rope to cut. The host and the condemned man aren't targets. Put it back and the round goes on.
 
 **The shootout.** Now you're the stranger, behind cover, and nine gunmen are out for you: seven in the street and
 two on the rooftops, behind the false fronts of the sheriff's office and the general store.
@@ -92,7 +95,10 @@ two on the rooftops, behind the false fronts of the sheriff's office and the gen
   up at any time (if the revolver runs dry first it wakes up humming). **Hold Fire** for a blue beam: a man in it
   burns to ash and crumbles into a little heap, and it scorches and breaks what it touches. It holds **20 seconds**
   of firing (the blue ring where the cylinder was), then takes **7 seconds** to charge itself (the ring fills amber).
-  What it does to a horse or a crow is best seen.
+  What it does to a horse or a crow is best seen, and what that leaves on the ground burns to ash in the beam too.
+- Taking the laser leaves your revolver on the crate. Tap the revolver to swap back (the laser keeps its charge on
+  the crate), and swap again whenever you like. Whichever you're holding when the street's cleared is the gun you
+  take into the getaway.
 
 <details>
 <summary><b>Spoiler: the getaway</b> (what the bell is for)</summary>
@@ -142,6 +148,9 @@ the same way, keeping to the trail, and nobody can hurt you while you turn.
   while another finger holds **Fire**. **Click** or **Fire** shoots.
 - When the cylinder empties it reloads by itself, twice. Run dry with riders still coming and they ride in and finish
   you.
+- If the laser was in your hand when the street was cleared, you ride out with it instead: hold **Fire** (or the mouse
+  button, or Space) for the beam, 20 seconds of it, then 7 to recharge. A rider in it burns to ash in the saddle and
+  his horse runs on without him; a horse in it is a steak, and its rider goes into the dirt.
 - The horse swerves round things on its own. Each swerve pulls your aim to one side, so watch the reticle and fire in
   the steady spells. Shots go exactly where the reticle is.
 - Gunmen hang back and take aim. Lasso men ride in close and spin a loop. The last rider comes up close and takes two
@@ -217,7 +226,7 @@ public repository.
 
 ```
 build.py                 builds dist/ from src/ and assets/ (standard library only)
-src/                     the game: one HTML shell and 36 JavaScript modules, loaded in the order build.py lists
+src/                     the game: one HTML shell and 37 JavaScript modules, loaded in the order build.py lists
   00_head.html           page markup and all CSS: HUD, keyboard, menu poster, end sign, Word Book, the getaway's HUD
   01_util.js             helpers, seeded noise
   02_textures.js         procedural material textures and sprites
@@ -246,12 +255,13 @@ src/                     the game: one HTML shell and 36 JavaScript modules, loa
   12e_book.js            the Word Book
   12f_bell.js            the bell, and the cleared street after a win
   12j_targets.js         what the shootout's shots do: bottles, cans, lanterns, windows, water, straw, sparks, dirt, holes
-  12k_laser.js           the laser gun: on the crate, taken up, the beam, the charge, its ring in the top bar
-  12l_meat.js            horses shot down (in town and in the getaway); the laser's flash, and the steak and chicken legs
+  12k_laser.js           the laser gun: on the crate, taken up (the revolver left there to swap back), the beam, the charge, its ring
+  12l_meat.js            horses shot down (in town and in the getaway); the laser's flash, the steak (drawn on canvases) and chicken legs
   12m_break.js           the things that break: tagged as the town is built, merged, hidden in the shader when shot apart
   12n_herd.js            the town's horses: tied, grazing, walking (a standing horse made from the gallop: 10b)
-  12o_ash.js             a man in the laser's beam burning to ash, and the heap he leaves
-  12p_look.js            looking round in the hangman part; the revolver on the barrel that starts the shootout after a win
+  12o_ash.js             a man (or a rider, or meat on the ground) in the laser's beam burning to ash, and the heap left
+  12p_look.js            looking round in the hangman part; the revolver on the barrel, shining
+  12q_armed.js           the revolver from the barrel in your hand before any shootout; shoot a townsman and the shootout starts
   12g_chase.js           the getaway: posse, horses, the turn, the fight, the results
   12h_runner.js          the getaway's run: three lanes, swipes and jumps, the course, the desert along the trail
   12i_canyon.js          the canyon at the end and the filmed fall

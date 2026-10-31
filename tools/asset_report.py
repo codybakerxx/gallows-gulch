@@ -123,7 +123,7 @@ def voice_texts():
     m = re.search(r'const MYSTERY_LINE = "((?:[^"\\]|\\.)*)"; VOICE_LINES\[MYSTERY_LINE\] = \["(\w+)"', words)
     if m: out[m.group(2)] = m.group(1)
     m = re.search(r'const REVOLVER_LINE = "((?:[^"\\]|\\.)*)"; VOICE_LINES\[REVOLVER_LINE\] = \["(\w+)"', read("src/12p_look.js"))
-    if m: out[m.group(2)] = m.group(1); SIEGE_WHEN[m.group(2)] = "the shootout started from the revolver on the barrel, after a won round (cut from the end of siege0)"
+    if m: out[m.group(2)] = m.group(1); SIEGE_WHEN[m.group(2)] = "one of the townsfolk shot with the revolver from the barrel: the shootout starts (cut from the end of siege0)"
     return out
 
 

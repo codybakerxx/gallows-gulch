@@ -2,6 +2,28 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v39
+- **The revolver from the start.** The revolver on the barrel can be taken up from the first moment of a round, not
+  only after a win (it shines whenever it's there for the taking). Tap it and you're standing at the barrel with it in
+  your hand: the letters give way to the Aim and Fire pad, and a **Put it back** button. Look round and shoot what you
+  like: crows, horses, the bell, the barrels, crates and lanterns about the town; every shot makes the crowd jump.
+  Shoot one of the townsfolk or the executioner and the town draws on you: the shootout starts right there ("Shoot
+  that stranger!"), with no hangman to finish and no rope to cut, and you run for the nearest cover with what's left
+  in the gun. The host and the condemned man aren't targets: a shot at them whips past. Put it back and the round
+  goes on where it was. After a win it works the same way: take it up, then shoot someone to start the fight.
+- **Swap guns at the crate.** Taking up the laser leaves the revolver lying on the crate where the laser was. Tap the
+  revolver and it's back in your hand, with the laser back on the crate keeping its charge (it goes on recharging
+  there). You can swap as often as you like.
+- **The laser in the getaway.** If the laser is the gun in your hand when the street's cleared, it's the gun you ride
+  out with. In the getaway's fight, hold Fire for the beam: a rider in it burns to ash in the saddle while his horse
+  runs on without him, and a horse in it is a steak, with its rider thrown into the dirt. Each ride starts fully
+  charged. Swap back to the revolver before the last man falls and you ride out with the revolver.
+- **The steak.** Three times the size it was, about 2 m across, and made to look like a ribeye off the grill: a thick
+  slab with an uneven edge, a browned cap of fat down one side and a seam of fat through it, a dark glossy crust with
+  criss-cross grill marks burnt in, cracked pepper and salt. It tumbles down onto its edge and flops flat.
+- **Meat to ash.** A drumstick or a steak lying on the ground burns to ash in the laser's beam, the same way a man
+  does, and leaves a scatter of grey heaps where it lay.
+
 ## v38
 - **Fewer crows.** They were heard far too often: the perched birds, the unseen ones out past the town and the
   vultures overhead each called every few seconds between them, and every shot set some off. Now, once a crow has been

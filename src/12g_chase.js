@@ -4,6 +4,8 @@
 // bullet past your shoulder and you twist round in the saddle and shoot back while the horse picks its own way (the second half). Drop
 // the last of them, turn round in time to see where the trail goes, and the horse takes you over the edge of a canyon. You won; he dies.
 // Then the results, a retry, or back to the hangman.
+// v39: if it's the laser in your hand when the street's cleared (12k), you ride out with it: in the fight Fire held is the beam (chaseBeam).
+// A rider it touches burns to ash in the saddle and his horse runs on without him; a horse it touches is a steak, and its rider's thrown.
 //
 // States (CHASE.state): off → mount → ride → turn → combat → victory → results, or (from ride, turn or combat) captured → results.
 // The bell's mark (BELL.unlocked) and the shootout's own states (SIEGE.phase: fight, cleared, won, chase) are kept apart from these, and
@@ -36,7 +38,7 @@ const CHASE_CFG = {
 const CHASE = { on: false, state: "off", st: 0, t: 0, s: 0, s0: 0, lat: 0, latV: 0, latA: 0, latAs: 0, speed: 0, gap: 36, gapShow: 36, lane: 0, shift: null, air: null, jy: 0, jp: 0,
   rows: [], obs: [], nextRow: 0, courseEnd: 0, turnAt: 0, rng: null, riders: [], hp: GUN.hearts, rounds: GUN.rounds, reloads: GUN.reloads, reloadT: 0, doom: null, cool: 0, ay: 0, ap: 0, cy: 0, cp: 0, yawOff: 0,
   safeT: 0, attackT: 0, attacker: null, joined: false, swerve: null, stats: null, threat: null, phase: 0, foot: 0, mouse: null, drag: null, cine: null, built: false, firstMount: true, seed: 1, result: null };
-const _c1 = new THREE.Vector3(), _c2 = new THREE.Vector3(), _c3 = new THREE.Vector3(), _c4 = new THREE.Vector3(), _cq1 = new THREE.Quaternion(), _cq2 = new THREE.Quaternion(), _ce = new THREE.Euler(), _tA = {}, _tB = {};
+const _c1 = new THREE.Vector3(), _c2 = new THREE.Vector3(), _c3 = new THREE.Vector3(), _c4 = new THREE.Vector3(), _cq1 = new THREE.Quaternion(), _cq2 = new THREE.Quaternion(), _ce = new THREE.Euler(), _tA = {}, _tB = {}, _cm = new THREE.Matrix4();
 const STATE_FROM = { mount: ["off", "results", "captured", "victory", "combat", "ride", "turn", "mount"], ride: ["mount"], turn: ["ride"], combat: ["turn"], victory: ["combat"], captured: ["ride", "turn", "combat"], results: ["victory", "captured"], off: null };
 function chaseState(next) { // the one way a state changes: only from the states listed for it (off is always allowed: a reset)
   const C = CHASE, ok = !STATE_FROM[next] || STATE_FROM[next].includes(C.state); if (!ok) return false; C.state = next; C.st = 0; return true; }
@@ -168,7 +170,7 @@ function buildChaseUI() {
   el("chasePad", `<div id="padAim2" role="button" aria-label="Aim: drag to look">${$("padAim").innerHTML}</div>`
     + `<div id="padShoot" role="button" aria-label="Fire">${$("padFire").innerHTML}</div>`, $("kb"));
   const shoot = $("padShoot"); shoot.addEventListener("pointerdown", e => { e.preventDefault(); shoot.classList.add("on"); chaseFire(); });
-  for (const ev of ["pointerup", "pointercancel", "pointerleave"]) shoot.addEventListener(ev, () => shoot.classList.remove("on"));
+  for (const ev of ["pointerup", "pointercancel", "pointerleave"]) shoot.addEventListener(ev, () => { shoot.classList.remove("on"); if (CHASE.laser) laserTrigger(false); });
   // a drag on the Aim pad works just like a drag on the view
   for (const id of ["padAim2"]) { const b = $(id);
     b.addEventListener("pointerdown", e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (x) {} b.classList.add("on"); chaseDragStart(e); });
@@ -189,7 +191,7 @@ function chaseDragMove(e) {
   const D = C.drag; if (!D || D.id !== e.pointerId) return; const dx = e.clientX - D.x, dy = e.clientY - D.y; D.x = e.clientX; D.y = e.clientY;
   if (C.state === "combat" || C.state === "turn") { C.mouse = null; C.ay = clamp(C.ay - dx * K.sens, -K.yawLim, K.yawLim); C.ap = clamp(C.ap - dy * K.sens, K.pitchLo, K.pitchHi); }
 }
-function chaseDragEnd(e) { const D = CHASE.drag; if (D && D.id === e.pointerId) CHASE.drag = null; runSwipeEnd(e); }
+function chaseDragEnd(e) { const D = CHASE.drag; if (D && D.id === e.pointerId) CHASE.drag = null; runSwipeEnd(e); if (CHASE.laser && e.pointerType === "mouse") laserTrigger(false); } // (a mouse let go: the beam stops)
 // a touch on the 3D view during the chase: a mouse click fires in the fight; anything else starts a swipe or a drag
 function chaseTap(e) {
   if (!CHASE.on) return false; if (e.target.closest("button")) return true;
@@ -203,6 +205,7 @@ function chaseKey(e, down) {
   if (C.state === "ride" || C.state === "mount") { // the run: a lane per press, a jump
     if (left || right || up || k === " ") { e.preventDefault(); if (down && !e.repeat) { if (left) runLane(-1); else if (right) runLane(1); else runJump(); } } return true; }
   if (left || right || up) { e.preventDefault(); return true; }
+  if (!down && (k === " " || k === "Enter") && C.laser) laserTrigger(false);
   if (down && (k === " " || k === "Enter")) { e.preventDefault(); if (!e.repeat) { if (C.cine && C.cine.skip) chaseSkipCine(); else chaseFire(); } }
   return true;
 }
@@ -218,9 +221,9 @@ function chaseUI(mode) { // "mount" and "ride" (the run: the whole screen is the
   if (!on) { $("gun").style.visibility = ""; $("app").classList.remove("aiming"); for (const id of ["pursuit", "chaseRet", "chaseTip", "chaseMsg", "chaseSkip"]) $(id).hidden = true; }
 }
 function chaseHud() {
-  const C = CHASE; gunHud(C.rounds, C.reloads, C.reloadT > 0 ? 1 - C.reloadT / GUN.reload : -1, C.hp, CHASE_CFG.reloads);
-  const alive = C.riders.filter(r => r.alive).length;
-  $("meta").textContent = C.state === "combat" || C.state === "turn" ? (C.reloadT > 0 ? (narrowHud() ? "" : "Reloading…") : narrowHud() ? `${alive} left` : `${alive} rider${alive === 1 ? "" : "s"} left`) : C.state === "ride" ? "Ride!" : "";
+  const C = CHASE; if (C.laser) { laserHud(); heartsHud(C.hp); } else gunHud(C.rounds, C.reloads, C.reloadT > 0 ? 1 - C.reloadT / GUN.reload : -1, C.hp, CHASE_CFG.reloads);
+  const alive = C.riders.filter(r => r.alive).length, L = LASER, n = narrowHud(), riders = n ? `${alive} left` : `${alive} rider${alive === 1 ? "" : "s"} left`;
+  $("meta").textContent = C.state === "combat" || C.state === "turn" ? (C.laser ? (L.rechargeT > 0 ? (n ? "Charging" : "Recharging…") : `${Math.ceil(L.charge)} s · ${riders}`) : C.reloadT > 0 ? (n ? "" : "Reloading…") : riders) : C.state === "ride" ? "Ride!" : "";
 }
 
 // ---- starting, retrying, leaving ----
@@ -228,18 +231,22 @@ function chaseHud() {
 function startGetaway() {
   if (CHASE.on || !LIFE.horse) return; buildChase(); BELL.pending = false;
   const S = SIEGE; S.phase = "chase"; S.threat = null; S.holding = S.keyAim = false; $("clearMsg").hidden = true; $("warn").hidden = true; $("threat").hidden = true; $("hurt").style.opacity = 0;
+  CHASE.laser = laserHeld(); // (v39: the gun in your hand as the street's cleared is the one you ride out with)
   STATE.locked = true; Sound.rush(0); Sound.preloadClips(CHASE_CLIPS); CHASE.on = true; chaseBegin(true);
 }
 function chaseBegin(first) {
   const C = CHASE, K = CHASE_CFG; chaseClear(); CAM.dof = null;
   C.seed = (C.seed * 9301 + 49297) % 233280 || 7; C.rng = rng(C.seed); C.state = "off"; chaseState("mount"); C.first = first && C.firstMount; C.firstMount = false;
   C.s = C.s0 = 0; C.lat = 0; C.latV = 0; C.latA = C.latAs = 0; C.speed = 0; C.gap = C.gapShow = K.pursuit.gap0; C.rows = []; C.nextRow = RUN.first; C.courseEnd = RUN.first + RUN.course; C.turnAt = C.courseEnd + 30; runBegin();
-  C.hp = GUN.hearts; C.rounds = GUN.rounds; C.reloads = K.reloads; C.reloadT = 0; C.doom = null; gunHud.key = null; C.cool = 0; C.ay = C.ap = C.cy = C.cp = 0; C.yawOff = 0; C.safeT = 0; C.attackT = 0; C.attacker = null; C.joined = false; C.swerve = null; C.threat = null;
+  C.hp = GUN.hearts; C.rounds = GUN.rounds; C.reloads = K.reloads; C.reloadT = 0; C.doom = null; gunHud.key = null;
+  if (C.laser) { const L = LASER; L.state = "held"; L.lift = null; L.charge = LASER_CFG.charge; L.rechargeT = 0; L.hold = L.firing = false; L.hudKey = ""; L.lastSecs = -1; Sound.laser(false); Sound.laserCharge(false);
+    L.scorch.used = L.scorch.next = 0; L.scorch.im.count = 0; L.scorch.im.visible = false; } /* (fully charged for each ride, the last ride's scorch marks gone) */ C.cool = 0; C.ay = C.ap = C.cy = C.cp = 0; C.yawOff = 0; C.safeT = 0; C.attackT = 0; C.attacker = null; C.joined = false; C.swerve = null; C.threat = null;
   C.stats = { shots: 0, hits: 0, downed: 0, bumps: 0, jumps: 0, t: 0 }; C.saidEarl = false; C.shoutAt = -9; C.t = 0; C.cine = null; C.result = null; C.tipT = 0; C.msgT = 0; C.drag = null;
   // he is you now: out of sight (you see through his eyes), the noose and the ties gone with the cut
   MAN.hang = null; MAN.root.visible = false; MAN.ride = true; MAN.pre = null; MAN.bound = false; if (MAN.tie) MAN.tie.visible = false; GAL.rope.lowHidden = true;
   C.horse.grp.visible = true; horseTackShow(C.horse, true); C.ribbon.visible = true; C.dust.pts.visible = true; runSceneryShow(true);
-  for (const R0 of C.riders) { const a = R0.a; a.hang = null; a.ride = true; a.pre = (actor, dt) => riderPose(R0, dt); a.root.visible = true; a.wounds = []; for (const m of [a.ch.body.material.userData.U, a.ch.skin.userData.U]) m.woundN.value = 0;
+  meatClearTrail(); // (the last ride's steaks: 12o)
+  for (const R0 of C.riders) { const a = R0.a; ashUndo(R0); R0.ashRel = null; R0.laserT = 0; if (R0.H.tack.reins) R0.H.tack.reins.visible = true; a.hang = null; a.ride = true; a.pre = (actor, dt) => riderPose(R0, dt); a.root.visible = true; a.wounds = []; for (const m of [a.ch.body.material.userData.U, a.ch.skin.userData.U]) m.woundN.value = 0;
     R0.alive = true; R0.state = "trail"; R0.H.grp.visible = true; horseTackShow(R0.H, true); R0.gun.visible = R0.kind !== "lasso"; R0.hp = R0.kind === "last" ? K.last.hp : 1; R0.t = 0; R0.cool = 0; R0.free = null; R0.l = (R0.i - 2) * 1.5; R0.dl = 0;
     C.posseHidden = false; R0.d = K.pursuit.gap0 + R0.i * 3; R0.wob = Math.random() * TAU; R0.side = Math.random() < 0.5 ? -1 : 1; R0.stagger = 0; R0.lockL = null; R0.inPlace = false; setDetail(a.ch, false); if (R0.hatOff) { const h = R0.hatOff; h.parent.add(h.obj); h.obj.position.copy(h.p); h.obj.quaternion.copy(h.q); R0.hatOff = null; } }
   chaseUI("mount"); $("hud").classList.add("chase"); $("meta").textContent = ""; Sound.duck(0.25, 1.2);
@@ -337,7 +344,7 @@ function updateTurn(dt) {
   C.safeT -= dt; C.speed += (K.speed2 - C.speed) * Math.min(1, dt * 1.5); C.latV = (0 - C.lat) * 1.2; C.lat += C.latV * dt; C.s += C.speed * dt; recycleObstacles();
   C.yawOff = Math.PI * Ease.inOut(k); placeHorse(C.horse, C.s, C.lat, C.latV, C.speed, dt, 0); gallopFeet(C.horse, dt, null, 0.8); Sound.rush(C.speed / K.speed);
   if (k >= 1) { chaseState("combat"); C.yawOff = Math.PI; C.ay = C.ap = C.cy = C.cp = 0; chaseUI("combat"); chaseHud();
-    chaseTip(matchMedia("(pointer: coarse)").matches ? "Drag to aim · Fire · it reloads itself, twice" : "Aim with the mouse · Click to fire · it reloads itself, twice", 3.6);
+    const touch = matchMedia("(pointer: coarse)").matches; chaseTip(C.laser ? (touch ? "Drag to aim · hold Fire for the beam" : "Aim with the mouse · hold the button for the beam") : touch ? "Drag to aim · Fire · it reloads itself, twice" : "Aim with the mouse · Click to fire · it reloads itself, twice", 3.6);
     C.swerve = { seg: "calm", t: 0, dur: rnd(K.swerve.calm[0], K.swerve.calm[1]), from: C.lat, to: C.lat }; }
 }
 // the second half: the horse keeps to the trail and swerves round what's on it by itself, a steady spell, a swerve, a steady spell; you shoot
@@ -375,7 +382,8 @@ function updateRiders(dt) {
   for (const R0 of C.riders) { const a = R0.a, H = R0.H;
     if (R0.free && R0.free.down) { const F = R0.free; F.t += dt; chaseHorseFallStep(R0, dt); if (a.hang) a.update(dt); continue; } // (his horse was shot: it's down too, 12l)
     if (R0.free) { // fallen: the horse runs on without him, drifting off and slowing; he lies where he came down
-      const F = R0.free; F.t += dt; F.v = Math.max(0, F.v - dt * 1.4); F.s += F.v * dt; F.l += F.side * dt * 1.1; placeHorse(H, F.s, F.l, F.side * 1.1, F.v, dt, 0); if (F.t > 6 || F.s < C.s - 90 || (C.cine && F.s > C.cine.sEdge - 6)) { H.grp.visible = false; horseTackShow(H, false); } // (and it shies away from the edge: never runs out over the canyon)
+      const F = R0.free; F.t += dt; F.v = Math.max(0, F.v - dt * 1.4); F.s += F.v * dt; F.l += F.side * dt * 1.1; placeHorse(H, F.s, F.l, F.side * 1.1, F.v, dt, 0);
+      if (R0.ashRel && a.root.visible) { _cm.multiplyMatrices(H.grp.matrixWorld, R0.ashRel); _cm.decompose(a.root.position, a.root.quaternion, a.root.scale); a.root.updateMatrixWorld(true); } /* (burning in the saddle: carried on with it, 12o) */ if (F.t > 6 || F.s < C.s - 90 || (C.cine && F.s > C.cine.sEdge - 6)) { H.grp.visible = false; horseTackShow(H, false); } // (and it shies away from the edge: never runs out over the canyon)
       if (a.hang) { a.update(dt); } continue; }
     if (!R0.alive || R0.posed) { if (R0.posed) { a.pos.copy(H.grp.position); a.yaw = H.yaw; a.update(dt); } continue; }
     R0.t += dt; R0.cool -= dt; R0.wob += dt;
@@ -467,6 +475,7 @@ function aimDir(out) { // where the shot goes: your aim plus the drift the horse
   return out.set(Math.sin(y) * Math.cos(p), Math.sin(p), Math.cos(y) * Math.cos(p)); }
 function chaseFire() {
   const C = CHASE, K = CHASE_CFG; if (C.state !== "combat") return;
+  if (C.laser) { laserTrigger(true); return; } // (the laser: held, it's the beam, chaseBeam)
   if (C.reloadT > 0) return; if (C.rounds <= 0) { if (C.cool <= 0) { Sound.clip("dry0", null, 0.9, 0, 0.05); C.cool = 0.3; } return; } if (C.cool > 0) return;
   C.rounds--; C.cool = K.fireCool; C.stats.shots++; SIEGE.recoil = 1; SIEGE.vm.kick = 1; Sound.clip(siegePick("shot", 3), null, 1.1, 0, 0.32, rnd(0.97, 1.03)); CAM.shake = Math.max(CAM.shake, reduceMotion() ? 0.1 : 0.3);
   muzzleFlash(SIEGE.vm.gun.localToWorld(V3(0, 0.035, 0.22)), 0.3);
@@ -484,8 +493,8 @@ function chaseDoomed() {
   chaseMsg("<b>Out of bullets</b><span>They know your gun is empty</span>", 2.2, "hit");
 }
 // a rider hit: the last of them takes two; anyone hit while lining up an attack loses it
-function riderHit(R0, part, at, rd) {
-  const C = CHASE; bloodBurst(at, rd, part[3] === "head"); Sound.thud(at, 0.4);
+function riderHit(R0, part, at, rd, quiet) { // (quiet: no wound: thrown when the beam took his horse from under him)
+  const C = CHASE; if (!quiet) { bloodBurst(at, rd, part[3] === "head"); Sound.thud(at, 0.4); }
   if (C.attacker === R0) { endAttack(R0); if (C.lasso.fly && C.lasso.fly.R0 === R0) C.lasso.fly = null; }
   R0.hp = (R0.hp || 1) - 1; if (R0.hp > 0) { R0.stagger = 2.2; R0.cool = 1.4; Sound.clip(siegePick("painm", 7), R0.a.ch.bones.Head.getWorldPosition(V3()), 1.1, 0.05, 0.2, 1, 6); chaseMsg("<b>Winged him</b>", 1.0); return; }
   // down: off the horse, still going the speed it was, in a heap in the dirt behind you
@@ -501,6 +510,46 @@ function riderHit(R0, part, at, rd) {
   if (left > 1 && !C.saidEarl) { C.saidEarl = true; const o = C.riders.find(r => r.alive && r.kind !== "last") || C.riders.find(r => r.alive); Sound.clip("shout5", o.H.grp.position, 1.2, 0.5, 0.2, 1, 10); } // (the first man down: "Aw, hell! He shot Earl!")
 }
 
+// ---- the laser in the getaway (v39) ----
+// the beam this frame: from the camera through the reticle, to the first thing on that line (a rider, his horse, meat in the dirt, the trail)
+function chaseBeam(dt) {
+  const C = CHASE, L = LASER, ro = R.camera.position.clone(), rd = aimDir(V3()).normalize(); let man = null;
+  for (const R0 of C.riders) { if (!R0.alive || !R0.a.root.visible) continue; const far = R0.a.ch.bones.Spine2.getWorldPosition(_c1).distanceTo(ro), h = rayActor(R0.a, ro, rd, false, clamp((far - 10) * 0.006, 0, 0.1)); if (h && (!man || h.t < man.t)) man = Object.assign(h, { R0 }); }
+  const hh = chaseHorseRay(ro, rd), mt = meatRay(ro, rd), cands = []; let gt = -1;
+  for (let t = 1; t < 90; t += 0.75) { const q = _c1.copy(ro).addScaledVector(rd, t); if (q.y < groundVis(q.x, q.z)) { let lo = t - 0.75, hi = t; for (let i = 0; i < 6; i++) { const m = (lo + hi) / 2; _c1.copy(ro).addScaledVector(rd, m); if (_c1.y < groundVis(_c1.x, _c1.z)) hi = m; else lo = m; } gt = hi; break; } }
+  if (man) cands.push([man.t, "man"]); if (hh) cands.push([hh.t, "horse"]); if (mt) cands.push([mt.t, "meat"]); if (gt > 0) cands.push([gt, "ground"]);
+  cands.sort((a, b) => a[0] - b[0]); const first = cands[0], at = ro.clone().addScaledVector(rd, first ? first[0] : 90);
+  for (const R0 of C.riders) if (!man || man.R0 !== R0) R0.laserT = 0; L.scorchT -= dt; L.smokeT -= dt;
+  if (first) { const k = first[1];
+    if (k === "man") { const R0 = man.R0; R0.laserT = (R0.laserT || 0) + dt; if (R0.laserT >= LASER_CFG.kill * (R0.kind === "last" ? 4 : 1)) chaseAsh(R0, at, rd); } // (the last of them, a little longer)
+    else if (k === "horse") chaseHorseLaser(hh.R0, at, rd);
+    else if (k === "meat") meatLaser(mt.M, at, rd, dt);
+    else if (L.scorchT <= 0) { L.scorchT = LASER_CFG.scorchGap * 2; decal(L.scorch, at, _c2.set(0, 1, 0), rnd(0.8, 1.3)); L.scorch.im.visible = true; if (Math.random() < 0.3) kickDust(at, 3, 0.5, 0.8, 0.6, 1.0); } }
+  for (let i = 0; i < 3; i++) emit(L.sparks, at, _c3.copy(rd).multiplyScalar(-rnd(0.6, 2.2)).add(_c4.set(rnd(-1.4, 1.4), rnd(-0.3, 1.8), rnd(-1.4, 1.4))), rnd(0.12, 0.35));
+  if (L.smokeT <= 0 && first) { L.smokeT = 0.12; puff(at.clone().addScaledVector(rd, -0.05), 3, 0.25, 0.14, 1.2, 0.35, 0x8a8682); }
+  L.muz.copy(LASER_MUZZLE).applyMatrix4(L.vm.matrixWorld); L.end.copy(at); const fl = 0.85 + 0.15 * Math.sin(L.t * 61);
+  setBeam(L.muz, L.end, fl); L.glowA.position.copy(L.muz); L.glowA.scale.setScalar(0.07 * fl); L.glowA.visible = true;
+  L.glowB.position.copy(at).addScaledVector(rd, -0.04); L.glowB.scale.setScalar((0.32 + 0.12 * Math.sin(L.t * 37)) * Math.max(1, ro.distanceTo(at) * 0.04)); L.glowB.visible = !!first;
+}
+// a rider in the beam: he burns to ash in the saddle, and his horse runs on without him
+function chaseAsh(R0, at, rd) {
+  const C = CHASE; if (!R0.alive) return;
+  if (C.attacker === R0) { endAttack(R0); if (C.lasso.fly && C.lasso.fly.R0 === R0) C.lasso.fly = null; }
+  R0.alive = false; R0.state = "dead"; C.stats.downed++; C.stats.hits++; const a = R0.a, H = R0.H; R0.gun.visible = false; if (H.tack.reins) H.tack.reins.visible = false;
+  a.root.updateMatrixWorld(true); R0.ashRel = new THREE.Matrix4().copy(H.grp.matrixWorld).invert().multiply(a.root.matrixWorld);
+  ashBurn(R0, at, rd, { ride: true, floor: groundVis });
+  R0.free = { t: 0, s: C.s - R0.d, l: R0.l, v: C.speed, side: R0.l >= 0 ? 1 : -1, body: false };
+  const left = C.riders.filter(r => r.alive).length; if (left) chaseMsg(`<b>${["One", "Two", "Three", "Four", "Five"][C.stats.downed - 1] || C.stats.downed} down</b>`, 1.1, "down");
+  if (left > 1 && !C.saidEarl) { C.saidEarl = true; const o = C.riders.find(r => r.alive && r.kind !== "last") || C.riders.find(r => r.alive); Sound.clip("shout5", o.H.grp.position, 1.2, 0.5, 0.2, 1, 10); }
+}
+// a horse in the beam: a flash and a steak, and its rider thrown into the dirt
+function chaseHorseLaser(R0, at, rd) {
+  const C = CHASE, H = R0.H; if (!R0.alive) return; const ctr = H.grp.localToWorld(V3(0, HORSE_HC, 0)), v = V3(Math.sin(H.yaw), 0, Math.cos(H.yaw)).multiplyScalar(C.speed * 0.85);
+  R0.hp = 1; riderHit(R0, ["Hips", "Spine", 0.2, "hips", "Hips"], R0.a.ch.bones.Hips.getWorldPosition(V3()), rd, true); C.stats.hits++;
+  H.grp.visible = false; horseTackShow(H, false); if (R0.free) R0.free.v = C.speed;
+  zapFx(ctr, 1.5); spawnMeat("steak", ctr, v.add(V3(rnd(-0.4, 0.4), 2.4, rnd(-0.4, 0.4))), 3, groundVis);
+}
+
 // caught: by the gap closing in the ride, or the last heart in the fight
 function chaseCapture(from) {
   const C = CHASE; if (!chaseState("captured")) return; C.cap = { t: 0, from }; C.attacker = null; C.lasso.fly = null; chaseUI("cine"); $("chaseRet").hidden = true; SLOW.t = 0;
@@ -511,7 +560,7 @@ function updateCaptured(rdt, dt) { const C = CHASE, K = CHASE_CFG; C.cap.t += rd
 // the results: what you did, the score, and where to go from here
 function chaseResults(won) {
   const C = CHASE; if (!chaseState("results")) return; C.cine = null; chaseUI("cine"); CAM.dof = null; R.grade.uniforms.zoomBlur.value = 0; $("chaseSkip").hidden = true; $("chaseMsg").hidden = true; Sound.rush(0); C.result = won ? "won" : "captured";
-  const S = C.stats, acc = S.shots ? Math.round(S.hits / S.shots * 100) : 0, score = (won ? 1000 : 0) + S.downed * 150 + (won ? Math.round(acc * 3) : 0) + (won && !S.bumps ? 200 : 0) + Math.round(Math.max(0, C.s) / 10);
+  const S = C.stats, acc = S.shots ? Math.min(100, Math.round(S.hits / S.shots * 100)) : 0, score = (won ? 1000 : 0) + S.downed * 150 + (won ? Math.round(acc * 3) : 0) + (won && !S.bumps ? 200 : 0) + Math.round(Math.max(0, C.s) / 10);
   STATE.bestRide = Math.max(STATE.bestRide || 0, score); if (won) STATE.rides = (STATE.rides || 0) + 1; savePrefs();
   $("resTitle").textContent = won ? "The End" : "Captured"; $("resTitle").className = won ? "" : "lose";
   $("resLine").textContent = won ? "You killed every last one. Should've watched the road." : C.cap && C.cap.from === "ride" ? "They ran you down and dragged you back to town. The rope was still warm." : C.cap && C.cap.from === "ammo" ? "Eighteen rounds, and not enough of them hit anything. They took their time." : "Shot out of the saddle. They took you back to town, what was left of you.";
@@ -525,16 +574,24 @@ function chaseResults(won) {
 function chaseLate(rdt) {
   const C = CHASE; if (!C.on || C.state === "results") { if (C.on) placeChaseCamera(rdt, true); return; }
   placeChaseCamera(rdt, false);
-  const cam = R.camera, S = SIEGE, vm = S.vm.gun, fight = C.state === "combat";
-  // the revolver: drawn during the turn, up while you fight, raised and twirled when the last one falls
+  const cam = R.camera, S = SIEGE, L = LASER, useL = C.laser && L.ready, vm = useL ? L.vm : S.vm.gun, fight = C.state === "combat";
+  if (useL) S.vm.gun.visible = false;
+  // the revolver (or the laser, v39): drawn during the turn, up while you fight, raised and twirled (fired into the sky) when the last one falls
   const showGun = C.state === "combat" || (C.state === "turn" && C.st > CHASE_CFG.turn * 0.55) || (C.state === "victory" && C.cine && C.cine.t < CHASE_CFG.cliff.celebrate + CHASE_CFG.cliff.turn * 0.6);
-  vm.visible = showGun; if (showGun) { const th = Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2), hw = d => d * th * cam.aspect, hh = d => d * th, k = S.vm.kick, toW = (x, y, z) => _c1.set(x, y, z).applyMatrix4(cam.matrixWorld);
-    S.vm.kick = Math.max(0, S.vm.kick - rdt * 6); S.recoil = Math.max(0, S.recoil - rdt * 4.5);
-    const rl = C.reloadT > 0 ? Math.sin(clamp(1 - C.reloadT / GUN.reload, 0, 1) * Math.PI) : 0, cel = C.state === "victory" ? clamp(C.cine.t / 0.5, 0, 1) : 0;
-    vm.scale.setScalar(0.95); vm.position.copy(toW(Math.min(0.24, hw(0.62) * 0.5), -hh(0.62) * 0.56 - rl * 0.12 + cel * hh(0.62) * 0.9 + k * 0.02, -0.62 + k * 0.04));
+  vm.visible = showGun; if (showGun) { const th = Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2), hw = d => d * th * cam.aspect, hh = d => d * th, k = useL ? 0 : S.vm.kick, toW = (x, y, z) => _c1.set(x, y, z).applyMatrix4(cam.matrixWorld);
+    S.vm.kick = Math.max(0, S.vm.kick - rdt * 6); S.recoil = Math.max(0, S.recoil - rdt * 4.5); const j = useL && L.firing ? 0.004 : 0;
+    const rl = !useL && C.reloadT > 0 ? Math.sin(clamp(1 - C.reloadT / GUN.reload, 0, 1) * Math.PI) : 0, cel = C.state === "victory" ? clamp(C.cine.t / 0.5, 0, 1) : 0;
+    vm.scale.setScalar(useL ? LASER_CFG.hold : 0.95); vm.position.copy(toW(Math.min(0.24, hw(0.62) * 0.5) + rnd(-j, j), -hh(0.62) * 0.56 - rl * 0.12 + cel * hh(0.62) * 0.9 + k * 0.02 + rnd(-j, j), -0.62 + k * 0.04));
     if (cel) { const pump = Math.sin(clamp(C.cine.t - 0.6, 0, 1.2) * 11) * 0.025 * (1 - clamp((C.cine.t - 0.6) / 1.2, 0, 1)); vm.position.copy(toW(hw(0.62) * 0.4, -hh(0.62) * 0.56 + cel * hh(0.62) * 0.75 + pump, -0.62)); }
     const tgt = fight ? cam.position.clone().addScaledVector(aimDir(_c2).normalize(), 25) : cel ? toW(hw(0.62) * 0.4 + 0.6 * cel, 6 * cel, -2.5) : toW(0, 0, -25); vm.lookAt(tgt); vm.rotateX(-k * 0.5 + rl * 0.9);
-    if (cel && !C.cine.fired && C.cine.t > 0.55) { C.cine.fired = true; S.vm.kick = 1; muzzleFlash(vm.localToWorld(V3(0, 0.035, 0.22)), 0.34); Sound.clip(siegePick("shot", 3), null, 1.0, 0, 0.45, 1.02); } } // (one in the air)
+    if (useL && !cel) { vm.rotateY(-0.26); vm.rotateZ(-0.1); } vm.updateMatrixWorld(true);
+    if (cel && !C.cine.fired && C.cine.t > 0.55) { C.cine.fired = true; S.vm.kick = 1; const mz = useL ? LASER_MUZZLE.clone().applyMatrix4(vm.matrixWorld) : vm.localToWorld(V3(0, 0.035, 0.22));
+      if (useL) { C.cine.beam = 0.4; zapFx(mz, 0.35); } else { muzzleFlash(mz, 0.34); Sound.clip(siegePick("shot", 3), null, 1.0, 0, 0.45, 1.02); } } } // (one in the air)
+  // the beam: held on what it's aimed at in the fight; a short one into the sky at the end
+  if (useL && showGun && fight && L.firing) chaseBeam(L.dtNow || rdt);
+  else if (useL && showGun && C.cine && C.cine.beam > 0) { C.cine.beam -= rdt; L.muz.copy(LASER_MUZZLE).applyMatrix4(vm.matrixWorld); const up = _c3.set(0, 0, 1).transformDirection(vm.matrixWorld);
+    setBeam(L.muz, _c4.copy(L.muz).addScaledVector(up, 60), 0.9 * Math.min(1, C.cine.beam * 4)); L.glowA.position.copy(L.muz); L.glowA.scale.setScalar(0.07); L.glowA.visible = true; }
+  else if (useL) { L.beam.visible = false; L.glowA.visible = L.glowB.visible = false; }
   // the reticle sits exactly where a shot would go
   const ret = $("chaseRet"); if (fight) { const p = _c2.copy(cam.position).addScaledVector(aimDir(_c3).normalize(), 40).project(cam); ret.hidden = false;
     ret.style.left = ((p.x * 0.5 + 0.5) * R.w).toFixed(1) + "px"; ret.style.top = ((-p.y * 0.5 + 0.5) * R.h).toFixed(1) + "px"; ret.classList.toggle("dim", C.reloadT > 0); } else ret.hidden = true;

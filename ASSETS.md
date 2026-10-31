@@ -109,7 +109,7 @@ The host, who runs the hanging and calls every letter. The subtitle shown on scr
 | `mystery0.mp3` | 3.87 s | 44,100 Hz | mono | 64 kb/s | 30.5 KB | the first round after the game loads, before the intro | “There's more to this game than you think. Find the mystery.” |
 | `siege0.mp3` | 2.77 s | 44,100 Hz | mono | 64 kb/s | 21.9 KB | the rope is cut and the shootout starts | “He cut him down! Shoot that stranger!” |
 | `siege2.mp3` | 3.21 s | 44,100 Hz | mono | 64 kb/s | 25.3 KB | the gunmen shoot you down | “Should've minded your own business, stranger.” |
-| `siege3.mp3` | 1.49 s | 44,100 Hz | mono | 65 kb/s | 11.9 KB | the shootout started from the revolver on the barrel, after a won round (cut from the end of siege0) | “Shoot that stranger!” |
+| `siege3.mp3` | 1.49 s | 44,100 Hz | mono | 65 kb/s | 11.9 KB | one of the townsfolk shot with the revolver from the barrel: the shootout starts (cut from the end of siege0) | “Shoot that stranger!” |
 | `win0.mp3` | 3.55 s | 44,100 Hz | mono | 64 kb/s | 28.0 KB | the word is solved | “Go on, git. Before I change my mind.” |
 | `win1.mp3` | 3.87 s | 44,100 Hz | mono | 64 kb/s | 30.5 KB | the word is solved | “Ride on, you lucky son of a gun.” |
 | `win2.mp3` | 3.24 s | 44,100 Hz | mono | 64 kb/s | 25.6 KB | the word is solved | “Rope goes home empty tonight.” |

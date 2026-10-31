@@ -1,7 +1,8 @@
 # builds test/s137.json: v37.
 #   - in the hangman part a drag on the picture looks round (all the way) and the next shot the director cuts to turns you back
-#   - a revolver on a barrel, off to the side (out of the view the round ends on): it shines and can be taken up only once the round's won;
-#     taken up, the shootout starts with you running from it to the nearest cover, the saved man gone, eight in the gun
+#   - a revolver on a barrel, off to the side (out of the view the round ends on): it shines; taken up after the win (v39: in your hand,
+#     12q; the shot at a townsman that starts the shootout), the shootout starts with you running from it to the nearest cover, the saved
+#     man gone, eight in the gun (v39: from the start of a round too: mk_s139)
 #   - the shootout: you can turn all the way round (a drag on the picture, crouched or up) and look from your boots to straight up; a tap
 #     without a drag still takes cover; the revolver holds eight, and its reload is eight
 #   - the laser can be taken up with rounds left in the revolver; a man in its beam burns to ash: he's gone in under two seconds and a heap
@@ -40,22 +41,23 @@ E("""(async () => { await __go(120, () => !STATE.locked); const y0 = __yawOf(); 
 E("""(async () => { const live0 = gunPropLive(); const left = [...new Set(STATE.word)].filter(c => !STATE.guessed.has(c)); for (const c of left) { guess(c); await __go(1500, () => !STATE.locked || STATE.over); }
   await __go(1800, () => !$('sign').hidden); await __go(30); const p = GUNPROP.gun.getWorldPosition(V3()), q = p.clone().project(R.camera), off = !(Math.abs(q.x) < 1 && Math.abs(q.y) < 1 && q.z < 1);
   const c = R.camera.position, turn = __dy(Math.atan2(p.x - c.x, p.z - c.z), __yawOf());
-  return __check('the revolver: off to the side, shining once the round is won', !live0 && STATE.lastWon && gunPropLive() && GUNPROP.glint.visible && off && Math.abs(turn) > 0.6, { liveBefore: live0, won: STATE.lastWon, glint: GUNPROP.glint.visible, offScreen: off, turn: +turn.toFixed(2) }); })()""")
+  return __check('the revolver: off to the side, shining once the round is won', live0 && STATE.lastWon && gunPropLive() && GUNPROP.glint.visible && off && Math.abs(turn) > 0.6, { liveBefore: live0, won: STATE.lastWon, glint: GUNPROP.glint.visible, offScreen: off, turn: +turn.toFixed(2) }); })()""")
 E("""(async () => { const p = GUNPROP.gun.getWorldPosition(V3()), c = R.camera.position; LOOK.yaw += __dy(Math.atan2(p.x - c.x, p.z - c.z), __yawOf()); await __go(3);
   LOOK.pitch += Math.atan2(p.y - c.y, Math.hypot(p.x - c.x, p.z - c.z)) - Math.asin(V3(0, 0, -1).applyQuaternion(R.camera.quaternion).y); await __go(3); return 1; })()""")
 shot("a_revolver")
 E("""(async () => { const p = GUNPROP.gun.getWorldPosition(V3()).project(R.camera), r = $('scene').getBoundingClientRect(); __ptr('pointerdown', r.left + (p.x * 0.5 + 0.5) * r.width, r.top + (-p.y * 0.5 + 0.5) * r.height);
+  await __go(80, () => ARMED.on && !ARMED.lift); const armed = ARMED.on, b0 = ARMED.bullets, pick = await __armShoot(); // (v39: in your hand first; a townsman shot starts it)
   await __go(300, () => SIEGE.phase === 'fight' && !SIEGE.run); __calm(); const S = SIEGE, cyl = document.querySelectorAll('#cyl circle[r="8.4"]').length;
-  return __check('taken up: the shootout from the revolver', S.on && S.fromRevolver && S.phase === 'fight' && !GUNPROP.gun.visible && !MAN.root.visible && S.bullets === 8 && cyl === 8 && S.enemies.length >= 7, { on: S.on, from: S.fromRevolver, phase: S.phase, cover: S.cover, bullets: S.bullets, chambers: cyl, man: MAN.root.visible, enemies: S.enemies.length }); })()""")
+  return __check('taken up: the shootout from the revolver', armed && b0 === 8 && pick && S.on && S.fromRevolver && S.phase === 'fight' && !GUNPROP.gun.visible && !MAN.root.visible && S.bullets === 7 && cyl === 8 && S.enemies.length >= 7, { armed, first: b0, shot: pick && pick.name, on: S.on, from: S.fromRevolver, phase: S.phase, cover: S.cover, bullets: S.bullets, chambers: cyl, man: MAN.root.visible, enemies: S.enemies.length }); })()""")
 # ---- the shootout ----
 E("""(async () => { const S = SIEGE; SIEGE_CFG.hitUp = 0; SIEGE_CFG.hitRun = 0; S.holding = false; await __go(30, () => { __calm(); return false; }); const y0 = S.yaw;
   await __drag(-700, 0, 20); const crouchTurn = __dy(S.yaw, y0); S.holding = true; await __go(30, () => { __calm(); return false; });
   for (let i = 0; i < 6; i++) await __drag(-700, 0, 12); const total = S.yaw - y0;
   await __drag(0, -2000, 20); const up = S.pitch; await __drag(0, 4000, 30); const down = S.pitch; S.pitch = 0;
   return __check('the shootout: all the way round, boots to sky', Math.abs(crouchTurn) > 0.6 && Math.abs(total) > TAU && up > 1.4 && down < -1.4, { crouchTurn: +crouchTurn.toFixed(2), total: +total.toFixed(2), up: +up.toFixed(2), down: +down.toFixed(2) }); })()""")
-E("""(async () => { const S = SIEGE, b0 = S.bullets; S.yaw = S.covers[S.cover].yaw0; S.pitch = 1.3; await __go(40, () => { __calm(); return false; }); for (let i = 0; i < b0; i++) { S.cool = 0; fireTap(); await __go(2); }
+E("""(async () => { const S = SIEGE; S.bullets = SIEGE_ROUNDS; const b0 = S.bullets; S.yaw = S.covers[S.cover].yaw0; /* (a full cylinder: one went into the townsman) */ S.pitch = 1.3; await __go(40, () => { __calm(); return false; }); for (let i = 0; i < b0; i++) { S.cool = 0; fireTap(); await __go(2); }
   const reloading = S.reloadT > 0, spent = S.bullets === 0; await __go(200, () => { __calm(); return S.reloadT <= 0; });
-  return __check('eight in the gun, and the reload is eight', b0 === 8 && spent && reloading && S.bullets === 8 && S.reloads === 0 && /Eight in the gun/.test(SIEGE_TIP2), { first: b0, reloading, after: S.bullets, tip: SIEGE_TIP2 }); })()""")
+  return __check('eight in the gun, and the reload is eight', b0 === 8 && spent && reloading && S.bullets === 8 && S.reloads === 0 && /(Eight|left) in the gun/.test(SIEGE_TIP2), { first: b0, reloading, after: S.bullets, tip: SIEGE_TIP2 }); })()""")
 # the laser, with rounds still in the revolver
 E("""(async () => { const S = SIEGE, L = LASER, b = S.bullets; if (S.cover !== 1) { const C = S.covers[1]; S.run = { from: CAM.pos.clone(), to: C.stand.clone(), t: 0, dur: 0.6, to_i: 1 }; await __go(80, () => { __calm(); return !S.run; }); }
   S.holding = true; __aimPt(L.crate.position); await __go(30, () => { __calm(); __aimPt(L.crate.position); return false; });
