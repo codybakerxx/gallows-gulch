@@ -126,7 +126,7 @@ function setTrapOpen(dt, target) {
       d.vel += (G * Math.cos(d.ang) - 0.55 * d.vel) * h; d.ang += d.vel * h;
       if (d.ang > STOP) { d.ang = STOP; const sp = d.vel; d.vel = -d.vel * 0.32;
         if (sp > 1.2) { const at = V3(LAY.trap.x + d.side * LAY.trap.w * 0.5, LAY.plat.h - w, LAY.trap.z);
-          if (!d.slams) { if (d.side > 0) { Sound.bang(at); CAM.shake = Math.max(CAM.shake || 0, 0.7); kickLanterns(1); } } else if (sp > 2) Sound.knock(at, Math.min(1, sp / 6)); d.slams++; } }
+          if (!d.slams) { if (d.side > 0) { Sound.bang(at); CAM.shake = Math.max(CAM.shake || 0, 0.7); kickLanterns(1); crowsStartle(at, 25, 1.2, 3.4); } } else if (sp > 2) Sound.knock(at, Math.min(1, sp / 6)); d.slams++; } }
       if (d.ang < 0) { d.ang = 0; d.vel = Math.abs(d.vel) * 0.2; }
     }
     d.pivot.rotation.z = d.side * d.ang;

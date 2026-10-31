@@ -30,20 +30,27 @@ function wireUI() {
   $("gfx").addEventListener("change", e => { setQuality(e.target.value === "auto" ? pickTier() : e.target.value); savePrefs(); });
   $("stage").addEventListener("pointerdown", e => {
     if (e.target.closest("button,#hintBox")) return;
+    if (chaseTap(e)) return; // the getaway: a drag steers or aims, a click fires (12g)
+    if (SIEGE.on) { lookDown(e, "siege"); if (e.cancelable) e.preventDefault(); return; } // the shootout: a drag turns you, a tap takes cover or the laser (12p, 12d)
+    if (ARMED.on) { lookDown(e, "armed"); if (e.cancelable) e.preventDefault(); return; } // the revolver from the barrel in your hand: a drag looks round (12q)
     if (siegeTap(e)) return; // the sword, and the shootout that follows (12d)
+    if (revolverTap(e)) return; // the revolver on the barrel: take it up (12p, 12q)
     if (PLAY.on) { playDown(e); return; } // once he hangs, touches handle the body instead of skipping
-    if (STATE.locked) STATE.ts = 6; });
-  window.addEventListener("pointermove", playMove, { passive: false });
-  for (const ev of ["pointerup", "pointercancel"]) window.addEventListener(ev, playUp);
+    lookDown(e, "town"); }); // (a drag looks round; a tap hurries the host along: 12p)
+  window.addEventListener("pointermove", e => { if (!lookMove(e)) playMove(e); }, { passive: false });
+  for (const ev of ["pointerup", "pointercancel"]) window.addEventListener(ev, e => { if (!lookUp(e)) playUp(e); });
   document.addEventListener("keydown", e => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === "Escape") { if (!$("book").hidden) { bookClose(); return; } if ($("menu").hidden) openMenu(); else if (!STATE.over || siegeLive()) { $("menu").hidden = true; Sound.resume(); } return; }
+    if (CHASE.on) { chaseKey(e, true); return; } // (the getaway's own keys: 12g)
+    if (ARMED.on && $("menu").hidden) { if (e.key === " " || e.key === "Enter") { e.preventDefault(); if (!e.repeat) armedFire(); } return; } // (the revolver from the barrel: 12q)
     if (SIEGE.on && $("menu").hidden) { if (e.key === " " || e.key === "Enter") { e.preventDefault(); if (!e.repeat) fireTap(); } else if (e.key === "Shift" || e.key === "a" || e.key === "A") SIEGE.keyAim = true; return; } // (hold Shift or A to come up)
     if (/^[a-zA-Z]$/.test(e.key) && $("menu").hidden && $("sign").hidden) { e.preventDefault(); guess(e.key.toUpperCase()); }
     else if (e.key === " " && STATE.locked) STATE.ts = 6;
   });
-  document.addEventListener("keyup", e => { if (e.key === "Shift" || e.key === "a" || e.key === "A") SIEGE.keyAim = false; });
-  window.addEventListener("blur", () => { SIEGE.keyAim = false; });
+  document.addEventListener("keyup", e => { if (CHASE.on) { chaseKey(e, false); return; } if (e.key === "Shift" || e.key === "a" || e.key === "A") SIEGE.keyAim = false; if (e.key === " " || e.key === "Enter") laserTrigger(false); });
+  window.addEventListener("blur", () => { SIEGE.keyAim = false; CHASE.swipe = null; CHASE.drag = null; laserTrigger(false); });
+  $("motion").addEventListener("change", e => { STATE.reduceMotion = e.target.checked; savePrefs(); });
   document.addEventListener("visibilitychange", () => { if (document.hidden) Sound.pauseAll(); else Sound.wake(); });
 }
 // the end sign's button: Try Again after a loss, Play Again after a win
@@ -77,6 +84,8 @@ async function boot() {
   if (typeof prefs.vol === "number") { $("vol").value = prefs.vol; Sound.setVolume(prefs.vol / 100); }
   if (prefs.muted) { Sound.setMuted(true); $("muteBtn").innerHTML = soundIcon(false); $("muteBtn").setAttribute("aria-pressed", "false"); $("soundBtn").textContent = "Sound: Off"; $("soundBtn").setAttribute("aria-pressed", "false"); }
   if (prefs.gfx) $("gfx").value = prefs.gfx;
+  STATE.reduceMotion = typeof prefs.motion === "boolean" ? prefs.motion : matchMedia("(prefers-reduced-motion: reduce)").matches; $("motion").checked = STATE.reduceMotion;
+  STATE.cliffSeen = !!prefs.cliff; STATE.bestRide = prefs.ride | 0; STATE.rides = prefs.rides | 0;
   buildKeyboard(); wireUI(); bookInit(); hud();
   const forced = new URLSearchParams(location.search).get("tier");
   const tier = pickTier(forced || ($("gfx").value === "auto" ? null : $("gfx").value)); TEXQ = TIERS[tier].tex;
@@ -87,7 +96,7 @@ async function boot() {
   const models = Promise.all(["Xbot.glb", "LeePerrySmith.glb", "Horse.glb", "Stork.glb"].map(f => loadGLB(ASSETS + f)));
   const tl = new THREE.TextureLoader(), texs = Promise.all(["Map-COL.jpg", "Infinite-Level_02_Tangent_SmoothUV.jpg", "skin-spec.jpg"].map(f => tl.loadAsync(ASSETS + f)));
   setProgress(0.12, "Weathering the lumber…"); await nextFrame(); buildTextures(); buildMaterials();
-  setProgress(0.35, "Raising the town…"); await nextFrame(); initSky(); buildGround(); buildMesas(); buildRocks(); buildCacti(); buildScrub(); buildTown();
+  setProgress(0.35, "Raising the town…"); await nextFrame(); initSky(); buildGround(); buildMesas(); buildRocks(); buildCacti(); buildScrub(); buildTown(); buildClutter(); buildTownWeeds(); buildTumbleweeds(); buildWindmill();
   setProgress(0.55, "Building the gallows…"); await nextFrame(); buildGallows(); buildBoard(); buildWeed(); buildDust(); buildSmoke();
   setProgress(0.7, "Waking the townsfolk…");
   let xbot, head, horse, stork, col, nrm, spec;
@@ -102,21 +111,24 @@ async function boot() {
   HOST.onStep = stepSnd(true); MAN.onStep = stepSnd(false, 1.25); EXEC.onStep = stepSnd(false, 0.9);
   MAN.onBreath = (a, p) => { if (p > 0.35) Sound.breath(a.ch.bones.Head.getWorldPosition(new THREE.Vector3()), p); };
   KEY_LIGHT = new THREE.PointLight(0xffd9b8, 0, 3.5, 2); R.scene.add(KEY_LIGHT);
-  buildCrowd(); prepHorse(horse); prepBirds(stork); buildSiege();
+  buildCrowd(); prepHorse(horse); buildHerd(); prepBirds(stork); buildSiege(); buildGunProp(); buildArmedUI(); buildBell(); buildChase(); buildCrows(); buildTargets(); buildTownBreakables(); Sound.crowGate = () => !CHASE.on; // (the distant crows are heard about the town, not out on the getaway)
   setProgress(0.95, "Saddling up…"); shot("intro", 0); resetScene(); boardDraw();
-  await nextFrame(); siegePrecompile(true); try { R.renderer.compile(R.scene, R.camera); } catch (e) { console.warn("precompile", e); } siegePrecompile(false);
+  await nextFrame(); siegePrecompile(true); ashPrecompile(true); meatPrecompile(true); try { R.renderer.compile(R.scene, R.camera); } catch (e) { console.warn("precompile", e); } meatPrecompile(false); ashPrecompile(false); siegePrecompile(false);
   Sound.preloadClips(SIEGE_CLIPS);
   for (let i = 0; i < 3; i++) { await nextFrame(); tick(performance.now()); }
   $("loading").hidden = true; openMenu(); shot("wide", 4);
+  loadGLB(ASSETS + "ARC09.glb").then(prepLaser).catch(e => console.warn("laser gun unavailable", e)); // (the shootout's laser, 12k: fetched once the game's up)
   last = performance.now(); requestAnimationFrame(loop);
 }
-function onResize() { const st = $("stage"), w = st.clientWidth, h = st.clientHeight; if (!w || !h || !R.renderer) return; resizeRenderer(w, h); if (CAM && !CAM.to && CAM.name) shot(CAM.name, 0); }
+function onResize() { const st = $("stage"), w = st.clientWidth, h = st.clientHeight; if (!w || !h || !R.renderer) return; resizeRenderer(w, h); if (CAM && !CAM.to && CAM.name) shot(CAM.name, 0);
+  try { renderFrame(T); } catch (e) {} } // (draw straight away: a resized canvas is blank until the next frame, and the getaway's run changes the view's size)
 let last = 0, T = 0, perf = { n: 0, acc: 0, steps: 0 };
-// if frames run long while playing: 1) switch off AO, light shafts and skin scattering, 2) drop a quality tier, 3) lower the resolution a little
+// if frames run long while playing: 1) switch off AO, light shafts and skin scattering, 2) drop a quality tier (and again), 3) lower the
+// resolution a little. What was built at load (textures, the crowd, the clutter) stays; the per-pixel cost is what comes down
 function perfStep() {
   perf.steps++;
   if (!R.lite && R.tier !== "low") { R.lite = true; return; }
-  if (R.tier !== "low") { R.lite = false; setQuality(R.tier === "high" ? "medium" : "low"); if (R.tier === "medium") R.lite = true; return; }
+  if (R.tier !== "low") { R.lite = false; setQuality(TIER_ORDER[TIER_ORDER.indexOf(R.tier) + 1]); if (R.tier === "medium") R.lite = true; return; }
   if ((R.resScale || 1) > 0.8) { R.resScale = 0.85; resizeRenderer(R.w, R.h); }
 }
 function tick(now) {
@@ -130,10 +142,10 @@ function tick(now) {
   if (EXEC.gripping && !STATE.trap) EXEC.ik.R.t.copy(GAL.leverTip.getWorldPosition(A1));
   updateWind(dt); updateCrowd(dt, STATE.mood); updatePanic(dt); setTrapOpen(dt, STATE.trap); updateRopeState(T, dt); updateLanterns(dt);
   if (MAN.hang && MAN.hang.caught && MAN.hang.t - MAN.hang.tCatch > 2.5 && Math.random() < dt * 0.3) Sound.ropeCreak(GAL.anchor, 0.35); // the odd creak once he hangs still
-  updateHorse(dt); updateBirds(dt); updateWeed(dt); updateDust(rdt, T); updatePuffs(dt); updateFlag(dt); updateSmoke(dt);
-  updateSiege(rdt, dt); updateCamera(rdt, T, dt); siegeLate(rdt); updateSky(T, R.camera); Sound.setListener(R.camera); updateBubble(rdt); updatePlay(rdt);
+  updateHorse(dt); updateHerd(dt); updateBirds(dt); updateCrows(dt); updateTargets(dt); updateMeat(dt); updateAsh(dt); updateBreak(dt); updateWeed(dt); updateDust(rdt, T); updateTumbleweeds(dt); updateWindmill(dt); updatePuffs(dt); updateFlag(dt); updateSmoke(dt);
+  updateSiege(rdt, dt); updateLaser(rdt, dt); updateGunProp(rdt); updateArmed(rdt, dt); updateBell(rdt, dt); updateChase(rdt, dt); updateCamera(rdt, T, dt); siegeLate(rdt); laserLate(rdt); chaseLate(rdt); armedLate(rdt); updateSky(T, R.camera); Sound.setListener(R.camera); updateBubble(rdt); updatePlay(rdt);
   renderFrame(T);
-  if (perf.steps < 5 && $("menu").hidden && $("gfx").value === "auto" && !window.GULCH_PAUSE) { perf.n++; perf.acc += rdt;
+  if (perf.steps < 7 && $("menu").hidden && $("gfx").value === "auto" && !window.GULCH_PAUSE) { perf.n++; perf.acc += rdt;
     if (perf.n === 150) { const avg = perf.acc / perf.n; perf.n = 0; perf.acc = 0; if (avg > 1 / 27) perfStep(); } }
 }
 function loop(now) { if (window.GULCH_PAUSE) { last = now; requestAnimationFrame(loop); return; } tick(now); requestAnimationFrame(loop); }
