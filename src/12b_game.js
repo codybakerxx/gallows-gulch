@@ -2,15 +2,15 @@
 const $ = id => document.getElementById(id);
 const STORE = "gallows-gulch-3d-v1";
 function loadPrefs() { try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch (e) { return {}; } }
-function savePrefs() { try { localStorage.setItem(STORE, JSON.stringify({ v: 2, len: STATE.len, diff: STATE.diff, best: STATE.best, vol: +$("vol").value, muted: Sound.muted, gfx: $("gfx").value })); } catch (e) {} }
+function savePrefs() { try { localStorage.setItem(STORE, JSON.stringify({ v: 2, len: STATE.len, diff: STATE.diff, best: STATE.best, vol: +$("vol").value, muted: Sound.muted, gfx: $("gfx").value, motion: !!STATE.reduceMotion, cliff: !!STATE.cliffSeen, ride: STATE.bestRide | 0, rides: STATE.rides | 0 })); } catch (e) {} }
 const crowdCenter = () => V3(-3.0, 1.6, -5.0);
 async function lose() {
-  STATE.over = true; STATE.locked = true; showHintBox(false); hud(); STATE.duskT = 1;
+  STATE.over = true; STATE.locked = true; showHintBox(false); hud(); STATE.duskT = 1; Sound.prime(["neck0"]); // (decoded now: decoding it at the snap put the crack a beat behind the rope, v40)
   shot("drop", 1.1); Sound.stinger(); MAN.lookPt = V3(MAN.pos.x, 9, MAN.pos.z - 2); MAN.tremble = 1.4; MAN.panic = 1;
   await wait(1.25);
   const tip = () => GAL.leverTip.getWorldPosition(V3());
   await tween(0.24, p => { GAL.leverPivot.rotation.z = lerp(-0.35, 0.6, Ease.in(p)); EXEC.ik.R.t.copy(tip()); }); Sound.clank(tip());
-  STATE.trap = true; releaseRopeCoil(); puff(V3(LAY.trap.x, 0.3, LAY.trap.z), 50, 1.2); // the leaves slam into their stops a moment later (07b)
+  STATE.trap = true; releaseRopeCoil(); puff(V3(LAY.trap.x, 0.3, LAY.trap.z), 50, 1.2); Sound.hush(3.2); // the leaves slam into their stops a moment later (07b); no crow is heard over the drop and the snap
   { const np = noosePose(MAN), B = MAN.ch.bones; B.Neck.getWorldPosition(A1); B.Head.getWorldPosition(A2); A3.lerpVectors(A1, A2, 0.6);
     MAN.startDrop(GAL.anchor, GAL.rope.sim.L + np.top.distanceTo(A3)); } // the ragdoll's rope runs anchor → knot → noose
   MAN.hang.onCatch = snapMoment;
@@ -70,7 +70,7 @@ async function hostTipHat() {
   HOST.setIK("R", null, 0);
 }
 function showSign(won) {
-  STATE.locked = false; STATE.ts = 1; $("skip").hidden = true;
+  freeReset(); STATE.locked = false; STATE.ts = 1; $("skip").hidden = true;
   const t = $("signTitle"); t.textContent = won ? "YOU SAVED HIM" : "GAME OVER"; t.className = won ? "" : "lose"; signAgain(won);
   $("signWord").textContent = STATE.word; signMeaning(STATE.word, won); let line = null; if (!won) { line = pickQuip("lose"); const v = VOICE_LINES[line]; if (v) Sound.speak(v[0], null, 0.35); }
   $("signLine").textContent = won ? `Streak: ${STATE.streak} · Best: ${STATE.best}` : line || "";
@@ -111,7 +111,7 @@ function showHintBox(on) {
   b.hidden = !on; $("hintBtn").setAttribute("aria-expanded", String(!!on));
 }
 function resetScene() {
-  resetSiege(); stopBodyPlay(); TASKS.length = 0; ROPE.held = false; ROPE.mode = null; ROPE.fromT = 1; STATE.trap = false;
+  freeReset(); resetSiege(); resetCrows(); resetTargets(); resetMeat(); stopBodyPlay(); TASKS.length = 0; ROPE.held = false; ROPE.mode = null; ROPE.fromT = 1; STATE.trap = false;
   for (const d of GAL.doors) { d.ang = 0; d.vel = 0; d.slams = 0; d.pivot.rotation.z = 0; }
   GAL.leverPivot.rotation.z = -0.35; resetRope();
   MAN.hang = null; MAN.pathIdx = 0; MAN.tremble = 0; MAN.sweating = false; MAN.setSad(0); MAN.ch.skin.userData.U.sweat.value = 0; MAN.bound = true;
@@ -122,14 +122,18 @@ function resetScene() {
   if (HOST.ch.hat) { HOST.ch.hat.rotation.x = -0.15; HOST.ch.hat.position.y = 2.86; }
 }
 function newRound() {
+  const far = CAM.pos.length() > 130 || CHASE.on; // (back from the getaway, kilometres out: no flight back across the desert, v40)
   resetScene(); STATE.played = true; STATE.lastWon = false; STATE.streakLost = null; STATE.roundId = (STATE.roundId || 0) + 1; // (from now on the menu's big button says Restart or Try Again, not Ride Out: openMenu)
   const pick = pickWord(STATE.len, STATE.diff), cfg = DIFF[STATE.diff];
   Object.assign(STATE, { word: pick.w, hint: pick.hint, prog: Array(pick.w.length).fill(0), lostReveal: Array(pick.w.length).fill(false), wrong: [], guessed: new Set(),
     maxWrong: cfg.max, misses: 0, hintShown: false, locked: false, over: false, ts: 1, duskT: 0, bubble: null, mood: 0 });
   boardLayout(STATE.word); boardDraw(); resetKeys(); showHintBox(false); hud(); $("skip").hidden = true;
-  Sound.setLevel(0); Sound.startMusic(); shot("wide", 1.4);
+  Sound.setLevel(0); Sound.startMusic(); shot("wide", far ? 0 : 1.4); if (far) { LOOK.yaw = LOOK.pitch = 0; fadeIn(0.8); }
   $("kb").classList.remove("up"); requestAnimationFrame(() => setTimeout(() => $("kb").classList.add("up"), 60));
-  quipNewRound(); setTimeout(() => say("intro"), 900);
+  quipNewRound(); const rid = STATE.roundId, first = !STATE.mysterySaid; STATE.mysterySaid = true;
+  const later = (s, f) => setTimeout(() => { if (STATE.roundId === rid && !STATE.over) f(); }, s * 1000); // (not into a round that's since been replaced or ended)
+  if (first) { later(0.9, () => say(null, MYSTERY_LINE)); later(0.9 + VOICE_LINES[MYSTERY_LINE][1] + 0.7, () => { if (!STATE.guessed.size) say("intro"); }); } // (the first round: the mystery line, then the usual intro)
+  else later(0.9, () => say("intro"));
 }
 // ---- HUD + keyboard ----
 const ROWS = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"];
