@@ -1,23 +1,28 @@
 // ---------- RENDERER + FILMIC POST ----------
 const R = { renderer: null, scene: null, camera: null, composer: null, bloom: null, grade: null, tier: "high", dpr: 1, w: 1, h: 1, webgl2: false };
+// detail: close-up detail textures layered over ground, wood and stone (0 off, 1 on, 2 with a second, finer octave); clutter: how much
+// small stuff lies about the town and the desert (stones, debris, tumbleweeds, porch props), 0-1.5
 const TIERS = {
-  high: { dpr: 2, shadow: 2048, bloom: true, msaa: 4, tex: 512, crowd: 12, grass: 1, ao: 12, shafts: 40, pcss: true, vol: 20, sss: 16 },
-  medium: { dpr: 1.5, shadow: 1024, bloom: true, msaa: 2, tex: 512, crowd: 6, grass: 0.6, ao: 8, shafts: 24, pcss: true, vol: 0, sss: 10 },
-  low: { dpr: 1.25, shadow: 1024, bloom: false, msaa: 2, tex: 256, crowd: 3, grass: 0.35, ao: 0, shafts: 0, sss: 0 }
+  ultra: { dpr: 2.5, shadow: 4096, bloom: true, msaa: 4, tex: 1024, crowd: 12, grass: 1.6, ao: 16, shafts: 48, pcss: true, vol: 28, sss: 20, detail: 2, clutter: 1.5 },
+  high: { dpr: 2, shadow: 2048, bloom: true, msaa: 4, tex: 512, crowd: 12, grass: 1.2, ao: 12, shafts: 40, pcss: true, vol: 20, sss: 16, detail: 2, clutter: 1.2 },
+  medium: { dpr: 1.5, shadow: 1024, bloom: true, msaa: 2, tex: 512, crowd: 6, grass: 0.7, ao: 8, shafts: 24, pcss: true, vol: 0, sss: 10, detail: 1, clutter: 0.8 },
+  low: { dpr: 1.25, shadow: 1024, bloom: false, msaa: 2, tex: 256, crowd: 3, grass: 0.35, ao: 0, shafts: 0, sss: 0, detail: 0, clutter: 0.4 }
 };
+const TIER_ORDER = ["ultra", "high", "medium", "low"];
+const tierAtLeast = t => TIER_ORDER.indexOf(R.tier) <= TIER_ORDER.indexOf(t); // (the tier now is this one or better)
 if (window.GULCH_TIER_PATCH) for (const k in window.GULCH_TIER_PATCH) Object.assign(TIERS[k], window.GULCH_TIER_PATCH[k]); // test hook
 function pickTier(pref) {
   if (pref && TIERS[pref]) return pref;
   const mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && Math.min(screen.width, screen.height) < 820);
-  return mobile ? "medium" : "high";
+  return mobile ? "high" : "ultra"; // (frames that run long step it down while playing: 12c)
 }
 const GradeShader = {
   uniforms: { tDiffuse: { value: null }, exposure: { value: 0.92 }, time: { value: 0 }, dusk: { value: 0 }, res: { value: new THREE.Vector2(1, 1) },
-    vignette: { value: 1 }, grain: { value: 0.035 }, flash: { value: 0 }, fade: { value: 0 },
+    vignette: { value: 1 }, grain: { value: 0.035 }, flash: { value: 0 }, fade: { value: 0 }, zoomBlur: { value: 0 },
     tDepth: { value: null }, sun: { value: new THREE.Vector2(0.5, 0.5) }, flare: { value: 0 }, sunCol: { value: new THREE.Color(1, 0.8, 0.6) } },
   vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
   fragmentShader: `
-    uniform sampler2D tDiffuse, tDepth; uniform float exposure, time, dusk, vignette, grain, flash, fade, flare; uniform vec2 res, sun; uniform vec3 sunCol; varying vec2 vUv;
+    uniform sampler2D tDiffuse, tDepth; uniform float exposure, time, dusk, vignette, grain, flash, fade, flare, zoomBlur; uniform vec2 res, sun; uniform vec3 sunCol; varying vec2 vUv;
     float gh(vec2 p){ return fract(sin(dot(p, vec2(41.3, 289.1))) * 43758.5453); }
     float gn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(gh(i), gh(i + vec2(1.0, 0.0)), f.x), mix(gh(i + vec2(0.0, 1.0)), gh(i + vec2(1.0, 1.0)), f.x), f.y); }
     // a soft hexagonal iris ghost
@@ -31,6 +36,9 @@ const GradeShader = {
       vec2 c = vUv - 0.5; float r2 = dot(c, c);
       vec2 off = c * r2 * 0.0035;
       vec3 col = vec3(texture2D(tDiffuse, vUv + off).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - off).b);
+      // speed: the edges of the view smear outward from where you're heading (the getaway's run at a full gallop); the middle stays sharp
+      if (zoomBlur > 0.002) { vec2 zc = vUv - vec2(0.5, 0.46); float zr = smoothstep(0.08, 0.5, length(zc * vec2(res.x / res.y, 1.0))); vec3 acc = col; float jit = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
+        for (int i = 1; i <= 5; i++) acc += texture2D(tDiffuse, vUv - zc * zoomBlur * zr * (float(i) - jit) * 0.012).rgb; col = acc / 6.0; }
       // the lens: with the sun in frame and not blocked, ghosts of the iris line up through the centre and the glare lights the dust on the glass
       if (flare > 0.001) {
         float vis = 0.0; for (int k = 0; k < 5; k++) { vec2 o = vec2(cos(float(k) * 1.2566), sin(float(k) * 1.2566)) * 0.006 * float(k > 0); vis += step(0.9999995, texture2D(tDepth, clamp(sun + o, 0.001, 0.999)).x); }
@@ -147,7 +155,7 @@ function patchFog(sunAz) {
       // plus dust that hangs in the bottom few metres of air: exponential height fog integrated along the view ray
       float fh0 = max(cameraPosition.y, 0.0), fh1 = max(vFogH, 0.0), fdh = fh1 - fh0;
       float fhf = abs(fdh) > 0.05 ? (exp(-0.5 * fh0) - exp(-0.5 * fh1)) / (0.5 * fdh) : exp(-0.5 * fh0);
-      fogFactor = 1.0 - (1.0 - fogFactor) * exp(-fogDensity * 1.6 * vFogDepth * fhf);
+      fogFactor = 1.0 - (1.0 - fogFactor) * exp(-fogDensity * 1.6 * vFogDepth * fhf * mix(0.08, 1.0, smoothstep(-30.0, -2.0, vFogH))); // (down in a canyon the air is clearer than the dust over the plain)
     #else
       float fogFactor = smoothstep(fogNear, fogFar, vFogDepth);
     #endif
@@ -162,7 +170,7 @@ function patchFog(sunAz) {
 function patchShadows(tier, ext = 30, depth = 159) {
   const C = THREE.ShaderChunk, src = C.shadowmap_pars_fragment, a = src.indexOf("#elif defined( SHADOWMAP_TYPE_PCF_SOFT )"), b = src.indexOf("#elif defined( SHADOWMAP_TYPE_VSM )");
   if (a < 0 || b < a) { console.warn("PCSS patch skipped"); return; }
-  const hi = tier === "high", km = (depth * Math.tan(THREE.MathUtils.degToRad(0.6)) / ext).toFixed(5);
+  const hi = tier === "high" || tier === "ultra", km = (depth * Math.tan(THREE.MathUtils.degToRad(0.6)) / ext).toFixed(5);
   const pcss = `#elif defined( SHADOWMAP_TYPE_PCF_SOFT )
       vec2 texelSize = vec2( 1.0 ) / shadowMapSize;
       float zR = shadowCoord.z, rot = 6.2832 * fract( 52.9829189 * fract( dot( gl_FragCoord.xy, vec2( 0.06711056, 0.00583715 ) ) ) );
@@ -318,7 +326,7 @@ function initRenderer(canvas, tierName) {
   if (depthOK) R.composer.renderTarget2.depthTexture = new THREE.DepthTexture(4, 4, THREE.UnsignedIntType); // its own source: a clone would share the GL texture and form a feedback loop
   const rp = new THREE.RenderPass(R.scene, R.camera), rpr = rp.render.bind(rp); rp.render = (r, w, rb, dt, m) => { R.sceneDepth = rb.depthTexture; if (R.grade) R.grade.uniforms.tDepth.value = R.sceneDepth || null; rpr(r, w, rb, dt, m); R.stats = { calls: r.info.render.calls, tris: r.info.render.triangles }; }; R.composer.addPass(rp);
   if (depthOK) { // the post pass reads the scene target and writes the other one, so the scene depth is never overwritten mid-frame
-    PostShader.defines = { DOF_N: tierName === "high" ? 32 : 20, SSS_N: Math.max(4, T.sss || 4) }; const post = new THREE.ShaderPass(PostShader); post.needsSwap = true; post.enabled = false; const base = post.render.bind(post);
+    PostShader.defines = { DOF_N: tierName === "ultra" ? 40 : tierName === "high" ? 32 : 20, SSS_N: Math.max(4, T.sss || 4) }; const post = new THREE.ShaderPass(PostShader); post.needsSwap = true; post.enabled = false; const base = post.render.bind(post);
     post.render = (r, w, rb, dt, m) => { const P = post.uniforms; P.tDepth.value = R.sceneDepth; P.tAO.value = R.ao ? R.ao.rt.texture : null; P.tShafts.value = R.shafts ? R.shafts.rt.texture : null; P.tVol.value = R.vol ? R.vol.rt.texture : null; base(r, w, rb, dt, m); };
     R.post = R.dof = post;
     if (T.ao) { R.ao = new AOPass(T.ao); R.composer.addPass(R.ao); }

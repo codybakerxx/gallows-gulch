@@ -440,4 +440,6 @@ const VOICE_SEC = {
 const VOICE_LINES = {}; for (const k in QUIPS) QUIPS[k].forEach((q, i) => VOICE_LINES[q] = [k + i, (VOICE_SEC[k] || [])[i] || 1.6]);
 // the host during the shootout at the gallows (12d)
 const SIEGE_LINES = { start: "He cut him down! Shoot that stranger!", win: "Go on, git. Before I change my mind.", lose: "Should've minded your own business, stranger." }; // (he walks out alive: the host lets him go)
+// the first round after the page loads opens with a nudge toward the game's secret (the bell, 12f), then the usual intro
+const MYSTERY_LINE = "There's more to this game than you think. Find the mystery."; VOICE_LINES[MYSTERY_LINE] = ["mystery0", 3.87];
 VOICE_LINES[SIEGE_LINES.start] = ["siege0", 2.73]; VOICE_LINES[SIEGE_LINES.lose] = ["siege2", 3.18]; // (the win line is the host's own "Go on, git")
