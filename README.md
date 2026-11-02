@@ -74,7 +74,10 @@ two on the rooftops, behind the false fronts of the sheriff's office and the gen
   may pitch over the edge.
 - They taunt you now and then. In the street they hide behind their own cover too: a trough, a crate stack and
   barrels.
-- Run out of bullets with gunmen still standing and they know your gun is empty. They finish you off.
+- Run out of bullets with gunmen still standing and they know your gun is empty. Show yourself and they finish you off.
+  Stay down behind your cover and it still stops their bullets, but one of them walks round the side of it to finish you
+  where you hide: a few seconds to get to the laser, if it's still on its crate. (A man on a roof can see down behind it
+  once there's nobody left in the street to send.)
 - Down all nine and you survive. The street stays yours, gun still in hand, until you press **Done**.
 - There's a bell on the gallows. It's a target like any other, and it costs a bullet like any other.
 - The street reacts to your shots. Bottles and tin cans stand on the gunmen's crates, barrels and trough and on the
@@ -92,7 +95,7 @@ two on the rooftops, behind the false fronts of the sheriff's office and the gen
   wagon wheel, the benches, sacks, lanterns, shutters and posters on the porches, and the gunmen's own cover. Each
   takes a few bullets; whatever was on it falls, and a gunman whose cover is gone is in the open.
 - Look down at the crate by your left hip at your middle cover. There's a laser on it, and you can tap it to take it
-  up at any time (if the revolver runs dry first it wakes up humming). **Hold Fire** for a blue beam: a man in it
+  up at any time (if the revolver runs dry first, its lights pulse). **Hold Fire** for a blue beam: a man in it
   burns to ash and crumbles into a little heap, and it scorches and breaks what it touches. It holds **20 seconds**
   of firing (the blue ring where the cylinder was), then takes **7 seconds** to charge itself (the ring fills amber).
   What it does to a horse or a crow is best seen (STEAK! or DRUMSTICK!, thick and steaming), and what that leaves on

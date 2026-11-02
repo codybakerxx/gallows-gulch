@@ -203,7 +203,7 @@ async function startSiege() {
   bellReset(); // (the bell's mark is for this shootout only: 12f)
   const S = SIEGE; S.on = true; S.phase = "cut"; S.sword.glint.visible = false; S.t = 0; S.used = {}; showSiegeUI("cut"); for (const C of S.covers) C.grp.visible = true; S.props.visible = true; resetTargets(); showTargets(true); crowsGather(); resetLaser(); horseHurry(); breakReset(); // (all of it whole: 12m)
   S.bullets = SIEGE_ROUNDS; S.reloads = GUN.reloads; S.reloadT = 0; S.health = GUN.hearts; gunHud.key = null; S.hurt = 0; S.deadT = 0; S.cool = 0; S.recoil = 0; S.holding = S.keyAim = false; S.aimId = null; S.scanT = 0; S.upT = 0; S.vm.kick = 0;
-  S.shots = 0; S.downT = 0; S.aims = 0; S.said.clear(); S.tauntT = 0; S.talkUntil = 0; S.wordsAt = S.lastAt = 0; S.doomT = S.doomI = 0; S.doomSaid = false; S.hitT = 0;
+  S.shots = 0; S.downT = 0; S.aims = 0; S.said.clear(); S.tauntT = 0; S.talkUntil = 0; S.wordsAt = S.lastAt = 0; S.doomT = S.doomI = 0; S.doomSaid = false; S.hitT = 0; S.flanker = null; S.flankSaid = false;
   $("doomMsg").hidden = $("hitMsg").hidden = true;
   stopBodyPlay(); STATE.locked = true; STATE.ts = 1; SLOW.t = 99; $("skip").hidden = true; showHintBox(false); $("sign").hidden = true;
   Sound.clip("sword0", S.sword.group.position, 1.1, 0, 0.2);
@@ -375,10 +375,11 @@ function enemyFire(E) {
   const S = SIEGE, muzzle = E.gun.localToWorld(V3(0, 0.035, 0.21)); muzzleFlash(muzzle, 0.28); E.kick = 1;
   puff(muzzle, 9, 0.35, 0.3, 2.4, 0.36, 0xd8d3c8); // black powder: a cloud of white smoke hangs where he fired
   Sound.clip(siegePick("far", 4), muzzle, 1.0, 0, 0.35, rnd(0.94, 1.06), 7); crowsStartle(muzzle, 28, 0.55);
-  const doomed = S.phase === "doomed", exposed = doomed || playerExposed(), p = doomed ? 1 : S.run ? SIEGE_CFG.hitRun : SIEGE_CFG.hitUp;
-  const hit = exposed && (doomed || clearShot(E)) && Math.random() < p; // (behind something solid, he can't hit you, unless your gun's empty)
+  const doomed = S.phase === "doomed", over = doomed && !playerExposed() && ((E.flank && E.flank.there) || (E.roof && !S.enemies.some(q => q.alive && !q.roof))); // (v43: down behind cover with an empty gun: only the man come round the side of it, or one on a roof with nobody left below)
+  const exposed = playerExposed() || over, p = doomed ? 1 : S.run ? SIEGE_CFG.hitRun : SIEGE_CFG.hitUp;
+  const hit = exposed && (doomed || clearShot(E)) && Math.random() < p; // (behind something solid, he can't hit you)
   if (!onFrame(E, 1.0)) S.threat = { E, t: 0.7, hit }; // fired from outside your view: the arc flares on his side (siegeLate)
-  if (hit) { playerHit(E, doomed); return; }
+  if (hit) { playerHit(E, over); return; }
   const C = S.covers[S.cover];
   if (exposed) { Sound.clip(siegePick("whiz", 3), playerEye(_s1).addScaledVector(V3().subVectors(muzzle, _s1).normalize(), -0.6).add(V3(rnd(-0.5, 0.5), 0.2, 0)), 0.9, 0.05, 0.05, rnd(0.9, 1.1), 2);
     const g = playerEye(V3()).add(V3(rnd(-1.4, 1.4), 0, rnd(0.6, 1.8))); g.y = 0.05; puff(g, 10, 0.5, 0.12, 0.8, 0.45); }
@@ -389,7 +390,7 @@ function enemyFire(E) {
 // out in the open: up from behind the cover with Aim held (read straight from the input, so the frame you let go you're safe), or on the
 // run between covers. Down behind cover, nothing can hit you while you've a bullet left.
 function playerExposed() { const S = SIEGE; return !!S.run || (!S.crouch && (S.holding || S.keyAim)); }
-function playerHit(E, force) { // force: your gun's empty, and cover won't save you
+function playerHit(E, force) { // force: your gun's empty and he's round your cover (v43), so it won't save you
   const S = SIEGE; if (S.phase !== "fight" && S.phase !== "doomed") return; if (!force && !playerExposed()) return;
   S.health--; S.hurt = 1; S.hbT = 0; CAM.shake = Math.max(CAM.shake, 1.6); CAM.kv = -1.2; S.recoil = Math.max(S.recoil, 0.6);
   Sound.clip(siegePick("hurt", 3), null, 1.0, 0.03, 0.1, rnd(0.96, 1.04)); siegeHud(); screenBlood(S.health <= 2 ? 3 : 2);
@@ -460,14 +461,28 @@ function siegeReload() {
   Sound.cap(null); setTimeout(() => Sound.cap(null), 240); siegeHud();
 }
 // the last bullet's gone and some of them are still standing: they know it. One calls out, and then they take turns shooting, each shot
-// a heart, cover or no cover, until you're down (updateSiege drives it, a gunman at a time, so you see each heart go)
+// a heart if you show yourself (updateSiege drives it, a gunman at a time, so you see each heart go). v43: down behind your cover it still
+// saves you: their shots thud into it, and one of them comes round the side of it to finish you where you hide (doomFlank). A man up on a
+// roof, with no one left in the street to send, can see down behind it
 function siegeDoomed() {
-  const S = SIEGE; S.phase = "doomed"; S.doomT = 0; S.doomI = 0; S.doomSaid = false; S.nextShot = 99; S.wordsAt = S.lastAt = 0; S.doomFirst = S.doomGap = null;
-  if (LASER.ready && LASER.state === "crate") { // (the laser on the crate wakes and hums: they give you longer, if you can find it: 12k)
-    S.doomFirst = 5; S.doomGap = 1.15; laserWake(); setTimeout(() => { if (S.phase === "doomed" && LASER.state === "crate") { const t = $("siegeTip"); t.textContent = "Something's humming down by your hip…"; t.hidden = false; S.tip = 3.5; } }, 1700); }
-  for (const E of S.enemies) if (E.alive) { E.state = "pause"; E.t = 99; E.a.path = null; }
+  const S = SIEGE; S.phase = "doomed"; S.doomT = 0; S.doomI = 0; S.doomSaid = false; S.nextShot = 99; S.wordsAt = S.lastAt = 0; S.doomFirst = S.doomGap = null; S.flanker = null;
+  if (LASER.ready && LASER.state === "crate") { S.doomFirst = 5; S.doomGap = 1.15; laserWake(); } // (the laser on the crate wakes, its lights pulsing (v43: silently): they give you longer, if you can find it: 12k)
+  for (const E of S.enemies) { E.flank = null; if (E.alive) { E.state = "pause"; E.t = 99; E.a.path = null; } }
   $("siegeTip").hidden = true; S.tip = 0; S.tipNext = null;
   const m = $("doomMsg"); m.hidden = false; m.classList.remove("show"); void m.offsetWidth; m.classList.add("show");
+}
+// v43: out of bullets and down behind cover: the nearest of them in the street walks round to the side of it, and from there he can't
+// miss. It takes him a few seconds: time to get to the laser, if it's still on its crate
+function doomFlank(dt) {
+  const S = SIEGE; if (S.doomT < 1.2) return; const C = S.covers[S.cover];
+  let F = S.flanker; if (F && !F.alive) F = S.flanker = null;
+  if (!F) { const P = C.stand, cands = S.enemies.filter(q => q.alive && !q.roof && q.state !== "aim").sort((a, b) => a.a.pos.distanceTo(P) - b.a.pos.distanceTo(P)); F = cands[0]; if (!F) return;
+    const s = (F.a.pos.x - P.x) * C.side.x + (F.a.pos.z - P.z) * C.side.z >= 0 ? 1 : -1, to = V3().copy(P).addScaledVector(C.side, s * 1.9).addScaledVector(C.away, 0.5); // (beside you and a step behind: the cover's no use)
+    S.flanker = F; F.flank = { to, there: false, cover: S.cover }; F.state = "move"; F.a.walkTo([[to.x, to.z]], SIEGE_CFG.speed[1]);
+    if (!S.flankSaid) { S.flankSaid = true; const t = $("siegeTip"); t.textContent = "One of them's coming round your cover…"; t.hidden = false; S.tip = 3; } return; }
+  if (F.flank.cover !== S.cover) { F.flank = null; S.flanker = null; return; } // (you moved: he'll pick his way again)
+  if (!F.flank.there) { if (F.a.path) { F.state = "move"; return; } F.flank.there = true; F.t = 0; }
+  if (F.state !== "aim" && F.state !== "recover") { F.state = "aim"; F.t = F.tAim = 0.55; F.a.path = null; Sound.clip(siegePick("cock", 2), F.gun.position, 0.9, 0.05, 0.1, rnd(0.95, 1.05), 4); } // (round the side of you: he takes aim, and keeps on till you're down)
 }
 // what one of them says when your gun clicks empty: the executioner asks for your last words, or reminds you whose time it is
 function doomTaunt() { const X = tauntSpeaker("exec"), M = tauntSpeaker("man");
@@ -823,8 +838,9 @@ function updateSiege(rdt, dt) {
   if (S.phase === "doomed") { S.doomT += dt;
     if (!S.doomSaid && S.doomT > 0.35) S.doomSaid = doomTaunt() || S.doomT > 1.2;
     if (S.doomT >= (S.doomFirst ?? SIEGE_CFG.doom[0]) + S.doomI * (S.doomGap ?? SIEGE_CFG.doom[1])) { const alive = S.enemies.filter(q => q.alive), E = alive[S.doomI % Math.max(1, alive.length)];
-      if (E && E.state !== "aim") { E.state = "aim"; E.t = E.tAim = 0.3; E.a.path = null; Sound.clip(siegePick("cock", 2), E.gun.position, 0.9, 0.05, 0.1, rnd(0.95, 1.05), 4); }
-      S.doomI++; } }
+      if (E && E.state !== "aim" && E !== S.flanker) { E.state = "aim"; E.t = E.tAim = 0.3; E.a.path = null; Sound.clip(siegePick("cock", 2), E.gun.position, 0.9, 0.05, 0.1, rnd(0.95, 1.05), 4); }
+      S.doomI++; }
+    doomFlank(dt); }
   // the taunts that wait on a moment rather than on someone taking aim
   if (S.phase === "fight") {
     if (S.t > 6 && !S.said.has(TAUNTS.getaway[1])) taunt("getaway", tauntSpeaker("man")); // the opening jeer, once the host has had his say

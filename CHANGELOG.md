@@ -7,6 +7,12 @@ The version numbers are the published versions of the game (first published as a
   hardly showed. Now it's tall tongues of flame drawn over the scene, yellow-white at the root and dark red at the tips,
   with a bright glow at the heart and black smoke rolling off. The weed goes up with a whoomph, crackles as it burns,
   is charred black in under a second, and burns for 4.5 s (was 3.2). It's a little easier to hit, too.
+- **Cover saves you when you're out of bullets.** Out of bullets, the gunmen used to shoot you dead through your cover,
+  crouched or not. Now cover still stops their bullets: they shoot you only if you show yourself, and instead one of
+  them walks round the side of your cover to finish you where you hide. That takes him a few seconds, time to get to
+  the laser if it's still on its crate ("One of them's coming round your cover…"). A man on a roof can still see down
+  behind it once there's nobody left in the street.
+- **No hum from the laser on the crate.** When your revolver runs dry, its lights pulse, silently.
 - **No humming after you're dead.** Out of bullets in the town shootout with the laser still on its crate, the laser
   wakes and hums so you can find it. If they finished you first, the hum never stopped: it went on through GAME OVER
   and into the next round. It's stopped now as soon as the fight is over, and the laser's other running sounds (the

@@ -2,7 +2,8 @@
 #   - the shootout with the laser: a tumbleweed in the beam catches fire, rolls on ablaze and blackening, burns down to ash; another blows in later
 #   - a gunman shot down, then held in the beam: he burns to ash where he lies, a long low heap under him
 #   - the meat: STEAK! over it as it comes, a ring and sparks; thicker; steaming once it's down
-#   - v42b: the weed on the ground, as it rolls; the fire drawn over the scene; out of bullets the laser hums, and stops once you're dead
+#   - v43: the weed on the ground, as it rolls; the fire drawn over the scene; out of bullets and down behind cover, safe from their shots
+#     till one of them comes round the side of it; the laser on the crate silent, and no hum left after
 #   - the getaway: the run from 70 km/h to 90; the revolver five in the gun and one reload; the riders sitting up straight
 # Prints one JSON line per check; "ok" is true when it passed.
 import json, os, sys
@@ -79,11 +80,14 @@ E("""(async () => { chaseRetry(); const C = CHASE; await __go(600, () => C.state
     worst = Math.max(worst, Math.abs(Math.atan2(d.z, d.y))); side = Math.max(side, Math.abs(Math.atan2(d.x, d.y))); } }
   return __check('the riders sit upright in the saddle', worst < 0.12 && side < 0.06, { forwardDeg: +(worst * 57.3).toFixed(1), sideDeg: +(side * 57.3).toFixed(1) }); })()""")
 shot("d_riders_upright")
-# ---- v42b: out of bullets, the laser on the crate hums; dead, the hum stops, and it's not there in the next round ----
-E("""(async () => { chaseHome(); await __go(30); await __siege(); const S = SIEGE, L = LASER; await __go(600, () => L.ready); await __go(10, () => { __calm(); return false; });
-  const onCrate = L.state === 'crate'; S.bullets = 0; S.reloads = 0; siegeDoomed(); await __go(20); const humming = Sound.hums.wake && L.awake;
-  siegeDie(); await __go(10); const afterDeath = Sound.hums; newRound(); await __go(30); const nextRound = Sound.hums;
-  return __check('out of bullets the laser hums; dead, it stops', onCrate && humming && !afterDeath.wake && !afterDeath.charge && !afterDeath.beam && !nextRound.wake && !nextRound.charge && !nextRound.beam, { onCrate, humming, afterDeath, nextRound }); })()""")
+# ---- v43: out of bullets and down behind cover: their shots go into it; one comes round the side and finishes you there; no hum, then or after ----
+E("""(async () => { chaseHome(); await __go(30); await __siege(); const S = SIEGE, L = LASER; await __go(600, () => L.ready); S.holding = S.keyAim = false; await __go(30);
+  const onCrate = L.state === 'crate', h0 = S.health; S.bullets = 0; S.reloads = 0; siegeDoomed(); let hum = false, hitAt = null, thereAt = null, near = null, walked = false;
+  await __go(3600, () => { S.holding = S.keyAim = false; hum = hum || Sound.hums.wake; const F = S.flanker; if (F && F.state === 'move') walked = true;
+    if (F && F.flank && F.flank.there && thereAt === null) { thereAt = +S.doomT.toFixed(2); near = +F.a.pos.distanceTo(S.covers[S.cover].stand).toFixed(2); } if (S.health < h0 && hitAt === null) hitAt = +S.doomT.toFixed(2); return S.phase === 'dead'; });
+  const dead = S.phase === 'dead'; await __go(10); const afterDeath = Sound.hums; newRound(); await __go(30); const nextRound = Sound.hums;
+  return __check('out of bullets behind cover: safe till one comes round it; no hum', onCrate && walked && thereAt !== null && hitAt !== null && hitAt >= thereAt && near < 2.6 && dead && !hum && !afterDeath.wake && !afterDeath.charge && !afterDeath.beam && !nextRound.wake && !nextRound.charge && !nextRound.beam,
+    { onCrate, walked, flankerThereAt: thereAt, fromYou: near, firstHitAt: hitAt, dead, hum, afterDeath, nextRound }); })()""")
 E("""JSON.stringify({ errs: __errs })""")
 json.dump(steps, open("test/s142.json", "w"), indent=0)
 print(len(steps), "steps")

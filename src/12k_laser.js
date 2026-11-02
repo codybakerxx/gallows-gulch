@@ -3,7 +3,7 @@
 // tools/pack_arc09.py). It lies on its side on the left-hand crate of the middle cover in the town shootout, down by your left hip, where
 // you'd have to look down and to the side to see it. It can be taken up at any time (v37; in v36 only once the revolver was empty): tap
 // it (from the crates; from the other cover a tap runs you over to it). If the revolver runs dry while it's still there, it wakes: its
-// charge lights come up and it hums there on the crate, and the gunmen give you a little longer before they finish you. Hold Fire and
+// charge lights come up and pulse there on the crate (v43: silently; it used to hum), and the gunmen give you a little longer before they finish you. Hold Fire and
 // it throws a blue beam with a hum: a man the beam touches burns to ash (12o), a crow or a horse comes out as meat (12l); it scorches
 // what it touches and breaks what it's held on (12m).
 // It holds 20 s of firing. When that's spent it takes 7 s to charge itself again. It goes back on the crate for the next shootout.
@@ -79,8 +79,8 @@ function resetLaser() {
   Sound.laser(false); Sound.laserWake(null, false); Sound.laserCharge(false);
   L.scorch.used = L.scorch.next = 0; L.scorch.im.count = 0; L.scorch.im.visible = false; L.sparks.life.fill(0); L.sparks.pts.visible = false;
 }
-// the revolver's empty: it wakes on the crate, lights up and hums, so you might hear where it is
-function laserWake() { const L = LASER; if (!L.ready || L.state !== "crate" || L.awake) return; L.awake = true; Sound.laserWake(L.crate.position, true); }
+// the revolver's empty: it wakes on the crate and its lights pulse
+function laserWake() { const L = LASER; if (!L.ready || L.state !== "crate" || L.awake) return; L.awake = true; } // (v43: its lights pulse, and that's all: no hum)
 // a tap on the stage: was it on the gun lying on the crate? (a generous ring round where it is on screen)
 function laserTap(e) {
   const L = LASER, S = SIEGE; if (!L.ready || L.state !== "crate" || !L.crate.visible || S.phase === "won" || S.phase === "dead" || S.phase === "cut") return false;
@@ -95,7 +95,7 @@ function laserTap(e) {
 function laserTake() {
   const L = LASER, S = SIEGE; if (L.state !== "crate") return; L.state = "lift"; L.lift = { t: 0, p: L.crate.position.clone(), q: L.crate.quaternion.clone() }; L.crate.visible = false; L.hudKey = "";
   Sound.laserWake(null, false); Sound.laserPick(); S.vm.gun.visible = false;
-  if (S.phase === "doomed") { S.phase = "fight"; $("doomMsg").hidden = true; S.nextShot = 1.6; S.doomFirst = S.doomGap = null;
+  S.flanker = null; if (S.phase === "doomed") { S.phase = "fight"; $("doomMsg").hidden = true; S.nextShot = 1.6; S.doomFirst = S.doomGap = null;
     for (const E of S.enemies) if (E.alive && E.state === "pause" && E.t > 50) E.t = rnd(0.3, 1.2); }
   const t = $("siegeTip"); t.textContent = "Hold Fire for the beam · 20 s, then it charges itself"; t.hidden = false; S.tip = 3.2; siegeHud();
 }
@@ -122,7 +122,7 @@ function revTake() {
 function updateLaser(rdt, dt) {
   const L = LASER, S = SIEGE; if (!L.ready) return; L.t += rdt;
   const chase = CHASE.on && CHASE.laser, live = chase ? CHASE.state === "combat" : S.on && (S.phase === "fight" || S.phase === "doomed" || S.phase === "cleared");
-  // (v42b: no hum left running where it has no business. The wake on the crate is only while you're out of bullets in the fight with it
+  // (v43: the wake makes no sound now, but in case: no hum left running where it has no business. The wake on the crate is only while you're out of bullets in the fight with it
   // still there to take; once you were dead, or the round was over, it hummed on into the next round, for good. And the recharge's rising
   // tone only while there's a fight it's for)
   if (L.awake && !(S.on && S.phase === "doomed" && L.state === "crate")) { L.awake = false; Sound.laserWake(null, false); }
