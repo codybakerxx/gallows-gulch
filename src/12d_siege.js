@@ -721,7 +721,7 @@ async function siegeDie() {
   for (const E of S.enemies) if (E.alive) { E.state = "pause"; E.t = 99; }
   Sound.duck(0.05, 1.5); await wait(2.0); if (!S.on) return;
   S.loseLine = ["Dig a hole out back, boys.", "Folks came for a hangin'. They got one."].find(q => !QUIP_SAID.has(q)) || SIEGE_LINES.lose;
-  say(null, S.loseLine); await wait(3.2); if (!S.on) return;
+  if (!S.hostE) say(null, S.loseLine); /* (v44: not from a dead host) */ await wait(3.2); if (!S.on) return;
   STATE.streak = 0; savePrefs(); showSiegeSign(false);
 }
 async function siegeWin() {
@@ -917,6 +917,7 @@ function resetSiege() {
   for (const E of G.hats) { const st = E.hatOff; if (st) { st.parent.add(st.obj); st.obj.position.copy(st.p); st.obj.quaternion.copy(st.q); st.obj.scale.copy(st.s); E.hatOff = null; } } G.hats = [];
   for (const a of S.hiddenCrowd) a.root.visible = true; S.hiddenCrowd = []; S.enemies = [];
   for (const a of S.roofActors) { a.root.visible = false; a.yOff = 0; a.path = null; } S.threat = null; $("threat").hidden = true; // (the men on the roofs climb back down out of sight)
+  if (S.hostE) { const a = HOST; a.hang = null; a.pre = null; a.lookPt = null; a.wounds = []; for (const m of [a.ch.body.material.userData.U, a.ch.skin.userData.U]) m.woundN.value = 0; S.hostE = null; } // (v44: shot from the barrel: whole again for the next round)
   HOST.root.visible = true; EXEC.act.idle.timeScale = 1; MAN.root.visible = true; if (MAN.tie) MAN.tie.visible = true; GAL.rope.lowHidden = false;
   S.vm.gun.visible = false; S.run = null; S.occ = null; S.hurt = 0; $("hurt").style.opacity = 0; $("xhair").hidden = true; $("warn").hidden = true; $("hitMsg").hidden = $("doomMsg").hidden = true; showSiegeUI("off"); $("gun").title = "Guesses left"; $("gun").removeAttribute("aria-label");
   if (STATE.bubble && STATE.bubble.who) STATE.bubble = null; S.wordsAt = S.lastAt = 0;

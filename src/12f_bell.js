@@ -82,7 +82,7 @@ function enterCleared() {
   const n = S.enemies.length, N = NUM_WORDS[n] || String(n), m = $("clearMsg");
   $("clearLine").textContent = `${S.shots <= n ? `${N} shots, ${N.toLowerCase()} down` : `${N} down in ${S.shots} shots`} · Streak: ${STATE.streak} · Best: ${STATE.best}`;
   m.hidden = false; m.classList.remove("show"); void m.offsetWidth; m.classList.add("show");
-  setTimeout(() => { if (S.on && S.phase === "cleared") { manCough("cough0", 0.7); say(null, SIEGE_LINES.win); } }, 1200);
+  setTimeout(() => { if (S.on && S.phase === "cleared") { manCough("cough0", 0.7); if (!S.hostE) say(null, SIEGE_LINES.win); } }, 1200);
 }
 async function finishCleared() { // Done: the old ending, the camera on the cut rope and the sign
   const S = SIEGE; if (S.phase !== "cleared") return; S.phase = "won"; $("clearMsg").hidden = true; showSiegeUI("end"); $("xhair").hidden = true; S.holding = S.keyAim = false;

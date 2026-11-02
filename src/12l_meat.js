@@ -9,11 +9,40 @@ const _mt1 = new THREE.Vector3(), _mt2 = new THREE.Vector3(), _mt3 = new THREE.V
 const HORSE_CAPS = [[V3(0, 1.22, 0.85), V3(0, 1.17, -0.9), 0.42], [V3(0, 1.45, 0.92), V3(0, 1.95, 1.38), 0.22], [V3(0, 0.95, 0.6), V3(0, 0.15, 0.62), 0.11], [V3(0, 0.95, -0.72), V3(0, 0.15, -0.8), 0.11]];
 const HORSE_HC = 1.15; // (the height of the middle of its body: what it rolls about as it goes down)
 
+// v44: the horse's hit shapes, fitted to the mesh itself once (the standing horse's vertices, in its own frame): the body, the neck, the
+// head (it had none: the old neck capsule stopped at the poll, so a shot at the face went through), and the four legs. Each is a capsule
+// along the part's long axis, squeezed side to side to the part's own width (a horse is narrower than it is deep), with its ends carrying
+// the neck's bow, so a grazing horse's lowered head is where it's drawn
+let HORSE_FIT = null;
+function horseFit() {
+  if (HORSE_FIT || !HORSE.stand || !HORSE.standHead) return HORSE_FIT; const St = HORSE.stand, P = St.pos, A = St.aLeg, hd = HORSE.standHead, n = P.length / 3;
+  const reg = { head: [], neck: [], body: [], LF: [], RF: [], LB: [], RB: [] };
+  for (let i = 0; i < n; i++) { const x = P[i * 3], y = P[i * 3 + 1], z = P[i * 3 + 2], w = A[i * 4 + 3], h = hd[i * 4 + 3], v = [x, y, z, w, h];
+    if (h > 0.5) reg.head.push(v); else if (w > 0.15) reg.neck.push(v); else if (y > 0.85) reg.body.push(v); else reg[(x < 0 ? "L" : "R") + (z > -0.1 ? "F" : "B")].push(v); }
+  const pct = (a, q) => { const s = a.slice().sort((p, r) => p - r); return s[Math.min(s.length - 1, Math.max(0, Math.round(q * (s.length - 1))))]; };
+  const fit = (L, rq, cut) => { if (L.length < 12) return null; let cx = 0, cy = 0, cz = 0; for (const v of L) { cx += v[0]; cy += v[1]; cz += v[2]; } cx /= L.length; cy /= L.length; cz /= L.length;
+    let syy = 0, szz = 0, syz = 0; for (const v of L) { const dy = v[1] - cy, dz = v[2] - cz; syy += dy * dy; szz += dz * dz; syz += dy * dz; } // (the long axis, in the side view)
+    const ang = 0.5 * Math.atan2(2 * syz, syy - szz), ey = Math.cos(ang), ez = Math.sin(ang), u = [], perp = [], lat = [];
+    for (const v of L) { const dy = v[1] - cy, dz = v[2] - cz; u.push(dy * ey + dz * ez); perp.push(Math.abs(-dy * ez + dz * ey)); lat.push(Math.abs(v[0] - cx)); }
+    const r = pct(perp, rq), rx = Math.max(0.03, pct(lat, rq)), u0 = pct(u, cut) + r * 0.55, u1 = pct(u, 1 - cut) - r * 0.55; // (the round ends of the capsule make up the rest)
+    const end = uu => { let w = 0, h = 0, k = 0; L.forEach((v, i) => { if (Math.abs(u[i] - uu) < 0.08) { w += v[3]; h += v[4]; k++; } }); return k ? [w / k, h / k] : [0, 0]; };
+    return { cx, a: [cy + ey * u0, cz + ez * u0], b: [cy + ey * Math.max(u0, u1), cz + ez * Math.max(u0, u1)], r, k: r / rx, wa: end(u0), wb: end(u1) }; };
+  HORSE_FIT = { body: fit(reg.body, 0.93, 0.02), neck: fit(reg.neck, 0.9, 0.03), head: fit(reg.head, 0.88, 0.04), legs: ["LF", "RF", "LB", "RB"].map(k => fit(reg[k], 0.9, 0.02)) };
+  HORSE_FIT.parts = [HORSE_FIT.body, HORSE_FIT.neck, HORSE_FIT.head, ...HORSE_FIT.legs].filter(Boolean); return HORSE_FIT;
+}
+// a point of a fitted part as the horse has it now: bowed with the neck when a standing horse grazes (as horseStandPt does a vertex)
+function horseFitPt(H, yz, wh, out) { let y = yz[0], z = yz[1]; const a = H.stand ? H.neckA || 0 : 0, w = wh[0] * a;
+  if (w) { const [py, pz, cf] = HORSE_POLL, np = HORSE.stand.neckP, b = -a * cf * wh[1]; if (b) { const ey = y - py, ez = z - pz; y = py + ey * Math.cos(b) - ez * Math.sin(b); z = pz + ey * Math.sin(b) + ez * Math.cos(b); }
+    const dy = y - np.x, dz = z - np.y; y = np.x + dy * Math.cos(w) - dz * Math.sin(w); z = np.y + dy * Math.sin(w) + dz * Math.cos(w); }
+  return out.set(0, y, z); }
+const _hfm = new THREE.Matrix4(), _hfo = new THREE.Vector3(), _hfd = new THREE.Vector3(), _hfa = new THREE.Vector3(), _hfb = new THREE.Vector3(), _hfo2 = new THREE.Vector3(), _hfd2 = new THREE.Vector3();
 function horseRayOne(H, ro, rd) {
-  if (!H || !H.grp.visible || H.meat) return -1; H.grp.updateMatrixWorld(); let best = -1;
-  HORSE_CAPS.forEach(([a, b, r], k) => { _mt1.copy(a); _mt2.copy(b);
-    if (k === 1 && H.stand && H.neckA) { const np = HORSE.stand.neckP; for (const [q, w] of [[_mt1, 0.35], [_mt2, 1]]) { const ang = H.neckA * w, dy = q.y - np.x, dz = q.z - np.y; q.y = np.x + dy * Math.cos(ang) - dz * Math.sin(ang); q.z = np.y + dy * Math.sin(ang) + dz * Math.cos(ang); } } // (a horse grazing: its head is down)
-    const t = rayCapsule(ro, rd, _mt1.applyMatrix4(H.grp.matrixWorld), _mt2.applyMatrix4(H.grp.matrixWorld), r); if (t > 0 && (best < 0 || t < best)) best = t; });
+  if (!H || !H.grp.visible || H.meat) return -1; H.grp.updateMatrixWorld(); const F = horseFit(); let best = -1;
+  if (!F) { HORSE_CAPS.forEach(([a, b, r]) => { const t = rayCapsule(ro, rd, _mt1.copy(a).applyMatrix4(H.grp.matrixWorld), _mt2.copy(b).applyMatrix4(H.grp.matrixWorld), r); if (t > 0 && (best < 0 || t < best)) best = t; }); return best; } // (before the fit's ready)
+  _hfm.copy(H.grp.matrixWorld).invert(); _hfo.copy(ro).applyMatrix4(_hfm); _hfd.copy(ro).add(rd).applyMatrix4(_hfm).sub(_hfo); // (the ray in the horse's own frame)
+  for (const C of F.parts) { horseFitPt(H, C.a, C.wa, _hfa); horseFitPt(H, C.b, C.wb, _hfb); _hfa.x = _hfb.x = 0; // (squeezed side to side about its own middle: then it's round)
+    _hfo2.set((_hfo.x - C.cx) * C.k, _hfo.y, _hfo.z); _hfd2.set(_hfd.x * C.k, _hfd.y, _hfd.z); const L = _hfd2.length(); _hfd2.divideScalar(L);
+    const t = rayCapsule(_hfo2, _hfd2, _hfa, _hfb, C.r) / L; if (t > 0 && (best < 0 || t < best)) best = t; }
   return best;
 }
 // the town's horse, for a shot in the shootout

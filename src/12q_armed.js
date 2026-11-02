@@ -4,7 +4,8 @@
 // round (a drag on the picture or on Aim) and shoot what you like: the crows, a horse, the bell, the town's barrels, crates and lanterns.
 // Every shot makes the crowd jump, but nothing more. Shoot one of the townsfolk or the executioner, though, and the whole town draws on
 // you: the shootout, from right there, with what's left in the gun. No hangman to finish and no rope to cut; the condemned man slips away
-// in the uproar. The host and the condemned man aren't targets: a shot at them whips past. Put it back and the round goes on where it was.
+// in the uproar. v44: the host can be shot too: he goes down where he stood, and the town draws on you just the same. The condemned man
+// isn't a target: a shot at him whips past. Put it back and the round goes on where it was.
 const ARMED = { on: false, t: 0, lift: null, back: null, yaw: 0, pitch: 0, eye: new THREE.Vector3(), from: null, bullets: SIEGE_ROUNDS, reloads: GUN.reloads, reloadT: 0, cool: 0, shots: 0,
   round: -1, tip: 0, tipNext: null, startleT: 0, sign: false, hint: false };
 const ARMED_TIP = "Drag to look · Fire to shoot", ARMED_TIP2 = "Shoot one of them and the whole town draws on you";
@@ -67,10 +68,10 @@ function armedFire() {
   A.bullets--; A.shots++; A.cool = SIEGE_CFG.fireCool; S.recoil = 1; S.vm.kick = 1; Sound.clip(siegePick("shot", 3), null, 1.15, 0, 0.32, rnd(0.97, 1.03)); CAM.shake = Math.max(CAM.shake, 0.35);
   R.camera.updateMatrixWorld(); const ro = R.camera.position.clone(), rd = V3(0, 0, -1).applyQuaternion(R.camera.quaternion).normalize();
   muzzleFlash(S.vm.gun.localToWorld(V3(0, 0.035, 0.22)), 0.32);
-  // the townsfolk and the executioner can be shot; the host and the condemned man can't (the bullet whips past them)
+  // the townsfolk, the executioner and (v44) the host can be shot; the condemned man can't (the bullet whips past him)
   let hit = null, near = null;
-  for (const a of [...LIFE.crowd.filter(q => q.root.visible), EXEC]) { const far = a.ch.bones.Spine2.getWorldPosition(_ar1).distanceTo(ro), h = rayActor(a, ro, rd, armedFemale(a), clamp((far - 12) * 0.007, 0, 0.12)); if (h && (!hit || h.t < hit.t)) hit = Object.assign(h, { a }); }
-  for (const a of [HOST, MAN]) { if (!a.root.visible) continue; const h = rayActor(a, ro, rd, false, 0.06); if (h && (!near || h.t < near.t)) near = Object.assign(h, { a }); }
+  for (const a of [...LIFE.crowd.filter(q => q.root.visible), EXEC, ...(HOST.root.visible && !HOST.hang ? [HOST] : [])]) { const far = a.ch.bones.Spine2.getWorldPosition(_ar1).distanceTo(ro), h = rayActor(a, ro, rd, armedFemale(a), clamp((far - 12) * 0.007, 0, 0.12)); if (h && (!hit || h.t < hit.t)) hit = Object.assign(h, { a }); }
+  for (const a of [MAN]) { if (!a.root.visible) continue; const h = rayActor(a, ro, rd, false, 0.06); if (h && (!near || h.t < near.t)) near = Object.assign(h, { a }); }
   const env = sceneryRay(ro, rd, 80), cr = crowRay(ro, rd), hr = townHorseRay(ro, rd), bt = bellRay(ro, rd), cands = [];
   if (hit) cands.push([hit.t, "man"]); if (cr) cands.push([cr.t, "crow"]); if (hr) cands.push([hr.t, "horse"]); if (bt > 0) cands.push([bt, "bell"]); if (env) cands.push([env.distance, "env"]);
   cands.sort((a, b) => a[0] - b[0]); const first = cands[0], at = first ? ro.clone().addScaledVector(rd, first[0]) : null;
@@ -99,8 +100,11 @@ function armedShootout(victim, part, at, rd) {
   // the condemned man slips away in the uproar (out of the noose, if it was on him)
   if (GAL.rope.onNeck) { GAL.rope.onNeck = false; ropeMode(null); } MAN.root.visible = false; if (MAN.tie) MAN.tie.visible = false; MAN.place(MAN_PATH[0][0], MAN_PATH[0][1], Math.PI); MAN.lookPt = null; MAN.panic = 0;
   if (EXEC.gripping) { EXEC.gripping = false; EXEC.setIK("R", null, 0); EXEC.setGrip("R", 0); }
-  say(null, REVOLVER_LINE); armEnemies(victim); // (the host: "Shoot that stranger!", and he ducks out of sight)
-  const E = S.enemies.find(q => q.a === victim); if (E) shotHits(E, part, at, rd);
+  if (victim === HOST) { // (v44: the host shot: he goes down where he stood; nobody's left to call it, and the town draws on you anyway)
+    armEnemies(null); HOST.root.visible = true; HOST.setIK("R", null, 0); HOST.ch.marker.visible = false; STATE.bubble = null;
+    const HE = S.hostE = { a: HOST, alive: true, state: "pause", female: false, P: V3() }; shotHits(HE, part, at, rd); }
+  else { say(null, REVOLVER_LINE); armEnemies(victim); // (the host: "Shoot that stranger!", and he ducks out of sight)
+    const E = S.enemies.find(q => q.a === victim); if (E) shotHits(E, part, at, rd); }
   // and you run from the barrel for the nearest cover, a moment after the shot, turning to the street as you go
   const from = R.camera.position.clone(); let bi = 0, bd = 1e9; S.covers.forEach((C, i) => { const d = C.stand.distanceTo(from); if (d < bd) { bd = d; bi = i; } });
   const C = S.covers[bi]; S.cover = bi; S.cv = 0.4; S.crouch = true; S.yaw = C.yaw0; S.pitch = 0.04;

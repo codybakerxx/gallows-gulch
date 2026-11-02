@@ -147,7 +147,7 @@ function updateLaser(rdt, dt) {
 function laserBeam(dt) {
   const L = LASER, S = SIEGE; R.camera.updateMatrixWorld(); const ro = R.camera.position.clone(), rd = V3(0, 0, -1).applyQuaternion(R.camera.quaternion).normalize();
   let man = null; for (const E of S.enemies) { if (!E.alive) continue; const far = E.a.ch.bones.Spine2.getWorldPosition(_l1).distanceTo(ro), h = rayActor(E.a, ro, rd, E.female, clamp((far - 12) * 0.007, 0, 0.12)); if (h && (!man || h.t < man.t)) man = Object.assign(h, { E }); }
-  const env = sceneryRay(ro, rd, 80), bt = bellRay(ro, rd), cr = crowRay(ro, rd), tg = targetRay(ro, rd), hr = townHorseRay(ro, rd), mt = meatRay(ro, rd), bd = bodyRay(S.enemies, ro, rd), cands = [];
+  const env = sceneryRay(ro, rd, 80), bt = bellRay(ro, rd), cr = crowRay(ro, rd), tg = targetRay(ro, rd), hr = townHorseRay(ro, rd), mt = meatRay(ro, rd), bd = bodyRay(S.hostE ? [...S.enemies, S.hostE] : S.enemies, ro, rd), cands = [];
   if (bt > 0) cands.push([bt, "bell"]); if (man) cands.push([man.t, "man"]); if (cr) cands.push([cr.t, "crow"]); if (tg) cands.push([tg.t, "tgt"]); if (hr) cands.push([hr.t, "horse"]); if (mt) cands.push([mt.t, "meat"]); if (bd) cands.push([bd.t, "body"]); if (env) cands.push([env.distance, "env"]);
   cands.sort((a, b) => a[0] - b[0]); const first = cands[0], at = first ? ro.clone().addScaledVector(rd, first[0]) : ro.clone().addScaledVector(rd, 80);
   L.bellT -= dt; L.envT -= dt; L.scorchT -= dt; L.smokeT -= dt;
