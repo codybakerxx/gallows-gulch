@@ -30,7 +30,7 @@ function wireUI() {
   $("gfx").addEventListener("change", e => { setQuality(e.target.value === "auto" ? pickTier() : e.target.value); savePrefs(); });
   $("stage").addEventListener("pointerdown", e => {
     if (e.target.closest("button,#hintBox")) return;
-    if (FREE.on) { if (revolverTap(e)) return; if (PLAY.on && MAN.hang) { const [sx, sy] = playLocal(e); if (playPick(sx, sy) !== null) { playDown(e); return; } } lookDown(e, "free"); if (e.cancelable) e.preventDefault(); return; } // (a sign put away: look round, 12p)
+    if (FREE.on) { if ((SIEGE.phase === "window" || SIEGE.phase === "late") && siegeTap(e)) { freeReset(); return; } if (revolverTap(e)) return; /* (the sword can still be taken up with the sign away: v41) */ if (PLAY.on && MAN.hang) { const [sx, sy] = playLocal(e); if (playPick(sx, sy) !== null) { playDown(e); return; } } lookDown(e, "free"); if (e.cancelable) e.preventDefault(); return; } // (a sign put away: look round, 12p)
     if (chaseTap(e)) return; // the getaway: a drag steers or aims, a click fires (12g)
     if (SIEGE.on) { lookDown(e, "siege"); if (e.cancelable) e.preventDefault(); return; } // the shootout: a drag turns you, a tap takes cover or the laser (12p, 12d)
     if (ARMED.on) { lookDown(e, "armed"); if (e.cancelable) e.preventDefault(); return; } // the revolver from the barrel in your hand: a drag looks round (12q)

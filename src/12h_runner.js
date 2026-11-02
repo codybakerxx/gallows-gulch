@@ -3,10 +3,10 @@
 // together and harder to read, and the posse behind gains on you every time you hit something. Nothing on screen to press. ----------
 const RUN = {
   lanes: [-2.3, 0, 2.3], shift: 0.19,                  // lane centres across the trail (m); seconds to change lane
-  speed0: 19.5, speed1: 19.5, fx0: 13, first: 70, course: 760, // m/s at the start and the end of the course (v34: flat out the whole way); the speed the view's
+  speed0: 19.5, speed1: 24.5, fx0: 13, first: 70, course: 1000, // m/s at the start and the end of the course (v34: flat out the whole way; v41: and faster as it goes, 19.5 to 24.5, over a longer course); the speed the view's
                                                         // stretch and blur count up from; where the first row is; how long the course runs
   jump: { up: 1.5, dur: 0.76 },                         // how high (m) and how long (s) a jump is
-  react: [1.45, 0.85], spread: 0.3,                     // seconds between rows at the start and the end (plus up to this share more, at random)
+  react: [1.45, 0.8], spread: 0.3,                     // seconds between rows at the start and the end (plus up to this share more, at random)
   horse: { half: 0.42, front: 1.45, back: 1.15 },       // the horse for collisions: half its width; nose and rump from the saddle (m)
   hit: { crash: 14, trip: 9, scrape: 5 },               // metres the posse gains when you ride into something, trip on it, or clip it changing lane
   slow: { crash: 0.42, trip: 0.62, scrape: 0.86 }, recover: 1.5, ghost: 0.55, // how hard each checks the horse; seconds back to full speed; seconds after a hit when nothing else can
@@ -228,7 +228,7 @@ function runBegin() { // (from the mount, and on a retry)
 }
 function updateRide(dt) {
   const C = CHASE, K = CHASE_CFG, f = clamp((C.s - RUN.first) / RUN.course, 0, 1);
-  // speed: flat out from the start (RUN.speed0 = speed1); checked by a hit, and back up to speed after it
+  // speed: flat out from the start, and building all the way (v41); checked by a hit, and back up to speed after it
   C.hitT += dt; C.ghostT -= dt; const back = C.hitT < RUN.recover ? lerp(C.slowK, 1, Ease.inOut(C.hitT / RUN.recover)) : 1;
   const want = lerp(RUN.speed0, RUN.speed1, f) * back; C.speed += (want - C.speed) * Math.min(1, dt * 2.6);
   // across: a quick, straight sidestep from lane to lane

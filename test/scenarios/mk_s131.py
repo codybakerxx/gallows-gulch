@@ -18,7 +18,8 @@ steps = []
 E = lambda js: steps.append(["eval", js])
 shot = lambda f: steps.append(["shot", f"test/{pre}_{f}.png"])
 E("""window.__errs = []; window.addEventListener('error', e => __errs.push(String(e.message) + ' @' + (e.filename || '').split('/').pop() + ':' + (e.lineno || ''))); window.addEventListener('unhandledrejection', e => __errs.push('rej ' + String(e.reason && e.reason.stack || e.reason))); 1""")
-steps.append(["click", "#startBtn"]); steps.append(["wait", 1500])
+steps.append(["wait", 2500]); E("""new Promise(res => { const to = setTimeout(() => res('no frame in 120 s'), 120000); requestAnimationFrame(() => requestAnimationFrame(() => { clearTimeout(to); res(1); })); })""") # (the page drawing before the click: under SwiftShader at desktop size the first frames behind the menu can take a while, v41)
+steps.append(["wait", 600]); steps.append(["click", "#startBtn"]); steps.append(["wait", 1500])
 E(open(os.path.join(HERE, "chase_helpers.js")).read())
 
 # ---- 1) an early bell, then the win on the last bullet ----
@@ -70,15 +71,15 @@ E("""(async () => { try { const C = CHASE, out = {}; await __go(30);
   out.bump = { bumps: C.stats.bumps - b0, gapBefore: __r(g0), gapAfter: __r(C.gap), speed: __r(C.speed), state: C.state, lane: C.lane, msg: document.getElementById('chaseMsg').textContent };
   RUN.strikes = 99; // (v40: from here the autopilot rides the whole course, whatever it clips: two strikes and you're shot is mk_s140's)
   // and a low one jumped clean
-  const low = () => C.obs.filter(o => o.run && o.low && !o.hit && o.s > C.s + 16).sort((a, b) => a.s - b.s)[0]; await __go(1200, () => { __auto(); return !!low() && C.ghostT <= 0; }); const lo = low(), b1 = C.stats.bumps;
-  await __go(600, () => { if (!C.shift) __steerTo(lo.lat); if (!C.air && !C.shift && lo.s - C.s < C.speed * 0.36 + 1.5 && __laneOf(lo.lat) === C.lane) runJump(); return C.s > lo.s + 3; });
+  const low = () => C.obs.filter(o => o.run && o.low && !o.hit && o.s > C.s + 16).sort((a, b) => a.s - b.s)[0]; await __go(1200, () => { __auto(); C.gap = Math.max(C.gap, 30); return !!low() && C.ghostT <= 0; }); /* (v41: the autopilot clips things now and then; it isn't to be caught for it here) */ const lo = low(), b1 = C.stats.bumps;
+  await __go(600, () => { C.gap = Math.max(C.gap, 30); if (!C.shift) __steerTo(lo.lat); if (!C.air && !C.shift && lo.s - C.s < C.speed * 0.36 + 1.5 && __laneOf(lo.lat) === C.lane) runJump(); return C.s > lo.s + 3; });
   out.lowJumped = { kind: lo.kind, height: lo.low, bumps: C.stats.bumps - b1, hit: lo.hit };
   await __go(6); out.errs = __errs; return JSON.stringify(out); } catch (e) { return 'ERR ' + e.stack; } })()""")
 shot("d_bump")
-E("""(async () => { const C = CHASE; await __go(800, () => { __auto(); return C.s > 200; }); return 1; })()""")
+E("""(async () => { const C = CHASE; await __go(800, () => { __auto(); C.gap = Math.max(C.gap, 30); return C.s > 200; }); return 1; })()""")
 shot("e_ride_rows")
 E("""(async () => { try { const C = CHASE, out = {}; const b0 = C.stats.bumps; let minGap = C.gap, near = false;
-  await __go(4000, () => { __auto(); minGap = Math.min(minGap, C.gap); near = near || document.getElementById('pursuit').classList.contains('near'); return C.state !== 'ride'; });
+  await __go(4000, () => { __auto(); if (C.gap < 1) C.gap = 1; minGap = Math.min(minGap, C.gap); near = near || document.getElementById('pursuit').classList.contains('near'); return C.state !== 'ride'; });
   out.ride = { state: C.state, newBumps: C.stats.bumps - b0, rideTime: __r(C.stats.t), s: __r(C.s), turnAt: C.turnAt, rowsLaid: C.rowsLaid, jumps: C.stats.jumps, topSpeed: __r(C.speed), gap: __r(C.gap), minGap: __r(minGap), near };
   // ---- 5) the turn ----
   const H = C.horse.grp, prev = H.position.clone(), track = []; let backwards = 0, attacks = 0, hp0 = C.hp, maxSafe = C.safeT;

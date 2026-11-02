@@ -2,6 +2,13 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v41
+- **The sword with the sign away.** After a hanging, with GAME OVER put away to look round, a tap on the sword didn't
+  cut him down (the drag to look round took it). Now it does, as it does with the sign up.
+- **A longer, harder run.** The getaway's course is about a third longer (1,000 m of rows, was 760), and the horse
+  builds speed the whole way, from 19.5 m/s at the start to 24.5 m/s at the end (it was 19.5 all the way). The rows
+  near the end come a little closer together too.
+
 ## v40
 - **Close the menu.** The menu has a red X at its top right that closes it, as well as Resume.
 - **Put the end signs away.** GAME OVER, YOU SAVED HIM, YOU SURVIVED and the getaway's results (The End, Captured)

@@ -129,7 +129,8 @@ grass between them. Nothing on the screen to press.
   Logs, hay bales, troughs and fences can be jumped; sometimes a fence runs right across the trail. Every row has a
   way through, and every course can be ridden clean: `test/scenarios/mk_s134.py` searches 300 of them frame by frame
   to prove it.
-- It's flat out from the first stride, and the rows come quicker and harder to read as it goes. The edges of the view
+- It's flat out from the first stride and keeps getting faster (from about 70 to 88 km/h), and the rows come quicker
+  and harder to read as it goes. The edges of the view
   blur with the speed.
 - A swipe every row: whatever lane you came through one row in, the next row blocks it with something you can't
   jump, so every row makes you move left or right (and some make you jump as well).
@@ -168,9 +169,9 @@ filmed in a few shots. You can skip it after the first time. Then **Retry chase*
 
 **The signs at the end.** Every end sign (GAME OVER, YOU SAVED HIM, YOU SURVIVED, and the getaway's results) has a
 button at its top right to put it away. With it away, drag anywhere to look round, all the way round and from your
-boots to the sky; **Show the sign** brings it back. The menu has a red **X** to close it.
+boots to the sky; **Show the sign** brings it back. The sword can still be taken up while it's away. The menu has a red **X** to close it.
 
-The run takes about 55 seconds and the fight about 20–40, depending on your shooting. The run's numbers (lanes,
+The run takes about a minute and the fight about 20–40, depending on your shooting. The run's numbers (lanes,
 speeds, jumps, the course, what a hit costs) are in `RUN` at the top of `src/12h_runner.js`; the fight's and the
 posse's in `CHASE_CFG` at the top of `src/12g_chase.js`; the canyon and the shots of the end in `CANYON` and `CINE` in
 `src/12i_canyon.js`. The gun and the hearts are in `GUN` at the top of `src/12d_siege.js` (the town shootout's seven rounds in `SIEGE_ROUNDS`), and the laser's charge

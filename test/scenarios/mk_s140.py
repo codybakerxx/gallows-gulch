@@ -7,6 +7,7 @@
 #     dirt while the horse runs on; the results say Shot Down
 #   - the end of the getaway: nothing left standing over the canyon (the town, its props and tufts are put away while it's there, and come
 #     back with it gone); back to the hangman from the results the view is in town at once, out of black, with no flight across the desert
+# (v41: the longer run moved the canyon clear of the town, so there may be nothing to put away)
 # Prints one JSON line per check; "ok" is true when it passed.
 import json, os, sys
 pre = sys.argv[1] if len(sys.argv) > 1 else "g140"
@@ -58,7 +59,7 @@ E("""(async () => { chaseRetry(); const C = CHASE; await __toCombat(); for (cons
   R.scene.traverse(o => { if (!o.isMesh || !shown(o) || o.userData.dyn || o.isSkinnedMesh || !o.frustumCulled || o === C.canyon || o === C.river || (C.pebbles || []).some(p => p.m === o)) return; // (the stones going over with him) if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere(); o.updateMatrixWorld();
     if (o.isInstancedMesh) { for (let i = 0; i < o.count; i++) { o.getMatrixAt(i, Mi); if (Mi.elements[0] === 0 && Mi.elements[5] === 0 && Mi.elements[10] === 0) continue; Mi.premultiply(o.matrixWorld); v.setFromMatrixPosition(Mi); if (over(v)) { out.push('inst'); break; } } return; }
     if (o.geometry.boundingSphere.radius * o.matrixWorld.getMaxScaleOnAxis() > 250) return; v.copy(o.geometry.boundingSphere.center).applyMatrix4(o.matrixWorld); if (over(v)) out.push(o.material && o.material.type); });
-  window.__hid = (C.canyonHid || []).length; return __check('the fall: nothing left standing over the canyon', !out.length && __hid > 20, { left: out.slice(0, 8), putAway: __hid, instanced: (C.canyonIm || []).length }); })()""")
+  window.__hid = (C.canyonHid || []).length; return __check('the fall: nothing left standing over the canyon', !out.length, { left: out.slice(0, 8), putAway: __hid, instanced: (C.canyonIm || []).length }); })()""")
 shot("c_fall")
 E("""(async () => { const C = CHASE; await __go(900, () => C.state === 'results'); await __go(20); const btn = document.querySelector('#chaseRes .signMin'); btn.click(); await __go(2); const away = $('chaseRes').hidden && FREE.on;
   const y0 = __yawOf(); await __drag(-900, 0, 24, 0.5, 0.3); const total = Math.abs(FREE.yaw), turned = Math.abs(__dy(__yawOf(), y0)); await __go(2);
