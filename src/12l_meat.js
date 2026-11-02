@@ -24,6 +24,7 @@ function horseFit() {
     let syy = 0, szz = 0, syz = 0; for (const v of L) { const dy = v[1] - cy, dz = v[2] - cz; syy += dy * dy; szz += dz * dz; syz += dy * dz; } // (the long axis, in the side view)
     const ang = flat ? Math.PI / 2 : 0.5 * Math.atan2(2 * syz, syy - szz), ey = Math.cos(ang), ez = Math.sin(ang), u = [], perp = [], lat = [];
     for (const v of L) { const dy = v[1] - cy, dz = v[2] - cz; u.push(dy * ey + dz * ez); perp.push(Math.abs(-dy * ez + dz * ey)); lat.push(Math.abs(v[0] - cx)); }
+    if (flat) { const ys = L.map(v => v[1]), hi = pct(ys, 0.96), lo = pct(ys, 0.04); cy = (hi + lo) / 2; for (let i = 0; i < L.length; i++) perp[i] = Math.abs(L[i][1] - cy); } // (laid along it: the middle of its depth, not of its points)
     const r = pct(perp, rq), rx = Math.max(0.03, pct(lat, rq)), u0 = pct(u, cut) + r * 0.55, u1 = pct(u, 1 - cut) - r * 0.55; // (the round ends of the capsule make up the rest)
     const end = uu => { let w = 0, h = 0, k = 0; L.forEach((v, i) => { if (Math.abs(u[i] - uu) < 0.08) { w += v[3]; h += v[4]; k++; } }); return k ? [w / k, h / k] : [0, 0]; };
     return { cx, a: [cy + ey * u0, cz + ez * u0], b: [cy + ey * Math.max(u0, u1), cz + ez * Math.max(u0, u1)], r, k: r / rx, wa: end(u0), wb: end(u1) }; };
