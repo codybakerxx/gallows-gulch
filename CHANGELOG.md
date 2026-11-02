@@ -2,6 +2,15 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v45
+- **The host can be shot.** From the barrel, before any shootout, a shot at the host used to whip past him. Now he goes
+  down where he stood, and the town draws on you just as it does when you shoot one of the townsfolk (with nobody left
+  to call "Shoot that stranger!"). He's back, whole, the next round.
+- **Tighter horse hit shapes, and a head.** The horses' hit shapes are now fitted to the horse model itself: the body,
+  the neck, the head and the four legs, each squeezed side to side to the horse's own width. The old shapes had no head
+  at all (a shot at the face went through), sat too low on the back and stood too wide at the sides. A grazing horse's
+  lowered head is hit where it's drawn.
+
 ## v44
 - **Cover saves you when you're out of bullets.** Out of bullets, the gunmen used to shoot you dead through your cover,
   crouched or not. Now cover still stops their bullets: they shoot you only if you show yourself, and instead one of

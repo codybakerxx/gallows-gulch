@@ -16,19 +16,19 @@ const HORSE_HC = 1.15; // (the height of the middle of its body: what it rolls a
 let HORSE_FIT = null;
 function horseFit() {
   if (HORSE_FIT || !HORSE.stand || !HORSE.standHead) return HORSE_FIT; const St = HORSE.stand, P = St.pos, A = St.aLeg, hd = HORSE.standHead, n = P.length / 3;
-  const reg = { head: [], neck: [], body: [], LF: [], RF: [], LB: [], RB: [] };
+  const reg = { head: [], neck: [], bodyF: [], bodyB: [], LF: [], RF: [], LB: [], RB: [] };
   for (let i = 0; i < n; i++) { const x = P[i * 3], y = P[i * 3 + 1], z = P[i * 3 + 2], w = A[i * 4 + 3], h = hd[i * 4 + 3], v = [x, y, z, w, h];
-    if (h > 0.5) reg.head.push(v); else if (w > 0.15) reg.neck.push(v); else if (y > 0.85) reg.body.push(v); else reg[(x < 0 ? "L" : "R") + (z > -0.1 ? "F" : "B")].push(v); }
+    if (h > 0.5) reg.head.push(v); else if (w > 0.15) reg.neck.push(v); else if (y > 0.85) { if (z > -0.55) reg.bodyF.push(v); if (z < -0.15) reg.bodyB.push(v); } /* (the body in two, overlapping so there's no gap where they meet: the barrel's deeper at the chest than the loins) */ else reg[(x < 0 ? "L" : "R") + (z > -0.1 ? "F" : "B")].push(v); }
   const pct = (a, q) => { const s = a.slice().sort((p, r) => p - r); return s[Math.min(s.length - 1, Math.max(0, Math.round(q * (s.length - 1))))]; };
-  const fit = (L, rq, cut) => { if (L.length < 12) return null; let cx = 0, cy = 0, cz = 0; for (const v of L) { cx += v[0]; cy += v[1]; cz += v[2]; } cx /= L.length; cy /= L.length; cz /= L.length;
+  const fit = (L, rq, cut, flat) => { if (L.length < 12) return null; let cx = 0, cy = 0, cz = 0; for (const v of L) { cx += v[0]; cy += v[1]; cz += v[2]; } cx /= L.length; cy /= L.length; cz /= L.length;
     let syy = 0, szz = 0, syz = 0; for (const v of L) { const dy = v[1] - cy, dz = v[2] - cz; syy += dy * dy; szz += dz * dz; syz += dy * dz; } // (the long axis, in the side view)
-    const ang = 0.5 * Math.atan2(2 * syz, syy - szz), ey = Math.cos(ang), ez = Math.sin(ang), u = [], perp = [], lat = [];
+    const ang = flat ? Math.PI / 2 : 0.5 * Math.atan2(2 * syz, syy - szz), ey = Math.cos(ang), ez = Math.sin(ang), u = [], perp = [], lat = [];
     for (const v of L) { const dy = v[1] - cy, dz = v[2] - cz; u.push(dy * ey + dz * ez); perp.push(Math.abs(-dy * ez + dz * ey)); lat.push(Math.abs(v[0] - cx)); }
     const r = pct(perp, rq), rx = Math.max(0.03, pct(lat, rq)), u0 = pct(u, cut) + r * 0.55, u1 = pct(u, 1 - cut) - r * 0.55; // (the round ends of the capsule make up the rest)
     const end = uu => { let w = 0, h = 0, k = 0; L.forEach((v, i) => { if (Math.abs(u[i] - uu) < 0.08) { w += v[3]; h += v[4]; k++; } }); return k ? [w / k, h / k] : [0, 0]; };
     return { cx, a: [cy + ey * u0, cz + ez * u0], b: [cy + ey * Math.max(u0, u1), cz + ez * Math.max(u0, u1)], r, k: r / rx, wa: end(u0), wb: end(u1) }; };
-  HORSE_FIT = { body: fit(reg.body, 0.93, 0.02), neck: fit(reg.neck, 0.9, 0.03), head: fit(reg.head, 0.88, 0.04), legs: ["LF", "RF", "LB", "RB"].map(k => fit(reg[k], 0.9, 0.02)) };
-  HORSE_FIT.parts = [HORSE_FIT.body, HORSE_FIT.neck, HORSE_FIT.head, ...HORSE_FIT.legs].filter(Boolean); return HORSE_FIT;
+  HORSE_FIT = { bodyF: fit(reg.bodyF, 0.9, 0.02, true), bodyB: fit(reg.bodyB, 0.9, 0.02, true), /* (the body lies along the horse, nose to tail) */ neck: fit(reg.neck, 0.9, 0.03), head: fit(reg.head, 0.88, 0.04), legs: ["LF", "RF", "LB", "RB"].map(k => fit(reg[k], 0.9, 0.02)) };
+  HORSE_FIT.parts = [HORSE_FIT.bodyF, HORSE_FIT.bodyB, HORSE_FIT.neck, HORSE_FIT.head, ...HORSE_FIT.legs].filter(Boolean); return HORSE_FIT;
 }
 // a point of a fitted part as the horse has it now: bowed with the neck when a standing horse grazes (as horseStandPt does a vertex)
 function horseFitPt(H, yz, wh, out) { let y = yz[0], z = yz[1]; const a = H.stand ? H.neckA || 0 : 0, w = wh[0] * a;

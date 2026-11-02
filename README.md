@@ -54,7 +54,8 @@ barrel, catching the light. Look round, find it and tap it, any time the host is
 round, or after you've saved him), and it's in your hand: the letters give way to an Aim and Fire pad and a **Put it
 back** button. Drag to look round and shoot what you like; the crowd jumps at every shot. Shoot one of the townsfolk
 or the executioner and the town turns on you: the shootout, right there, as the stranger, with no hangman to finish
-and no rope to cut. The host and the condemned man aren't targets. Put it back and the round goes on.
+and no rope to cut. The host can be shot too: he goes down where he stood, and the town draws on you just the same.
+The condemned man isn't a target. Put it back and the round goes on.
 
 **The shootout.** Now you're the stranger, behind cover, and nine gunmen are out for you: seven in the street and
 two on the rooftops, behind the false fronts of the sheriff's office and the general store.
