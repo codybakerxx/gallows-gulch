@@ -72,7 +72,7 @@ function buildGallows() {
     const arm = woodBox(0.04, 0.04, 0.32, MAT.iron); arm.position.set(0, 0.22, -0.15); lg.add(arm);
     const hook = new THREE.Mesh(new THREE.TorusGeometry(0.02, 0.005, 6, 10, Math.PI * 1.4), MAT.iron); hook.position.set(0, 0.215, 0); hook.rotation.y = Math.PI / 2; lg.add(hook);
     GAL.lanterns.push(glass.material); (GAL.swingers = GAL.swingers || []).push({ pv, ax: 0, az: 0, vx: 0, vz: 0, k: 0.12 });
-    if (x === LAY.postX[1] || R.tier === "high") { const pl = new THREE.PointLight(0xff9a40, 0, 9, 2); pl.position.set(0, -0.24, 0.05); pv.add(pl); GAL.lanterns.push(pl); }
+    if (x === LAY.postX[1] || tierAtLeast("high")) { const pl = new THREE.PointLight(0xff9a40, 0, 9, 2); pl.position.set(0, -0.24, 0.05); pv.add(pl); GAL.lanterns.push(pl); }
   }
   g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   GAL.doors.forEach(d => d.pivot.userData.dyn = true); lp.userData.dyn = true; GAL.lanternGroups.forEach(l => l.userData.dyn = true);
@@ -166,7 +166,7 @@ function buildBoard() {
   if (R.tier === "low") { BOARD.W = 1024; BOARD.H = 512; }
   const c = document.createElement("canvas"); c.width = BOARD.W; c.height = BOARD.H; BOARD.canvas = c; BOARD.ctx = c.getContext("2d");
   BOARD.tex = canvasTex(c); BOARD.tex.anisotropy = 8;
-  const surf = new THREE.Mesh(new THREE.PlaneGeometry(B.w, B.h), new THREE.MeshPhysicalMaterial({ map: BOARD.tex, emissiveMap: BOARD.tex, emissive: 0xffffff, emissiveIntensity: 0.32, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.12, envMapIntensity: 0.9 }));
+  const surf = new THREE.Mesh(new THREE.PlaneGeometry(B.w, B.h), new THREE.MeshPhysicalMaterial({ map: BOARD.tex, emissiveMap: BOARD.tex, emissive: 0xffffff, emissiveIntensity: 0.3, roughness: 0.88, envMapIntensity: 0.35, sheen: 0.3, sheenRoughness: 0.8, sheenColor: new THREE.Color(0.55, 0.5, 0.4) })); // (a sheet of old newsprint: matte, the faint sheen of paper fibres)
   surf.position.set(0, B.y, 0.035); surf.receiveShadow = true; grp.add(surf); BOARD.surface = surf;
   const back = new THREE.Mesh(new THREE.BoxGeometry(B.w, B.h, 0.03), new THREE.MeshStandardMaterial({ color: 0x6d6a66, roughness: 0.6, metalness: 0.4 })); back.position.set(0, B.y, 0.015); grp.add(back);
   const al = new THREE.MeshStandardMaterial({ color: 0xc9c7c2, roughness: 0.3, metalness: 1 });
@@ -198,11 +198,27 @@ function boardLayout(word) {
   BOARD.wfont = H * 0.12; BOARD.wy = H * 0.86; BOARD.wx0 = W * 0.26; BOARD.wstep = Math.min(BOARD.wfont * 1.05, (W * 0.7) / Math.max(8, (STATE && STATE.maxWrong) || 8));
 }
 const px2board = (x, y) => [(x / BOARD.W - 0.5) * LAY.board.w, (0.5 - y / BOARD.H) * LAY.board.h];
+// the sheet the words are written on: old newsprint, yellowed to a warm off-white, darker toward its edges, with fibres, a few foxing spots
+// and the ghost of the print on its other side showing through. Drawn once; each boardDraw starts from it
+function boardPaper(W, H) {
+  if (BOARD.paper) return BOARD.paper; const c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d"), r = rng(1888), k = W / 2048;
+  g.fillStyle = "#e9d9b2"; g.fillRect(0, 0, W, H);
+  for (let i = 0; i < 70; i++) { const x = r() * W, y = r() * H, rad = (80 + r() * 380) * k, gr = g.createRadialGradient(x, y, 0, x, y, rad), dk = r() < 0.55;
+    gr.addColorStop(0, dk ? `rgba(160,120,60,${0.03 + r() * 0.05})` : `rgba(255,250,235,${0.04 + r() * 0.06})`); gr.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2); }
+  g.fillStyle = "rgba(60,50,40,0.022)"; // (the print on the back: column rules and lines of type, faint and reversed)
+  const cols = 5, cw = W / cols; for (let cI = 0; cI < cols; cI++) { const x0 = cI * cw + 28 * k; g.fillRect(cI * cw, 0, 2 * k, H);
+    for (let y = 40 * k; y < H - 20 * k; y += 21 * k) { if (r() < 0.12) { y += 24 * k; continue; } g.fillRect(x0, y, (cw - 56 * k) * (r() < 0.15 ? 0.35 + r() * 0.5 : 1), 9 * k); } }
+  for (let i = 0; i < 2600; i++) { g.strokeStyle = `rgba(${110 + r() * 50 | 0},${90 + r() * 40 | 0},${60 + r() * 20 | 0},${0.04 + r() * 0.07})`; g.lineWidth = (0.6 + r()) * k; // (fibres)
+    const x = r() * W, y = r() * H, a = r() * Math.PI, l = (4 + r() * 14) * k; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke(); }
+  for (let i = 0; i < 26; i++) { const x = r() * W, y = r() * H, rad = (2 + r() * 9) * k; g.fillStyle = `rgba(140,90,40,${0.12 + r() * 0.2})`; g.beginPath(); g.arc(x, y, rad, 0, TAU); g.fill(); } // (foxing)
+  const vg = g.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, W * 0.62); vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(120,80,30,0.32)"); g.fillStyle = vg; g.fillRect(0, 0, W, H);
+  const eg = 26 * k; for (const [x0, y0, x1, y1] of [[0, 0, 0, eg], [0, H, 0, H - eg], [0, 0, eg, 0], [W, 0, W - eg, 0]]) { // (the edges browned)
+    const lg = g.createLinearGradient(x0, y0, x1, y1); lg.addColorStop(0, "rgba(110,70,25,0.28)"); lg.addColorStop(1, "rgba(110,70,25,0)"); g.fillStyle = lg; g.fillRect(0, 0, W, H); }
+  BOARD.paper = c; return c;
+}
 function boardDraw() {
   const g = BOARD.ctx, W = BOARD.W, H = BOARD.H;
-  g.fillStyle = "#f4f3ef"; g.fillRect(0, 0, W, H);
-  const ghost = rng(42); g.strokeStyle = "rgba(120,130,150,0.06)"; g.lineWidth = W * 0.004;
-  for (let i = 0; i < 14; i++) { g.beginPath(); const x = ghost() * W, y = ghost() * H; g.moveTo(x, y); g.bezierCurveTo(x + 200, y - 60, x + 380, y + 80, x + 520 * ghost(), y + 20); g.stroke(); }
+  g.drawImage(boardPaper(W, H), 0, 0);
   const S = STATE; if (!S || !S.word) { g.fillStyle = "rgba(60,70,90,0.18)"; g.font = `${H * 0.16}px "Permanent Marker",cursive`; g.textAlign = "center"; g.fillText("GALLOWS GULCH", W / 2, H * 0.56); BOARD.tex.needsUpdate = true; return; }
   g.textAlign = "left"; g.textBaseline = "alphabetic"; g.font = `${H * 0.07}px "Permanent Marker",cursive`;
   g.fillStyle = "rgba(90,90,100,0.45)"; g.fillText(S.word.length + " LETTERS", W * 0.05, H * 0.12);
@@ -222,33 +238,27 @@ function boardDraw() {
 function slotBoardPos(i) { const s = BOARD.slots[i]; return { a: px2board(s.x - s.w * 0.35, s.y - BOARD.font * 0.35), b: px2board(s.x + s.w * 0.35, s.y - BOARD.font * 0.35), h: BOARD.font / BOARD.H * LAY.board.h }; }
 function wrongBoardPos(i) { const x = BOARD.wx0 + i * BOARD.wstep + BOARD.wstep / 2; return { a: px2board(x - BOARD.wstep * 0.4, BOARD.wy - BOARD.wfont * 0.35), b: px2board(x + BOARD.wstep * 0.4, BOARD.wy - BOARD.wfont * 0.35), h: BOARD.wfont / BOARD.H * LAY.board.h }; }
 // ---- set dressing ----
-function barrel(x, z, s = 1) {
-  const g = new THREE.CylinderGeometry(0.29, 0.29, 0.86, 22, 6); const p = g.attributes.position;
-  for (let i = 0; i < p.count; i++) { const y = p.getY(i), k = 1 + 0.13 * (1 - Math.pow(y / 0.43, 2)); p.setX(i, p.getX(i) * k); p.setZ(i, p.getZ(i) * k); } g.computeVertexNormals();
-  const uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 2.2, uv.getY(i) * 0.9);
-  const m = new THREE.Mesh(g, MAT.wood); m.position.set(x, 0.43 * s, z); m.scale.setScalar(s); m.castShadow = m.receiveShadow = true; R.scene.add(m);
-  for (const y of [-0.3, 0.3]) { const h = new THREE.Mesh(new THREE.TorusGeometry(0.31, 0.012, 6, 28), MAT.iron); h.rotation.x = Math.PI / 2; h.position.set(x, (0.43 + y) * s, z); h.scale.setScalar(s * (1 + 0.13 * (1 - (y / 0.43) ** 2)) / 1.0); R.scene.add(h); }
-}
+function barrel(x, z, s = 1) { const b = barrelMesh(s); b.position.set(x, 0, z); R.scene.add(b); return b; } // (07c)
 function buildSetDressing() {
   const G0 = new THREE.Group(); R.scene.add(G0); const add0 = R.scene.add.bind(R.scene); R.scene.add = o => G0.add(o);
   try { buildSetDressingInner(); } finally { R.scene.add = add0; }
-  bakeGroup(G0, o => o.material && o.material.roughness < 0.1); for (const c of [...G0.children]) R.scene.add(c); R.scene.remove(G0);
+  bakeGroup(G0, o => (o.material && o.material.roughness < 0.1) || brkSkip(o)); for (const c of [...G0.children]) R.scene.attach(c); R.scene.remove(G0); // (the things that break stay out of it: 12m)
 }
 function buildSetDressingInner() {
-  barrel(-6.0, -3.9); barrel(-6.5, -4.4, 0.95); barrel(-5.95, -4.75, 1.02);
-  for (const [x, z, s, ry] of [[0.2, -6.9, 0.7, 0.3], [0.75, -7.25, 0.55, 1.1], [-6.4, -7.6, 0.8, 0.2]]) { const c = woodBox(s, s, s, MAT.woodDark); c.position.set(x, s / 2, z); c.rotation.y = ry; R.scene.add(c); }
+  brkTag(barrel(-6.0, -3.9), "barrel"); brkTag(barrel(-6.5, -4.4, 0.95), "barrel"); brkTag(barrel(-5.95, -4.75, 1.02), "barrel");
+  for (const [x, z, s, ry] of [[0.2, -6.9, 0.7, 0.3], [0.75, -7.25, 0.55, 1.1], [-6.4, -7.6, 0.8, 0.2]]) { const c = brkTag(woodBox(s, s, s, MAT.woodDark), "crate"); c.position.set(x, s / 2, z); c.rotation.y = ry; R.scene.add(c); }
   // pine coffin leaning on the platform
   const sh = new THREE.Shape([[-0.22, -1], [0.22, -1], [0.3, 0.45], [0.2, 1], [-0.2, 1], [-0.3, 0.45]].map(p => new THREE.Vector2(p[0], p[1])));
   const cg = new THREE.ExtrudeGeometry(sh, { depth: 0.32, bevelEnabled: false }); cg.translate(0, 0, -0.16);
   const uv = cg.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 0.9, uv.getY(i) * 0.9);
-  const coffin = new THREE.Mesh(cg, MAT.wood); coffin.position.set(-5.35, 1.0, -3.85); coffin.rotation.set(-0.12, 0.35, 0); coffin.castShadow = coffin.receiveShadow = true; R.scene.add(coffin);
+  const coffin = brkTag(new THREE.Mesh(cg, MAT.wood), "coffin"); coffin.position.set(-5.35, 1.0, -3.85); coffin.rotation.set(-0.12, 0.35, 0); coffin.castShadow = coffin.receiveShadow = true; R.scene.add(coffin);
   // water trough + hitching rail near the street
-  const tr = woodBox(2.2, 0.5, 0.6, MAT.woodDark); tr.position.set(6.5, 0.25, -7.5); R.scene.add(tr);
-  const wtr = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 0.45), new THREE.MeshStandardMaterial({ color: 0x1a2226, roughness: 0.05, metalness: 0.1 })); wtr.rotation.x = -Math.PI / 2; wtr.position.set(6.5, 0.46, -7.5); R.scene.add(wtr);
-  for (const x of [5.2, 7.8]) { const p = woodBox(0.14, 1.1, 0.14, MAT.woodDark); p.position.set(x, 0.55, -8.4); R.scene.add(p); }
-  const rail = woodBox(2.9, 0.1, 0.1, MAT.wood, true); rail.position.set(6.5, 1.05, -8.4); R.scene.add(rail);
+  { const tg = brkTag(new THREE.Group(), "trough"), tr = woodBox(2.2, 0.5, 0.6, MAT.woodDark); tr.position.set(6.5, 0.25, -7.5); tg.add(tr);
+    const wtr = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 0.45), new THREE.MeshStandardMaterial({ color: 0x1a2226, roughness: 0.05, metalness: 0.1 })); wtr.rotation.x = -Math.PI / 2; wtr.position.set(6.5, 0.46, -7.5); tg.add(wtr); R.scene.add(tg); }
+  { const rg = brkTag(new THREE.Group(), "rail"); for (const x of [5.2, 7.8]) { const p = woodBox(0.14, 1.1, 0.14, MAT.woodDark); p.position.set(x, 0.55, -8.4); rg.add(p); }
+    const rail = woodBox(2.9, 0.1, 0.1, MAT.wood, true); rail.position.set(6.5, 1.05, -8.4); rg.add(rail); R.scene.add(rg); }
   // wagon wheel leaning against a crate
-  const wheel = new THREE.Group(); const rim = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.035, 8, 32), MAT.woodDark); wheel.add(rim);
+  const wheel = brkTag(new THREE.Group(), "wheel"); const rim = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.035, 8, 32), MAT.woodDark); wheel.add(rim);
   for (let i = 0; i < 12; i++) { const s = woodBox(0.03, 1.05, 0.025, MAT.wood); s.rotation.z = i * Math.PI / 12; wheel.add(s); }
   const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.14, 12), MAT.iron); hub.rotation.x = Math.PI / 2; wheel.add(hub);
   wheel.position.set(0.35, 0.56, -6.35); wheel.rotation.set(0, 0.6, 0.12); R.scene.add(wheel);
@@ -256,9 +266,9 @@ function buildSetDressingInner() {
   { const [x, z] = streetPt(7, 6.8); wagon(x, z, Math.atan2(STREET.a[0], STREET.a[1]) + 0.25); }
   { const [x, z] = streetPt(33, -7.2); wagon(x, z, Math.atan2(-STREET.a[0], -STREET.a[1]) - 0.15, true); }
   // hay and sacks by the livery, barrels and crates along the boardwalks
-  for (const [al, sd] of [[36.5, 8.9], [37.6, 9.3]]) { const [x, z] = streetPt(al, sd); const hb = woodBox(1.0, 0.5, 0.6, MAT.hay); hb.position.set(x, 0.25, z); hb.rotation.y = Math.random(); R.scene.add(hb); }
-  for (const [al, sd] of [[12.5, -9.2], [19.8, 8.6], [27.2, -8.8], [22.6, -9.1]]) { const [x, z] = streetPt(al, sd); barrel(x, z, 0.95 + Math.random() * 0.1); }
-  for (const [al, sd, s] of [[13.4, -9.3, 0.6], [20.8, 8.9, 0.5], [21.3, 8.7, 0.42]]) { const [x, z] = streetPt(al, sd); const c = woodBox(s, s, s, MAT.woodDark); c.position.set(x, s / 2, z); c.rotation.y = Math.random() * 2; R.scene.add(c); }
+  for (const [al, sd] of [[36.5, 8.9], [37.6, 9.3]]) { const [x, z] = streetPt(al, sd); const hb = brkTag(woodBox(1.0, 0.5, 0.6, MAT.hay), "hay"); hb.position.set(x, 0.25, z); hb.rotation.y = Math.random(); R.scene.add(hb); }
+  for (const [al, sd] of [[12.5, -9.2], [19.8, 8.6], [27.2, -8.8], [22.6, -9.1]]) { const [x, z] = streetPt(al, sd); brkTag(barrel(x, z, 0.95 + Math.random() * 0.1), "barrel"); }
+  for (const [al, sd, s] of [[13.4, -9.3, 0.6], [20.8, 8.9, 0.5], [21.3, 8.7, 0.42]]) { const [x, z] = streetPt(al, sd); const c = brkTag(woodBox(s, s, s, MAT.woodDark), "crate", { hp: 2 }); c.position.set(x, s / 2, z); c.rotation.y = Math.random() * 2; R.scene.add(c); }
 }
 // a wagon: plank bed, spoked wheels on iron axles, tongue resting on the ground; some carry a canvas bonnet over hoops
 function wagon(x, z, ry, covered) {

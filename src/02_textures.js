@@ -103,7 +103,51 @@ function buildTextures() {
       H[y * S + x] = -pit + 0.35 * gnoise(u * 64, v * 64, 64, 64, 133) + 0.18 * gnoise(u * 7, v * 96, 7, 96, 135); }
     TEX.pores = normalMap(H, S, S, 1.6); }
   TEX.white = dataTex(1, 1, new Uint8Array([255, 255, 255, 255]), false);
+  if (TIERS[R.tier].detail) buildDetail();
   TEX.grass = spriteGrass(); TEX.sage = spriteSage(); TEX.dust = spriteDot(); TEX.cloth = spriteBunting();
+}
+// close-up detail: small tiling maps sampled a second time over the main textures, much finer than they are, and faded out with
+// distance. R: height (the surface is bumped from it in the shader), G: tone. grit: sand grains, grit and little stones in a 0.5 m tile
+// (the ground, rock); fibre: the grain's fibres, splinters and fine checks in wood, 0.25 m across by 1 m along
+function buildDetail() {
+  const S = TIERS[R.tier].detail > 1 ? 512 : 256, A = new Uint8Array(S * S * 4), B = new Uint8Array(S * S * 4);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const u = x / S, v = y / S, i = (y * S + x) * 4;
+    const sand = gnoise(u * 160, v * 160, 160, 160, 201) * 0.5 + gnoise(u * 64, v * 64, 64, 64, 203) * 0.5, w = worley(u * 22, v * 22, 22, 22, 205), id = (w.id & 255) / 255;
+    const stone = id > 0.62 ? smoothstep(0.42, 0.18, w.f1) * (0.5 + 0.5 * id) : 0, w2 = worley(u * 55, v * 55, 55, 55, 207), grain = (w2.id & 3) === 0 ? smoothstep(0.38, 0.1, w2.f1) : 0;
+    const h = 0.5 + 0.18 * sand + 0.4 * stone + 0.16 * grain, tone = 0.5 + 0.14 * sand - 0.2 * stone * ((w.id >>> 9) & 1 ? 1 : -0.6) + 0.12 * grain * ((w2.id >>> 5) & 1 ? 1 : -1);
+    A[i] = clamp(h, 0, 1) * 255; A[i + 1] = clamp(tone, 0, 1) * 255; A[i + 2] = 128; A[i + 3] = 255;
+    const fib = gnoise(u * 90, v * 6, 90, 6, 211) * 0.55 + gnoise(u * 220, v * 14, 220, 14, 213) * 0.3 + gnoise(u * 30, v * 3, 30, 3, 215) * 0.15;
+    const cu = u * 40, cf = cu - Math.floor(cu), chk = ((Math.floor(cu) * 2654435761 >>> 0) % 5 === 0 ? 1 : 0) * smoothstep(0.08, 0.0, Math.abs(cf - 0.5)) * smoothstep(0.2, 0.6, gnoise(Math.floor(cu) * 7, v * 4, 280, 4, 217) * 0.5 + 0.5);
+    B[i] = clamp(0.5 + 0.35 * fib - 0.45 * chk, 0, 1) * 255; B[i + 1] = clamp(0.5 + 0.22 * fib - 0.35 * chk, 0, 1) * 255; B[i + 2] = 128; B[i + 3] = 255; }
+  TEX.grit = dataTex(S, S, A, false); TEX.fibre = dataTex(S, S, B, false); TEX.grit.anisotropy = TEX.fibre.anisotropy = Math.min(16, R.maxAniso || 8);
+}
+// the same in GLSL: tone and bump from a detail map, faded out by distance (dn: fully on nearer than this, df: gone beyond); writes `dh`
+// (height, metres) and scales the colour
+const DETAIL_GLSL = (map, uv, amp, tone, dn, df) => `{ float dk = 1.0 - smoothstep(${dn.toFixed(1)}, ${df.toFixed(1)}, length(vViewPosition));
+    if (dk > 0.0) { vec2 dq = ${uv}; vec4 dt = texture2D(${map}, dq), dt2 = texture2D(${map}, dq * 0.31 + vec2(0.37, 0.61));
+      diffuseColor.rgb *= 1.0 + ((dt.g - 0.5) * ${tone.toFixed(3)} + (dt2.g - 0.5) * ${(tone * 0.6).toFixed(3)}) * dk;
+      dh += ((dt.r - 0.5) * ${amp.toFixed(5)} + (dt2.r - 0.5) * ${(amp * 2.2).toFixed(5)}) * dk; } }`;
+const BUMP_GLSL = h => `{ vec3 sx = dFdx(-vViewPosition), sy = dFdy(-vViewPosition), r1 = cross(sy, normal), r2 = cross(normal, sx);
+    float fd = dot(sx, r1) * faceDirection; vec3 gr = sign(fd) * (dFdx(${h}) * r1 + dFdy(${h}) * r2); normal = normalize(abs(fd) * normal - gr); }`;
+// grit on any surface by world position (three projections blended by the normal: no UVs needed). For rock and the like
+function gritWorld(m, scale = 1.4, amp = 0.006, tone = 0.4) {
+  if (!TEX.grit) return m; const before = m.onBeforeCompile;
+  m.onBeforeCompile = function (sh, r) { if (before && before !== THREE.Material.prototype.onBeforeCompile) before.call(this, sh, r);
+    sh.uniforms.gritMap = { value: TEX.grit };
+    sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vGRP; varying vec3 vGRN;").replace("#include <worldpos_vertex>", `#include <worldpos_vertex>
+      #ifdef USE_INSTANCING
+        vGRP = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz; vGRN = mat3(modelMatrix) * mat3(instanceMatrix) * objectNormal;
+      #else
+        vGRP = (modelMatrix * vec4(transformed, 1.0)).xyz; vGRN = mat3(modelMatrix) * objectNormal;
+      #endif`);
+    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vGRP; varying vec3 vGRN; uniform sampler2D gritMap; float gh = 0.0;")
+      .replace("#include <map_fragment>", `#include <map_fragment>
+        { vec3 bw = pow(abs(normalize(vGRN)), vec3(4.0)); bw /= bw.x + bw.y + bw.z; float dh = 0.0; vec3 q = vGRP * ${(1 / scale).toFixed(4)};
+          float dk = 1.0 - smoothstep(6.0, 30.0, length(vViewPosition));
+          if (dk > 0.0) { vec4 a = texture2D(gritMap, q.yz) * bw.x + texture2D(gritMap, q.xz) * bw.y + texture2D(gritMap, q.xy) * bw.z;
+            diffuseColor.rgb *= 1.0 + (a.g - 0.5) * ${tone.toFixed(3)} * dk; gh = (a.r - 0.5) * ${amp.toFixed(5)} * dk; } }`)
+      .replace("#include <normal_fragment_maps>", "#include <normal_fragment_maps>\n" + BUMP_GLSL("gh")); };
+  const key = m.customProgramCacheKey ? m.customProgramCacheKey() : ""; m.customProgramCacheKey = () => key + "|grit"; return m;
 }
 function canvasTex(c, srgb = true) { const t = new THREE.CanvasTexture(c); if (srgb) t.encoding = THREE.sRGBEncoding; t.anisotropy = 4; return t; }
 function spriteGrass() {
@@ -192,7 +236,7 @@ function windowMat() {
 }
 // weathering that depends on where a surface is: tops bleached silver by the sun, undersides dark, rain streaks down vertical faces,
 // dust and splash-back grime near the ground, slow blotchy variation so no two boards match
-const WOOD_PARS = `varying vec3 vWWP; varying vec3 vWWN; uniform sampler2D woodMacro;`;
+const WOOD_PARS = `varying vec3 vWWP; varying vec3 vWWN; uniform sampler2D woodMacro; uniform sampler2D fibreMap; float wdh = 0.0;`;
 const WOOD_WEATHER = `{ // two texture reads of a tiling noise map (cheap on phones) instead of procedural noise
     vec3 wn = normalize(vWWN); float lumW = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11));
     float up = clamp(wn.y, 0.0, 1.0), dn = clamp(-wn.y, 0.0, 1.0), vert = 1.0 - abs(wn.y);
@@ -219,6 +263,9 @@ function weatherWood(m, prev) {
           vWWP = (modelMatrix * vec4(transformed, 1.0)).xyz; vWWN = mat3(modelMatrix) * objectNormal;
         #endif`);
     sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\n" + WOOD_PARS).replace("#include <map_fragment>", "#include <map_fragment>\n" + WOOD_WEATHER);
+    if (TEX.fibre && sh.fragmentShader.includes("vUv")) { sh.uniforms.fibreMap = { value: TEX.fibre }; // (close up: the grain's fibres and splinters, 10)
+      sh.fragmentShader = sh.fragmentShader.replace("#include <map_fragment>", "#include <map_fragment>\n{ float dh = 0.0; " + DETAIL_GLSL("fibreMap", "vUv * vec2(4.0, 1.0)", 0.0012, 0.32, 1.5, 6.0) + " wdh = dh; }")
+        .replace("#include <normal_fragment_maps>", "#include <normal_fragment_maps>\n" + BUMP_GLSL("wdh")); }
   };
   const key = m.customProgramCacheKey ? m.customProgramCacheKey() : ""; m.customProgramCacheKey = () => key + "|wood"; return m;
 }
@@ -229,7 +276,7 @@ function buildMaterials() {
   MAT.iron = new THREE.MeshStandardMaterial({ color: 0x2e2a27, roughness: 0.45, metalness: 0.85, normalMap: TEX.leather.normalMap });
   MAT.brass = new THREE.MeshStandardMaterial({ color: 0xb08a3e, roughness: 0.35, metalness: 1 });
   MAT.rope = stdMat(TEX.rope, 0xd9c2a0);
-  MAT.rock = stdMat(TEX.rock, 0xffffff);
+  MAT.rock = gritWorld(stdMat(TEX.rock, 0xffffff), 1.2, 0.008, 0.45);
   MAT.glassLit = new THREE.MeshStandardMaterial({ color: 0x1a120a, emissive: 0xffa040, emissiveIntensity: 0.0, roughness: 0.2 });
   MAT.siding = sidingMat(MAT.wood); MAT.sidingRed = sidingMat(MAT.woodRed);
   MAT.door = sidingMat(MAT.woodDark, 0.11);
