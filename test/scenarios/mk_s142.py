@@ -2,6 +2,7 @@
 #   - the shootout with the laser: a tumbleweed in the beam catches fire, rolls on ablaze and blackening, burns down to ash; another blows in later
 #   - a gunman shot down, then held in the beam: he burns to ash where he lies, a long low heap under him
 #   - the meat: STEAK! over it as it comes, a ring and sparks; thicker; steaming once it's down
+#   - v42b: the weed on the ground, as it rolls; the fire drawn over the scene; out of bullets the laser hums, and stops once you're dead
 #   - the getaway: the run from 70 km/h to 90; the revolver five in the gun and one reload; the riders sitting up straight
 # Prints one JSON line per check; "ok" is true when it passed.
 import json, os, sys
@@ -33,13 +34,16 @@ E("""(async () => { await __go(200, () => !STATE.locked); await __siege(); const
 # ---- a tumbleweed in the beam catches fire, burns down to ash, and another blows in later ----
 E("""(async () => { const S = SIEGE, D = DRESS.weeds; if (!D) return __check('a tumbleweed in the beam catches fire', false, { err: 'no tumbleweeds at this tier' });
   const w = D.weeds[0], C = S.covers[S.cover], savedV = WIND.v.clone(); WIND.v.set(0.001, 0, 0); window.__windBack = () => WIND.v.copy(savedV); window.__W = w; let spot = null; const why = { moved: 0, blocked: 0 }; // (somewhere in the street in plain sight of the cover, and it stays put)
-  for (let al = 9; al <= 45; al += 3) { for (const sd of [0, 3, -3, 6, -6, 9, -9, 12, -12]) { const ro = upEye(V3()), at = V3(STREET.o[0] + STREET.a[0] * al + STREET.r[0] * sd, 0, STREET.o[1] + STREET.a[1] * al + STREET.r[1] * sd); /* (in the street, where tumbleweeds roll: not within 8 m of the gallows) */ w.p.set(at.x, 0, at.z); w.kick = null; w.v = 0; w.y = 0.7; w.vy = 0; await __go(2, () => { w.y = 0.7; w.vy = 0; return false; }); /* (held up off the ground, as if on a hop: the gallows and the rise of the street hide the low ones from this cover) */
+  for (let al = 9; al <= 45; al += 3) { for (const sd of [0, 3, -3, 6, -6, 9, -9, 12, -12]) { const ro = upEye(V3()), at = V3(STREET.o[0] + STREET.a[0] * al + STREET.r[0] * sd, 0, STREET.o[1] + STREET.a[1] * al + STREET.r[1] * sd); /* (in the street, where tumbleweeds roll: not within 8 m of the gallows) */ w.p.set(at.x, 0, at.z); w.kick = null; w.v = 0; w.y = 0; w.vy = 0; await __go(2, () => { w.vy = Math.min(w.vy, 0); return false; }); /* (v42b: on the ground, rolling as it would: no lift) */
       if (w.p.distanceTo(at.setY(0)) > 0.3) { why.moved++; continue; } const c = w.c.clone(), rd = c.clone().sub(ro).normalize(), e = sceneryRay(ro, rd, 80); if (!e || e.distance > c.distanceTo(ro)) { spot = c; break; } why.blocked++; why.last = [+c.distanceTo(ro).toFixed(1), e && +e.distance.toFixed(1)]; } if (spot) break; }
   if (!spot) { __windBack(); return __check('a tumbleweed in the beam catches fire', false, { err: 'no clear spot', why }); }
-  const got = await __track(() => { w.y = 0.7; w.vy = 0; return w.c.clone(); }, (ro, rd) => { const h = targetRay(ro, rd), e = sceneryRay(ro, rd, 80); return h && h.weed === w && (!e || h.t < e.distance); }, 120);
-  laserTrigger(true); await __go(3, () => { w.y = 0.7; w.vy = 0; return false; }); laserTrigger(false); const lit = !!w.fire; await __go(30); const flames = FIRE.list.filter(f => f.t < f.life).length; const col = new THREE.Color(); D.im.getColorAt(0, col);
-  return __check('a tumbleweed in the beam catches fire', got && lit && flames > 5 && col.r < 0.9, { got, lit, flames, colour: +col.r.toFixed(2) }); })()""")
+  const got = await __track(() => { w.vy = Math.min(w.vy, 0); return w.c.clone(); }, (ro, rd) => { const h = targetRay(ro, rd), e = sceneryRay(ro, rd, 80); return h && h.weed === w && (!e || h.t < e.distance); }, 120);
+  laserTrigger(true); await __go(8); laserTrigger(false); const lit = !!w.fire; /* (the beam comes on a frame or two after the trigger) */ await __go(30); const flames = FIRE.list.filter(f => f.t < f.life && !f.core).length; const col = new THREE.Color(); D.im.getColorAt(0, col);
+  return __check('a tumbleweed on the ground in the beam catches fire', got && lit && flames > 10 && col.r < 0.5, { got, lit, flames, colour: +col.r.toFixed(2), spot: spot.toArray().map(v => +v.toFixed(1)) }); })()""")
 shot("a_weed_fire")
+E("""(async () => { const p = __W.c; window.__cam = { p: [p.x + 3.2, p.y + 1.4, p.z + 3.2], t: [p.x, p.y + 0.6, p.z], fov: 45 }; await __go(2); return 1; })()""")
+shot("a2_weed_fire_close")
+E("""(async () => { window.__cam = null; await __go(1); return 1; })()""")
 E("""(async () => { const w = __W, D = DRESS.weeds; await __go(400, () => w.gone > 0); const gone = w.gone > 0, m = new THREE.Matrix4(); D.im.getMatrixAt(0, m); const s = new THREE.Vector3().setFromMatrixScale(m).x;
   const hit = targetRay(upEye(V3()), w.p.clone().sub(upEye(V3())).normalize()); const ignored = !hit || hit.weed !== w; w.gone = 0.05; await __go(10); const back = !w.gone && !w.fire; const col = new THREE.Color(); D.im.getColorAt(0, col); __windBack();
   return __check('it burns down to ash, and another blows in later', gone && s < 0.01 && ignored && back && col.r > 0.99, { gone, scale: +s.toFixed(3), ignoredWhileGone: ignored, back, colour: +col.r.toFixed(2) }); })()""")
@@ -75,6 +79,11 @@ E("""(async () => { chaseRetry(); const C = CHASE; await __go(600, () => C.state
     worst = Math.max(worst, Math.abs(Math.atan2(d.z, d.y))); side = Math.max(side, Math.abs(Math.atan2(d.x, d.y))); } }
   return __check('the riders sit upright in the saddle', worst < 0.12 && side < 0.06, { forwardDeg: +(worst * 57.3).toFixed(1), sideDeg: +(side * 57.3).toFixed(1) }); })()""")
 shot("d_riders_upright")
+# ---- v42b: out of bullets, the laser on the crate hums; dead, the hum stops, and it's not there in the next round ----
+E("""(async () => { chaseHome(); await __go(30); await __siege(); const S = SIEGE, L = LASER; await __go(600, () => L.ready); await __go(10, () => { __calm(); return false; });
+  const onCrate = L.state === 'crate'; S.bullets = 0; S.reloads = 0; siegeDoomed(); await __go(20); const humming = Sound.hums.wake && L.awake;
+  siegeDie(); await __go(10); const afterDeath = Sound.hums; newRound(); await __go(30); const nextRound = Sound.hums;
+  return __check('out of bullets the laser hums; dead, it stops', onCrate && humming && !afterDeath.wake && !afterDeath.charge && !afterDeath.beam && !nextRound.wake && !nextRound.charge && !nextRound.beam, { onCrate, humming, afterDeath, nextRound }); })()""")
 E("""JSON.stringify({ errs: __errs })""")
 json.dump(steps, open("test/s142.json", "w"), indent=0)
 print(len(steps), "steps")

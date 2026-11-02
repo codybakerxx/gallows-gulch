@@ -450,6 +450,7 @@ const Sound = (() => {
     pauseAll() { if (silentEl) silentEl.pause(); suspend(); },
     wake() { resume(); if (silentEl && !muted && silentEl.paused) silentEl.play().catch(() => {}); },
     setVolume(v) { volume = v; if (ctx && !muted) master.gain.setTargetAtTime(v, now(), 0.05); },
+    get hums() { return { beam: !!laz.beam, charge: !!laz.charge, wake: !!laz.wake }; }, /* (v42b: the laser's running sounds, for the tests) */
     get muted() { return muted; }, get masterGain() { return master ? master.gain.value : null; }, /* (what everything, music, voices and effects, finally goes out through) */ get playing() { return playing; }, get ready() { return !!ctx; }, get songReady() { return !!song.buf; }, get songPlaying() { return !!song.src; }
   };
   return api;

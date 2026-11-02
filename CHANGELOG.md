@@ -2,6 +2,16 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v43
+- **Tumbleweeds you can see burn.** The v42 fire was drawn by adding light, and against the sunset's orange street it
+  hardly showed. Now it's tall tongues of flame drawn over the scene, yellow-white at the root and dark red at the tips,
+  with a bright glow at the heart and black smoke rolling off. The weed goes up with a whoomph, crackles as it burns,
+  is charred black in under a second, and burns for 4.5 s (was 3.2). It's a little easier to hit, too.
+- **No humming after you're dead.** Out of bullets in the town shootout with the laser still on its crate, the laser
+  wakes and hums so you can find it. If they finished you first, the hum never stopped: it went on through GAME OVER
+  and into the next round. It's stopped now as soon as the fight is over, and the laser's other running sounds (the
+  beam, the recharge) can't be left on either.
+
 ## v42
 - **A faster, busier run.** The getaway's run builds from 70 km/h to 90 (19.5 to 25 m/s; it topped out at 88), and
   there's more on the trail: the rows come about 10% closer together (so there are more of them), fewer of them

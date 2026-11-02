@@ -122,6 +122,13 @@ function revTake() {
 function updateLaser(rdt, dt) {
   const L = LASER, S = SIEGE; if (!L.ready) return; L.t += rdt;
   const chase = CHASE.on && CHASE.laser, live = chase ? CHASE.state === "combat" : S.on && (S.phase === "fight" || S.phase === "doomed" || S.phase === "cleared");
+  // (v42b: no hum left running where it has no business. The wake on the crate is only while you're out of bullets in the fight with it
+  // still there to take; once you were dead, or the round was over, it hummed on into the next round, for good. And the recharge's rising
+  // tone only while there's a fight it's for)
+  if (L.awake && !(S.on && S.phase === "doomed" && L.state === "crate")) { L.awake = false; Sound.laserWake(null, false); }
+  if (!L.awake) Sound.laserWake(null, false);
+  if (!(L.rechargeT > 0 && (chase || (S.on && S.phase !== "chase")))) Sound.laserCharge(false);
+  if (!L.firing) Sound.laser(false);
   L.crate.visible = S.on && L.state === "crate" && S.phase !== "chase" && S.covers[1].grp.visible;
   L.rev.visible = S.on && laserHeld() && S.phase !== "chase" && S.covers[1].grp.visible && !S.vm.lift; // (the revolver where the laser lay: v39)
   if (L.rechargeT > 0) { L.rechargeT -= dt; L.charge = LASER_CFG.charge * clamp(1 - L.rechargeT / LASER_CFG.recharge, 0, 1); // (it charges on the crate too)

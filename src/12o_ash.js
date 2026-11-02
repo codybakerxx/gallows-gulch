@@ -137,27 +137,39 @@ function bodyRay(list, ro, rd) { let best = null; for (const E of list) { if (E.
 function bodyLaser(B, at, rd, dt, floor) { const E = B.E; E.laserT = (E.laserT || 0) + dt; if (E.laserT >= 0.12) ashBody(E, at, rd, floor); }
 
 // ---- v42: a tumbleweed in the beam catches fire: it rolls on ablaze, blackens, and falls to ash; another blows in later ----
-const FIRE = { list: [], tex: null };
-function fireTex() { const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d"), gr = g.createRadialGradient(32, 36, 0, 32, 32, 32);
-  gr.addColorStop(0, "rgba(255,250,220,1)"); gr.addColorStop(0.25, "rgba(255,200,90,0.95)"); gr.addColorStop(0.55, "rgba(255,110,30,0.55)"); gr.addColorStop(1, "rgba(200,40,10,0)"); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return canvasTex(c); }
-function fireEmit(p, size, life) {
-  let f = FIRE.list.find(q => q.t >= q.life); if (!f) { if (FIRE.list.length >= 90) return; if (!FIRE.tex) FIRE.tex = fireTex(); const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: FIRE.tex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false }));
-    s.renderOrder = 6; R.scene.add(s); f = { s, t: 1, life: 1, v: new THREE.Vector3(), size: 1 }; FIRE.list.push(f); }
-  f.t = 0; f.life = life; f.size = size; f.s.position.copy(p); f.v.set(rnd(-0.25, 0.25), rnd(0.9, 1.7), rnd(-0.25, 0.25)); f.s.visible = true; f.s.material.rotation = Math.random() * TAU;
+// (v42b: the flames drawn over the scene, not added to it: added light vanished against the sunset's orange street. Tall tongues of fire,
+// yellow-white at the root and dark red at the tips, a bright core over them, black smoke, and the weed itself charred black)
+const FIRE = { list: [], tex: null, core: null };
+function fireTex() { const W = 64, H = 128, c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d");
+  // a tongue of flame: wide and round at the bottom, drawn up to a point, hot at the root
+  g.beginPath(); g.moveTo(W / 2, 2); g.bezierCurveTo(W * 0.62, H * 0.3, W * 0.98, H * 0.55, W * 0.92, H * 0.76); g.bezierCurveTo(W * 0.86, H * 0.96, W * 0.14, H * 0.96, W * 0.08, H * 0.76); g.bezierCurveTo(W * 0.02, H * 0.55, W * 0.38, H * 0.3, W / 2, 2); g.closePath();
+  const gr = g.createLinearGradient(0, H, 0, 0); gr.addColorStop(0, "rgba(255,248,200,1)"); gr.addColorStop(0.25, "rgba(255,214,80,1)"); gr.addColorStop(0.55, "rgba(255,120,20,0.95)"); gr.addColorStop(0.85, "rgba(190,40,10,0.75)"); gr.addColorStop(1, "rgba(120,20,10,0)");
+  g.fillStyle = gr; g.filter = "blur(3px)"; g.fill(); return canvasTex(c); }
+function fireCoreTex() { const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d"), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, "rgba(255,255,235,1)"); gr.addColorStop(0.35, "rgba(255,220,120,0.8)"); gr.addColorStop(1, "rgba(255,140,40,0)"); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return canvasTex(c); }
+function fireEmit(p, size, life, core) {
+  let f = FIRE.list.find(q => q.t >= q.life && q.core === !!core); if (!f) { if (FIRE.list.length >= 140) return; if (!FIRE.tex) { FIRE.tex = fireTex(); FIRE.core = fireCoreTex(); }
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: core ? FIRE.core : FIRE.tex, blending: core ? THREE.AdditiveBlending : THREE.NormalBlending, depthWrite: false, transparent: true, fog: false }));
+    s.renderOrder = core ? 7 : 6; s.center.set(0.5, core ? 0.5 : 0.12); R.scene.add(s); f = { s, t: 1, life: 1, v: new THREE.Vector3(), size: 1, core: !!core }; FIRE.list.push(f); } // (a tongue stands up from its root)
+  f.t = 0; f.life = life; f.size = size; f.s.position.copy(p); f.v.set(rnd(-0.2, 0.2), core ? rnd(0.2, 0.5) : rnd(1.2, 2.2), rnd(-0.2, 0.2)); f.s.visible = true; f.s.material.rotation = core ? Math.random() * TAU : rnd(-0.25, 0.25);
 }
-function fireStep(dt) { for (const f of FIRE.list) { if (f.t >= f.life) continue; f.t += dt; const u = f.t / f.life; f.s.position.addScaledVector(f.v, dt); f.s.scale.setScalar(f.size * (0.6 + 0.6 * Math.sin(Math.min(1, u) * Math.PI)) * (1 - 0.5 * u));
-  f.s.material.opacity = (1 - u) * 0.95; f.s.material.color.setRGB(1, 1 - 0.55 * u, 1 - 0.85 * u); if (u >= 1) f.s.visible = false; } }
-function weedIgnite(w, at) { if (w.fire || w.gone) return; w.fire = { t: 0, acc: 0, smokeT: 0 }; Sound.ash(at, 0.55); for (let i = 0; i < 10; i++) fireEmit(at, rnd(0.3, 0.5), rnd(0.3, 0.6));
+function fireStep(dt) { for (const f of FIRE.list) { if (f.t >= f.life) continue; f.t += dt; const u = Math.min(1, f.t / f.life); f.s.position.addScaledVector(f.v, dt);
+  const k = f.size * (0.55 + 0.6 * Math.sin(u * Math.PI)) * (1 - 0.35 * u); if (f.core) f.s.scale.setScalar(k); else f.s.scale.set(k, k * (1.7 + 0.5 * Math.sin(f.t * 23 + f.size * 40)), 1);
+  f.s.material.opacity = f.core ? (1 - u) * 0.9 : Math.min(1, (1 - u) * 1.6); if (!f.core) f.s.material.color.setRGB(1, 1 - 0.35 * u, 1 - 0.6 * u); if (f.t >= f.life) f.s.visible = false; } }
+function weedIgnite(w, at) { if (w.fire || w.gone) return; w.fire = { t: 0, acc: 0, smokeT: 0, crackT: 0.3 }; Sound.ash(at, 0.7); Sound.straw(at, 0.8);
+  for (let i = 0; i < 14; i++) fireEmit(_a3.set(at.x + rnd(-0.2, 0.2), at.y - 0.15, at.z + rnd(-0.2, 0.2)), rnd(0.5, 0.9), rnd(0.35, 0.7)); fireEmit(at, 1.6, 0.5, true); // (a whoomph as it goes up)
   if (!ASH.flakes) { ASH.flakes = ashPoints(900, 0.034, 0x9a948c, false); ASH.embers = ashPoints(160, 0.06, 0xff8a3a, true); } crowsStartle(at, 20, 0.8); }
 // each frame while it burns (07c updateTumbleweeds, which has just placed it at w.c): returns how big it still is, and its colour
-const WEED_BURN = 3.2;
+const WEED_BURN = 4.5;
 function weedFireStep(w, dt, col) {
-  const F = w.fire; F.t += dt; const t = F.t, r = w.rad, k = 1 - smoothstep(WEED_BURN - 0.9, WEED_BURN, t), heat = Math.min(1, t / 0.5) * k;
-  F.acc += dt * 34 * heat; while (F.acc >= 1) { F.acc -= 1; fireEmit(_a1.set(w.c.x + rnd(-r, r) * 0.7, w.c.y + rnd(-r, r) * 0.6, w.c.z + rnd(-r, r) * 0.7), r * rnd(0.9, 1.5), rnd(0.35, 0.7)); }
-  if (Math.random() < dt * 14 * heat) ashEmit(ASH.embers, _a1.set(w.c.x + rnd(-r, r) * 0.6, w.c.y + r * 0.4, w.c.z + rnd(-r, r) * 0.6), rnd(-0.3, 0.3), rnd(0.8, 2.2), rnd(-0.3, 0.3), rnd(0.6, 1.3), 1, w.c.y - r);
-  F.smokeT -= dt; if (F.smokeT <= 0) { F.smokeT = 0.12; puff(_a2.set(w.c.x, w.c.y + r * 0.8, w.c.z), 2, 0.25, 0.3, 1.6, 0.35 * heat + 0.1, 0x3a3632); }
-  if (t > WEED_BURN - 0.9) for (let i = 0; i < 3; i++) ashEmit(ASH.flakes, _a1.set(w.c.x + rnd(-r, r) * 0.8, w.c.y + rnd(-r, r) * 0.6, w.c.z + rnd(-r, r) * 0.8), rnd(-0.3, 0.3), rnd(-0.1, 0.3), rnd(-0.3, 0.3), rnd(2, 3.5), rnd(0.35, 0.7), w.c.y - r * 0.9);
-  const ch = Math.min(1, t / 1.4); col.setRGB(1 - 0.88 * ch, 1 - 0.9 * ch, 1 - 0.92 * ch);
+  const F = w.fire; F.t += dt; const t = F.t, r = w.rad, k = 1 - smoothstep(WEED_BURN - 1.1, WEED_BURN, t), heat = Math.min(1, 0.4 + t / 0.4) * (0.25 + 0.75 * k);
+  F.acc += dt * 30 * heat; while (F.acc >= 1) { F.acc -= 1; fireEmit(_a1.set(w.c.x + rnd(-r, r) * 0.6, w.c.y + rnd(-0.6, 0.2) * r, w.c.z + rnd(-r, r) * 0.6), r * rnd(1.7, 2.7) * (0.5 + 0.5 * k), rnd(0.4, 0.75)); }
+  if (Math.random() < dt * 9 * heat) fireEmit(_a1.set(w.c.x, w.c.y, w.c.z), r * rnd(2.4, 3.4) * (0.4 + 0.6 * k), rnd(0.15, 0.3), true); // (the glow at its heart)
+  if (Math.random() < dt * 22 * heat) ashEmit(ASH.embers, _a1.set(w.c.x + rnd(-r, r) * 0.6, w.c.y + r * 0.6, w.c.z + rnd(-r, r) * 0.6), rnd(-0.4, 0.4), rnd(1.2, 3), rnd(-0.4, 0.4), rnd(0.7, 1.5), 1, w.c.y - r);
+  F.smokeT -= dt; if (F.smokeT <= 0) { F.smokeT = 0.09; puff(_a2.set(w.c.x, w.c.y + r * 1.6, w.c.z), 3, 0.3, 0.45, 2.2, 0.55 * heat + 0.1, 0x221e1c); } // (black smoke rolling up off it)
+  F.crackT -= dt; if (F.crackT <= 0 && k > 0.3) { F.crackT = rnd(0.35, 0.7); Sound.sizzle(w.c, 0.55); } // (it crackles as it goes)
+  if (t > WEED_BURN - 1.1) for (let i = 0; i < 4; i++) ashEmit(ASH.flakes, _a1.set(w.c.x + rnd(-r, r) * 0.8, w.c.y + rnd(-r, r) * 0.6, w.c.z + rnd(-r, r) * 0.8), rnd(-0.3, 0.3), rnd(-0.1, 0.3), rnd(-0.3, 0.3), rnd(2, 3.5), rnd(0.35, 0.7), w.c.y - r * 0.9);
+  const ch = Math.min(1, t / 0.9); col.setRGB(1 - 0.95 * ch, 1 - 0.96 * ch, 1 - 0.97 * ch); // (black through in under a second)
   if (t >= WEED_BURN) { w.fire = null; w.gone = rnd(6, 12); } // (gone to ash: another blows in after a while)
   return k;
 }
