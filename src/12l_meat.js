@@ -3,7 +3,7 @@
 // street behind the gallows) and, on the getaway, a posse rider's horse, which throws its rider. It cries out, its forelegs fold, it pitches
 // nose-first and rolls onto its side, slides to a stop and lies there in its blood. Hit by the laser (12k) a horse is gone in a flash and a
 // steak drops out of the air where it was; a crow comes down as a chicken leg. The meat bounces, lies where it lands and steams.
-const MEAT = { list: [], steakGeo: null, steakMats: null, legGeo: null, legMat: null, zaps: [], blue: null };
+const MEAT = { list: [], steakGeo: null, steakMats: null, legGeo: null, legMat: null, zaps: [], blue: null, gold: null, labels: [], rings: [] };
 const _mt1 = new THREE.Vector3(), _mt2 = new THREE.Vector3(), _mt3 = new THREE.Vector3(), _mtq = new THREE.Quaternion(), _mte = new THREE.Euler(), _mtc = new THREE.Color();
 // the horse for a shot, in its own frame (metres): the body, the neck and head, the forelegs, the hind legs
 const HORSE_CAPS = [[V3(0, 1.22, 0.85), V3(0, 1.17, -0.9), 0.42], [V3(0, 1.45, 0.92), V3(0, 1.95, 1.38), 0.22], [V3(0, 0.95, 0.6), V3(0, 0.15, 0.62), 0.11], [V3(0, 0.95, -0.72), V3(0, 0.15, -0.8), 0.11]];
@@ -97,7 +97,7 @@ function horseMeatStep(H, dt) { const M = H.meat; M.t += dt; const k = 1 - smoot
 // a crust seared dark and glossy, criss-cross grill marks burnt into it, cracked pepper and a few flakes of salt. The slab is built ring by
 // ring from the middle out (steakGeo): a top that isn't quite flat, rounded corners, a wall that bulges a little; the top and bottom
 // carry the drawn crust (steakTopTex) with a normal map pressed from the same picture (steakNrmTex), the wall its own band (steakSideTex).
-const STEAK = { a: 0.3, b: 0.21, T: 0.075, rc: 0.022, U: 0.72, V: 0.52, fat0: 2.25, fatW: 0.72, N: 72 };
+const STEAK = { a: 0.3, b: 0.21, T: 0.11, rc: 0.03, /* (T: v42 thicker, was 0.075) */ U: 0.72, V: 0.52, fat0: 2.25, fatW: 0.72, N: 72 };
 // how far out the edge is at angle a (x along it, z across), as a share of the ellipse; a dip where the tail curls in
 const steakK = a => 1 + 0.09 * Math.sin(2 * a + 0.6) + 0.05 * Math.sin(3 * a + 1.2) + 0.025 * Math.sin(5 * a + 2.1) - 0.1 * Math.max(0, Math.cos(a - 5.2)) ** 6;
 // how much of the edge at angle a is the fat cap (1 in the middle of it, 0 away from it)
@@ -201,7 +201,7 @@ function buildMeat() {
   MEAT.steakMats = [new THREE.MeshPhysicalMaterial({ map: top, normalMap: nrm, normalScale: new THREE.Vector2(1.1, 1.1), roughness: 0.64, metalness: 0, clearcoat: 0.3, clearcoatRoughness: 0.5, envMapIntensity: 0.55 }), // (a sheen of juices and fat, not a varnish: low, or the sky shows in it)
     new THREE.MeshPhysicalMaterial({ map: side, roughness: 0.7, metalness: 0, clearcoat: 0.22, clearcoatRoughness: 0.55, envMapIntensity: 0.55 })];
   // a chicken leg: knob and bone, then the roasted meat
-  const prof = [[0, 0], [0.012, 0.002], [0.016, 0.011], [0.011, 0.022], [0.0075, 0.03], [0.0075, 0.07], [0.016, 0.085], [0.032, 0.12], [0.042, 0.16], [0.04, 0.19], [0.028, 0.214], [0, 0.226]].map(([x, y]) => new THREE.Vector2(x, y));
+  const prof = [[0, 0], [0.012, 0.002], [0.016, 0.011], [0.011, 0.022], [0.0075, 0.03], [0.0075, 0.07], [0.016, 0.085], [0.032, 0.12], [0.042, 0.16], [0.04, 0.19], [0.028, 0.214], [0, 0.226]].map(([x, y]) => new THREE.Vector2(y > 0.08 ? x * 1.4 : x, y)); // (v42: the meat on it plumper, the bone as it was)
   const lg = new THREE.LatheGeometry(prof, 14), col = new Float32Array(lg.attributes.position.count * 3), cb = new THREE.Color(0xeadcc4).convertSRGBToLinear(), cm = new THREE.Color(0xb06a2c).convertSRGBToLinear(), cd = new THREE.Color(0x6a3612).convertSRGBToLinear();
   for (let i = 0; i < lg.attributes.position.count; i++) { const y = lg.attributes.position.getY(i), x = lg.attributes.position.getX(i), z = lg.attributes.position.getZ(i), n = 0.5 + 0.5 * Math.sin(x * 160 + y * 90) * Math.cos(z * 140 - y * 50);
     const c = y < 0.076 ? cb : _mtc.copy(cm).lerp(cd, n * 0.6); col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
@@ -216,33 +216,60 @@ function meatPrecompile(on) {
 function spawnMeat(kind, at, v, s, floor) { // (floor: the ground under it, where that isn't the town's: the getaway's trail)
   if (!MEAT.steakGeo) buildMeat(); const steak = kind === "steak", m = new THREE.Mesh(steak ? MEAT.steakGeo : MEAT.legGeo, steak ? MEAT.steakMats : MEAT.legMat);
   m.castShadow = m.receiveShadow = true; m.userData.dyn = true; m.position.copy(at); m.scale.setScalar(0.001); m.rotation.set(rnd(-1, 1), Math.random() * TAU, rnd(-1, 1)); R.scene.add(m);
-  MEAT.list.push({ m, steak, v: v.clone(), w: V3(rnd(-7, 7), rnd(-4, 4), rnd(-7, 7)).multiplyScalar(steak ? 0.6 : 1), t: 0, rest: false, s, half: (steak ? STEAK.T / 2 + 0.002 : 0.036) * s, steamT: 0, bounced: 0, floor, settle: null });
+  mealReward(at, steak, s); // (v42: a flash of gold and a ring, and its name, so it feels like a prize)
+  MEAT.list.push({ m, steak, v: v.clone(), w: V3(rnd(-7, 7), rnd(-4, 4), rnd(-7, 7)).multiplyScalar(steak ? 0.6 : 1), t: 0, rest: false, s, half: (steak ? STEAK.T / 2 + 0.002 : 0.05) * s, steamT: 0, bounced: 0, floor, settle: null });
 }
 // how far below its middle the lowest point of it is, turned as it is (so a big steak tumbling down lands on its edge, not through it)
 function meatLow(M) { const q = M.m.quaternion, k = M.m.scale.x;
   if (M.steak) { const ex = _mt1.set(1, 0, 0).applyQuaternion(q).y, ey = _mt2.set(0, 1, 0).applyQuaternion(q).y, ez = _mt3.set(0, 0, 1).applyQuaternion(q).y;
     return k * (Math.hypot(ex * STEAK.a * 1.12, ez * STEAK.b * 1.12) + Math.abs(ey) * STEAK.T / 2); }
-  return k * (Math.abs(_mt1.set(0, 1, 0).applyQuaternion(q).y) * 0.11 + 0.042); }
+  return k * (Math.abs(_mt1.set(0, 1, 0).applyQuaternion(q).y) * 0.11 + 0.058); }
 function meatFloor(M) { const p = M.m.position; return M.floor ? M.floor(p.x, p.z) : typeof goreFloor === "function" ? goreFloor(p.x, p.z, p.y + 0.1) : surfaceAt(p.x, p.z, p.y + 0.1); }
 function updateMeat(dt) {
   for (const M of MEAT.list) { const m = M.m; M.t += dt; if (M.ash) continue; // (burning to ash: 12o)
-    const pop = M.t < 0.14 ? 1.2 * Ease.out(M.t / 0.14) : 1.2 - 0.2 * smoothstep(0.14, 0.26, M.t); m.scale.setScalar(M.s * pop); // (it pops out of the flash)
+    const u = M.t - 0.12, pop = M.t < 0.12 ? 1.35 * Ease.out(M.t / 0.12) : 1 + 0.35 * Math.exp(-u * 5.5) * Math.cos(u * 19); m.scale.setScalar(M.s * pop); // (it pops out of the flash, overshoots and wobbles to its size: v42)
+    if (M.squash) { const q = M.squash; q.t += dt; const k = 0.32 * Math.exp(-q.t * 7) * Math.cos(q.t * 24); m.scale.set(M.s * (1 + k * 0.5), M.s * (1 - k), M.s * (1 + k * 0.5)); if (q.t > 1) M.squash = null; } // (landed: it squashes and springs)
+    if (!M.rest && MEAT.gold && Math.random() < 0.7) emit(MEAT.gold, m.position, _mt1.set(rnd(-0.4, 0.4), rnd(0, 0.6), rnd(-0.4, 0.4)), rnd(0.3, 0.6)); // (a trail of sparks as it flies)
     if (!M.rest) { M.v.y -= 9.81 * dt; m.position.addScaledVector(M.v, dt); _mtq.setFromEuler(_mte.set(M.w.x * dt, M.w.y * dt, M.w.z * dt)); m.quaternion.multiply(_mtq);
       const ground = meatFloor(M), fl = ground + (M.t > 0.14 ? meatLow(M) : M.half);
       if (m.position.y <= fl) { m.position.y = fl;
         if (M.v.y < -1.6 && M.bounced < 2) { M.bounced++; M.v.y = -M.v.y * 0.3; M.v.x *= 0.5; M.v.z *= 0.5; M.w.multiplyScalar(0.45); Sound.slap(m.position, M.steak ? 1 : 0.5); }
         else { M.rest = true; const yaw = Math.random() * TAU, q1 = new THREE.Quaternion().setFromEuler(M.steak ? _mte.set(0, yaw, 0) : _mte.set(Math.PI / 2 - 0.12, yaw, 0, "YXZ"));
-          M.settle = { t: 0, q0: m.quaternion.clone(), q1, y0: m.position.y, y1: ground + M.half }; Sound.sizzle(m.position, M.steak ? 0.8 : 0.4); } } }
+          M.settle = { t: 0, q0: m.quaternion.clone(), q1, y0: m.position.y, y1: ground + M.half }; Sound.sizzle(m.position, M.steak ? 1.1 : 0.6); Sound.slap(m.position, M.steak ? 1.2 : 0.6);
+          M.squash = { t: 0 }; M.steamT = 0; M.landT = M.t; puff(m.position.clone(), M.steak ? 14 : 6, 0.25 * M.s, 0.22 * Math.sqrt(M.s), 1.6, 0.4, 0xf4f4f4); // (down with a slap, a squash and a gush of steam)
+          if (MEAT.gold) for (let i = 0; i < (M.steak ? 26 : 12); i++) emit(MEAT.gold, m.position, _mt1.set(rnd(-1, 1), rnd(0.6, 2.2), rnd(-1, 1)).multiplyScalar(M.steak ? 1.6 : 1), rnd(0.4, 0.9)); } } }
     else if (M.settle) { const S = M.settle; S.t = Math.min(1, S.t + dt / 0.22); const e = Ease.inOut(S.t); m.quaternion.slerpQuaternions(S.q0, S.q1, e); m.position.y = lerp(S.y0, S.y1, e); if (S.t >= 1) M.settle = null; } // (it flops down flat)
-    if (M.t < 5) { M.steamT -= dt; if (M.steamT <= 0) { M.steamT = M.steak ? 0.24 : 0.3; puff(m.position.clone().add(_mt1.set(rnd(-0.1, 0.1) * M.s, 0.05 * M.s, rnd(-0.1, 0.1) * M.s)), 2, 0.1 * Math.sqrt(M.s), (M.steak ? 0.18 * Math.sqrt(M.s) : 0.08), 1.5, 0.22, 0xf2f2f2); } } }
+    const st = M.landT != null ? M.t - M.landT : -1; // (v42: steaming hard for the first few seconds it's down, then thinning away)
+    if (st >= 0 && st < 3.5) { M.steamT -= dt; if (M.steamT <= 0) { M.steamT = lerp(0.05, 0.25, st / 3.5) * (M.steak ? 1 : 1.6); const k = 1 - st / 3.5;
+        puff(m.position.clone().add(_mt1.set(rnd(-0.22, 0.22) * M.s, 0.06 * M.s, rnd(-0.22, 0.22) * M.s)), M.steak ? 3 : 2, 0.08 * Math.sqrt(M.s), (M.steak ? 0.24 : 0.1) * Math.sqrt(M.s) * (0.6 + 0.6 * k), 1.8, 0.2 + 0.25 * k, 0xf6f6f6); } } }
   for (const z of MEAT.zaps) { if (z.t >= 1) continue; z.t = Math.min(1, z.t + dt / 0.28); z.s.scale.setScalar(z.size * (0.4 + 2.2 * Ease.out(z.t))); z.s.material.opacity = 1 - z.t * z.t; if (z.t >= 1) z.s.visible = false; }
-  if (MEAT.blue) updatePoints(MEAT.blue, dt, true, 0.8);
+  if (MEAT.blue) updatePoints(MEAT.blue, dt, true, 0.8); if (MEAT.gold) updatePoints(MEAT.gold, dt, true, 1.2);
+  for (const L of MEAT.labels) { if (L.t >= 1) continue; L.t = Math.min(1, L.t + dt / 1.5); L.s.position.y = L.y0 + Ease.out(L.t) * 1.1; L.s.material.opacity = L.t < 0.12 ? L.t / 0.12 : 1 - smoothstep(0.6, 1, L.t);
+    L.s.scale.set(L.w, L.h, 1).multiplyScalar(L.t < 0.12 ? 0.6 + 0.4 * Ease.out(L.t / 0.12) * 1.15 : 1 + 0.15 * Math.exp(-(L.t - 0.12) * 12)); if (L.t >= 1) L.s.visible = false; }
+  for (const g of MEAT.rings) { if (g.t >= 1) continue; g.t = Math.min(1, g.t + dt / 0.45); g.m.scale.setScalar(g.r * (0.2 + 1.8 * Ease.out(g.t))); g.m.material.opacity = 0.85 * (1 - g.t); if (g.t >= 1) g.m.visible = false; }
+}
+// v42: the prize: a ring of gold light out from the flash, a burst of gold sparks, and the word for what you got, rising and fading
+function mealReward(at, steak, s) {
+  if (!MEAT.gold) { MEAT.gold = pointPool(260, 0.07, 0xffc35a, true);
+    const rc = document.createElement("canvas"); rc.width = rc.height = 128; const g = rc.getContext("2d"), gr = g.createRadialGradient(64, 64, 40, 64, 64, 62); gr.addColorStop(0, "rgba(255,210,120,0)"); gr.addColorStop(0.6, "rgba(255,220,140,0.9)"); gr.addColorStop(1, "rgba(255,180,80,0)"); g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+    MEAT.ringTex = canvasTex(rc); }
+  for (let i = 0; i < (steak ? 50 : 26); i++) emit(MEAT.gold, at, _mt1.set(rnd(-1, 1), rnd(-0.3, 1.2), rnd(-1, 1)).normalize().multiplyScalar(rnd(2, 5.5) * (steak ? 1.2 : 0.8)), rnd(0.35, 0.8));
+  let ring = MEAT.rings.find(q => q.t >= 1); if (!ring) { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: MEAT.ringTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false })); m.renderOrder = 8; R.scene.add(m); ring = { m, t: 1, r: 1 }; MEAT.rings.push(ring); }
+  ring.t = 0; ring.r = steak ? 3.2 : 1.4; ring.m.position.copy(at); ring.m.visible = true;
+  const word = steak ? "STEAK!" : "DRUMSTICK!"; let L = MEAT.labels.find(q => q.t >= 1 && q.word === word);
+  if (!L) { const c = document.createElement("canvas"); c.width = 512; c.height = 128; const g = c.getContext("2d"), font = (getComputedStyle(document.documentElement).getPropertyValue("--font-display") || "Georgia").trim();
+    g.font = `76px ${font}`; g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round"; g.lineWidth = 12; g.strokeStyle = "rgba(40,18,6,0.95)"; g.strokeText(word, 256, 66);
+    const gr = g.createLinearGradient(0, 30, 0, 100); gr.addColorStop(0, "#fff2c4"); gr.addColorStop(0.5, "#f6c453"); gr.addColorStop(1, "#c77a1c"); g.fillStyle = gr; g.fillText(word, 256, 66);
+    const s2 = new THREE.Sprite(new THREE.SpriteMaterial({ map: canvasTex(c), transparent: true, depthWrite: false, depthTest: false, fog: false })); s2.renderOrder = 9; R.scene.add(s2); L = { s: s2, t: 1, word }; MEAT.labels.push(L); }
+  const h = steak ? 0.55 : 0.32; L.t = 0; L.w = h * 4; L.h = h; L.y0 = at.y + (steak ? 1.0 : 0.4); L.s.position.set(at.x, L.y0, at.z); L.s.visible = true; L.s.material.opacity = 0;
+  Sound.ding(at, steak ? 1 : 0.7);
 }
 // the shootout's begun: the horse comes through soon
 function horseHurry() { const H = LIFE.horse; if (H && !H.run && !H.dead && !H.meat) H.wait = Math.min(H.wait, 4 + Math.random() * 4); }
 // a new round: the meat's cleared away, and the town horse is up and gone again (it'll come through later)
 function resetMeat() {
   for (const M of MEAT.list) R.scene.remove(M.m); MEAT.list = []; resetHerd();
-  for (const z of MEAT.zaps) { z.t = 1; z.s.visible = false; } if (MEAT.blue) { MEAT.blue.life.fill(0); MEAT.blue.pts.visible = false; }
+  for (const z of MEAT.zaps) { z.t = 1; z.s.visible = false; } if (MEAT.blue) { MEAT.blue.life.fill(0); MEAT.blue.pts.visible = false; } if (MEAT.gold) { MEAT.gold.life.fill(0); MEAT.gold.pts.visible = false; }
+  for (const L of MEAT.labels) { L.t = 1; L.s.visible = false; } for (const g of MEAT.rings) { g.t = 1; g.m.visible = false; }
   const H = LIFE.horse; if (H && (H.dead || H.meat)) { H.dead = H.meat = null; H.run = null; H.grp.visible = false; H.grp.scale.setScalar(1); H.grp.rotation.set(0, 0, 0); horseTackShow(H, false); H.act.timeScale = 1; H.wait = 25 + Math.random() * 20; }
 }

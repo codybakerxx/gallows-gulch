@@ -2,6 +2,21 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v42
+- **A faster, busier run.** The getaway's run builds from 70 km/h to 90 (19.5 to 25 m/s; it topped out at 88), and
+  there's more on the trail: the rows come about 10% closer together (so there are more of them), fewer of them
+  have only one thing in the way, and rocks and cactus line the trailside more often.
+- **Tumbleweeds burn.** A tumbleweed in the laser's beam catches fire: it rolls on ablaze, blackening, throwing
+  embers and smoke, then falls away to ash. Another blows in after a while.
+- **The dead burn to ash.** A gunman already down in the street, or a rider shot off his horse lying on the trail,
+  burns to ash where he lies in the beam, leaving a long, low heap.
+- **The meat's a reward.** A horse or a crow in the beam pops out its meat with a gold flash, a ring, a chime and
+  STEAK! or DRUMSTICK! rising over it; it squashes and springs as it lands, with a slap and a gush of steam, and
+  steams hard for a few seconds after. The steak and the drumstick are thicker.
+- **The posse sits up straight.** Riders sit tall in the saddle now (they leaned forward over their horses' necks,
+  and from in front could look as if they were lying on them).
+- **Five in the gun, one reload** for the getaway's fight: 10 rounds in all (was six and two reloads).
+
 ## v41
 - **The sword with the sign away.** After a hanging, with GAME OVER put away to look round, a tap on the sword didn't
   cut him down (the drag to look round took it). Now it does, as it does with the sign up.

@@ -6,7 +6,7 @@
 #  4) the run: nothing to press on screen and the view takes the whole page; a key per lane (← → and A / D), ↑ / W / Space to jump; the page doesn't scroll;
 #     riding into something costs ground but not the chase; low things jumped clear; the course ridden (by the test's autopilot) to the turn
 #  5) the turn: the horse keeps going the same way while the view comes round; nothing can hurt you through it
-#  6) the fight: mouse aim and click, no R key (the gun reloads itself, twice out here), the reticle is where the shot goes while the horse swerves, the horse steers itself
+#  6) the fight: mouse aim and click, no R key (the gun reloads itself, once out here since v42), the reticle is where the shot goes while the horse swerves, the horse steers itself
 #     clear of everything, a lasso that lands costs a heart, a windup shot through is called off
 #  7) the last one down: the cliff, once; the scream through the master output; completion; the results
 #  8) retry: straight back in the saddle, everything cleaned up; caught in the ride, caught in the fight, retry after each; the cliff

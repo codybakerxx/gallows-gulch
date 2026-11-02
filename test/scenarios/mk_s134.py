@@ -6,7 +6,8 @@
 # needs a swipe (a jump alone won't do): stillRows must be 0 too. twoLane: rows whose only way on is two lanes across
 import json, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
-steps = [["click", "#startBtn"], ["wait", 1500]]
+steps = [["wait", 2500], ["eval", "new Promise(res => { const to = setTimeout(() => res('no frame in 120 s'), 120000); requestAnimationFrame(() => requestAnimationFrame(() => { clearTimeout(to); res(1); })); })"], ["wait", 600], # (v42: the page drawing again before the click: under SwiftShader the first frames behind the menu can take a while)
+         ["click", "#startBtn"], ["wait", 1500]]
 E = lambda js: steps.append(["eval", js])
 E(open(os.path.join(HERE, "chase_helpers.js")).read())
 E(open(os.path.join(HERE, "course_solver.js")).read())

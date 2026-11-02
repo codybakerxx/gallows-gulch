@@ -375,6 +375,10 @@ const Sound = (() => {
       const g2 = ctx.createGain(); g2.gain.value = 0.9 * k; c.connect(hp); hp.connect(g2); g2.connect(d); c.start(t + 0.05);
       noise(t + 0.35, 1.0, 0.22 * k, "bandpass", 3800, 0.5, d); drum(t, 90, 45, 0.25, 0.45 * k, d); },
     slap(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, 0.15, 3); noise(t, 0.08, 0.5 * k, "lowpass", 1400, 0.8, d); drum(t, 130, 60, 0.08, 0.4 * k, d); },
+    // v42: a prize: a bright little two-note chime, a ring of a bell struck lightly
+    ding(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, 0.25, 6);
+      for (const [f, dl, g] of [[1318.5, 0, 0.16], [1975.5, 0.09, 0.14], [2637, 0.09, 0.05]]) { const o = ctx.createOscillator(), og = ctx.createGain(); o.type = "sine"; o.frequency.value = f;
+        og.gain.setValueAtTime(0.0001, t + dl); og.gain.exponentialRampToValueAtTime(g * k, t + dl + 0.008); og.gain.exponentialRampToValueAtTime(0.0001, t + dl + 0.9); o.connect(og); og.connect(d); o.start(t + dl); o.stop(t + dl + 0.95); } },
     sizzle(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, 0.15, 2.5), s = ctx.createBufferSource(); s.buffer = buf(1.8, (tt) => (Math.random() < 0.08 ? (Math.random() * 2 - 1) : (Math.random() * 2 - 1) * 0.25) * Math.exp(-tt * 1.6));
       const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 2400; const g = ctx.createGain(); g.gain.value = 0.35 * k; s.connect(hp); hp.connect(g); g.connect(d); s.start(t); },
     // things hit in the shootout (12j): straw, water, dirt, a tin can landing

@@ -81,7 +81,7 @@ two on the rooftops, behind the false fronts of the sheriff's office and the gen
   post at the foot of the gallows stairs: a bottle bursts into glass, a can jumps and can be shot again where it lands.
   The gallows lanterns shatter and go dark, shop windows crack round the hole, barrels and the trough's side spout
   water, the trough's water splashes, hay bursts into straw, iron throws sparks and the bullet whines off it, wood
-  splinters and keeps the hole, the street spits dirt, and a tumbleweed jumps.
+  splinters and keeps the hole, the street spits dirt, and a tumbleweed jumps (in the laser's beam it catches fire).
 - Crows perch on the gallows, the rooftops and the hitching rails, and pick about in the street. Your shots and
   theirs scare them up. Hit one and it drops in a burst of blood and feathers and lies where it lands. Every bullet
   counts, as always.
@@ -95,7 +95,9 @@ two on the rooftops, behind the false fronts of the sheriff's office and the gen
   up at any time (if the revolver runs dry first it wakes up humming). **Hold Fire** for a blue beam: a man in it
   burns to ash and crumbles into a little heap, and it scorches and breaks what it touches. It holds **20 seconds**
   of firing (the blue ring where the cylinder was), then takes **7 seconds** to charge itself (the ring fills amber).
-  What it does to a horse or a crow is best seen, and what that leaves on the ground burns to ash in the beam too.
+  What it does to a horse or a crow is best seen (STEAK! or DRUMSTICK!, thick and steaming), and what that leaves on
+  the ground burns to ash in the beam too. So do the men already down, where they lie. A tumbleweed in the beam
+  catches fire, rolls on ablaze and burns away to ash; another blows in after a while.
 - Taking the laser leaves your revolver on the crate. Tap the revolver to swap back (the laser keeps its charge on
   the crate), and swap again whenever you like. Whichever you're holding when the street's cleared is the gun you
   take into the getaway.
@@ -129,8 +131,8 @@ grass between them. Nothing on the screen to press.
   Logs, hay bales, troughs and fences can be jumped; sometimes a fence runs right across the trail. Every row has a
   way through, and every course can be ridden clean: `test/scenarios/mk_s134.py` searches 300 of them frame by frame
   to prove it.
-- It's flat out from the first stride and keeps getting faster (from about 70 to 88 km/h), and the rows come quicker
-  and harder to read as it goes. The edges of the view
+- It's flat out from the first stride and keeps getting faster (from 70 to 90 km/h), the rows come quicker and
+  harder to read as it goes, and there's more to ride round between them. The edges of the view
   blur with the speed.
 - A swipe every row: whatever lane you came through one row in, the next row blocks it with something you can't
   jump, so every row makes you move left or right (and some make you jump as well).
@@ -145,15 +147,16 @@ grass between them. Nothing on the screen to press.
 the same way, keeping to the trail, and nobody can hurt you while you turn.
 
 **Second half, the fight.**
-- It's the same gun and the same hearts as the shootout, but out here it holds 6 rounds and you get two automatic
-  reloads: 18 rounds in all. A speedloader for each sits beside the cylinder.
+- It's the same gun and the same hearts as the shootout, but out here it holds 5 rounds and you get one automatic
+  reload: 10 rounds in all. The speedloader sits beside the cylinder.
 - Aim with the mouse, by dragging the **Aim** pad (as in the shootout) or by dragging on the view. Any of these works
   while another finger holds **Fire**. **Click** or **Fire** shoots.
-- When the cylinder empties it reloads by itself, twice. Run dry with riders still coming and they ride in and finish
+- When the cylinder empties it reloads by itself, once. Run dry with riders still coming and they ride in and finish
   you.
 - If the laser was in your hand when the street was cleared, you ride out with it instead: hold **Fire** (or the mouse
   button, or Space) for the beam, 20 seconds of it, then 7 to recharge. A rider in it burns to ash in the saddle and
-  his horse runs on without him; a horse in it is a steak, and its rider goes into the dirt.
+  his horse runs on without him; a horse in it is a steak, and its rider goes into the dirt. A rider already shot
+  down burns to ash where he lies on the trail.
 - The horse swerves round things on its own. Each swerve pulls your aim to one side, so watch the reticle and fire in
   the steady spells. Shots go exactly where the reticle is.
 - Gunmen hang back and take aim. Lasso men ride in close and spin a loop. The last rider comes up close and takes two

@@ -80,11 +80,15 @@ function ashBurn(E, at, rd, opt = {}) {
   const keep = [], m = ashMat(); a.root.traverse(o => { if (!o.isMesh && !o.isPoints) return; keep.push([o, o.material, o.castShadow, o.visible]);
     const see = (Array.isArray(o.material) ? o.material : [o.material]).some(q => q && (q.transparent || q.alphaTest > 0)) || o.isPoints;
     if (see) { o.visible = false; return; } o.material = Array.isArray(o.material) ? o.material.map(() => m) : m; o.castShadow = false; });
-  a.root.updateMatrixWorld(true); const B = a.ch.bones, top = B.HeadTop_End ? B.HeadTop_End.getWorldPosition(_a1).y + 0.18 : a.pos.y + 1.95;
-  const base = opt.ride ? Math.min(B.LeftFoot.getWorldPosition(_a2).y, B.RightFoot.getWorldPosition(_a3).y) - 0.1 : a.pos.y, y0 = a.root.position.y;
-  const A = E.ash = { t: 0, keep, m, base, top, y0, at: at.clone(), feet: V3(a.root.position.x, base, a.root.position.z), pile: null, acc: 0, emberT: 0, ride: !!opt.ride, floor: opt.floor || null };
+  a.root.updateMatrixWorld(true); const B = a.ch.bones; let top = B.HeadTop_End ? B.HeadTop_End.getWorldPosition(_a1).y + 0.18 : a.pos.y + 1.95;
+  let base = opt.ride ? Math.min(B.LeftFoot.getWorldPosition(_a2).y, B.RightFoot.getWorldPosition(_a3).y) - 0.1 : a.pos.y, y0 = a.root.position.y, feet = V3(a.root.position.x, base, a.root.position.z), lying = null;
+  if (opt.lying) { // (v42: a man already down: as he lies, the line sinks through him from his highest point to the ground, the ash shed all along him)
+    lying = ["Head", "Spine2", "Hips", "LeftArm", "RightArm", "LeftForeArm", "RightForeArm", "LeftUpLeg", "RightUpLeg", "LeftLeg", "RightLeg", "LeftFoot", "RightFoot"].map(n => B[n]).filter(Boolean);
+    top = Math.max(...lying.map(b => b.getWorldPosition(_a1).y)) + 0.16; const h = B.Hips.getWorldPosition(_a2), hd = B.Head.getWorldPosition(_a3); base = (opt.floor || goreFloor)(h.x, h.z, h.y + 0.3);
+    feet = V3((h.x + hd.x) / 2, base, (h.z + hd.z) / 2); feet.yaw = Math.atan2(hd.x - h.x, hd.z - h.z); }
+  const A = E.ash = { t: 0, keep, m, base, top, y0, at: at.clone(), feet, pile: null, acc: 0, emberT: 0, ride: !!opt.ride, floor: opt.floor || null, lying };
   m.userData.A.cut.value = top + 0.2; m.userData.A.glow.value = 1.6; ASH.list.push(E);
-  zapFx(B.Spine2.getWorldPosition(_a2), 1.0); Sound.ash(at, 1); Sound.clip(E.female ? siegePick("painf", 3) : siegePick("painm", 7), B.Head.getWorldPosition(_a3), 0.7, 0.02, 0.2, rnd(1.1, 1.2), 4);
+  zapFx(B.Spine2.getWorldPosition(_a2), 1.0); Sound.ash(at, 1); if (!lying) Sound.clip(E.female ? siegePick("painf", 3) : siegePick("painm", 7), B.Head.getWorldPosition(_a3), 0.7, 0.02, 0.2, rnd(1.1, 1.2), 4);
   crowsStartle(at, 30, 1); return A;
 }
 function updateAsh(dt) {
@@ -95,15 +99,16 @@ function updateAsh(dt) {
     // the ash falling from the line as it sinks (a cylinder round him, wider at the shoulders and hips)
     if (k > 0 && k < 1) { A.acc += dt * 330; const y = cut, h = (y - base) / Math.max(0.5, top - base), rad = 0.12 + 0.12 * Math.sin(Math.min(1, h * 1.25) * Math.PI);
       while (A.acc >= 1) { A.acc -= 1; const an = Math.random() * TAU, rr = Math.sqrt(Math.random()) * rad;
-        _a1.set(A.feet.x + Math.cos(an) * rr, y - Math.random() * 0.05, A.feet.z + Math.sin(an) * rr); const fl = A.floor ? A.floor(_a1.x, _a1.z) : base;
+        if (A.lying) { const b = A.lying[(Math.random() * A.lying.length) | 0].getWorldPosition(_a1); if (b.y > y + 0.05) continue; _a1.set(b.x + rnd(-0.12, 0.12), Math.min(y, b.y + 0.1) - Math.random() * 0.04, b.z + rnd(-0.12, 0.12)); }
+        else _a1.set(A.feet.x + Math.cos(an) * rr, y - Math.random() * 0.05, A.feet.z + Math.sin(an) * rr); const fl = A.floor ? A.floor(_a1.x, _a1.z) : base;
         const pale = Math.random() < 0.12; ashEmit(ASH.flakes, _a1, rnd(-0.35, 0.35), rnd(-0.1, 0.5), rnd(-0.35, 0.35), rnd(2.5, 4.5), pale ? rnd(0.85, 1) : rnd(0.35, 0.7), fl + Math.random() * 0.02);
         if (Math.random() < 0.06) ashEmit(ASH.embers, _a1, rnd(-0.2, 0.2), rnd(0.2, 0.9), rnd(-0.2, 0.2), rnd(0.5, 1.2), 1, fl); }
       if (Math.random() < dt * 9) puff(_a2.set(A.feet.x, y, A.feet.z), 2, 0.3, 0.2, 0.9, 0.35, 0x6a625c); }
     if (t > ASH_T.heat + ASH_T.gone && a.root.visible) a.root.visible = false;
     if (A.ride) continue; // (no heap: it's strewn along the trail)
     // the heap: it builds as the ash comes down
-    if (!A.pile) { if (t > ASH_T.heat + 0.25) A.pile = ashPile(A.feet, 1, 1, 1); }
-    else { const g = clamp((t - ASH_T.heat - 0.25) / (ASH_T.crumble + 0.3), 0, 1), s = Ease.out(g); A.pile.scale.set(0.35 + 0.65 * s, Math.max(0.001, s), 0.35 + 0.65 * s); }
+    if (!A.pile) { if (t > ASH_T.heat + 0.25) { A.pile = ashPile(A.feet, 1, 1, 1); if (A.lying) A.pile.rotation.y = A.feet.yaw; } }
+    else { const g = clamp((t - ASH_T.heat - 0.25) / (ASH_T.crumble + 0.3), 0, 1), s = Ease.out(g), L = A.lying ? [1.0, 0.6, 2.4] : [1, 1, 1]; A.pile.scale.set(L[0] * (0.35 + 0.65 * s), Math.max(0.001, L[1] * s), L[2] * (0.35 + 0.65 * s)); } // (one lying down leaves a long, low heap)
     // embers on the heap for a few seconds after
     if (A.pile && t > 1 && t < 6) ashSmoulder(A, dt, t, 0.22, 0.12); }
   // meat on the ground in the beam (v39): it chars and crumbles the same way, quicker, into a heap the size of it
@@ -118,13 +123,45 @@ function updateAsh(dt) {
     if (!A.piles && t > 0.3) A.piles = A.heaps.map(([u, v, sc, sy]) => { const p = ashPile(_a1.set(A.feet.x + u * A.ax.x + v * A.az.x, A.base, A.feet.z + u * A.ax.z + v * A.az.z), 1, 1, 1); p.position.y = M.floor ? M.floor(p.position.x, p.position.z) : goreFloor(p.position.x, p.position.z, A.base + 0.3); return [p, sc, sy]; });
     if (A.piles) { const s = Ease.out(clamp((t - 0.3) / 0.9, 0, 1)); for (const [p, sc, sy] of A.piles) p.scale.set(sc * (0.35 + 0.65 * s), Math.max(0.001, sy * s), sc * (0.35 + 0.65 * s)); }
     if (A.piles && t > 0.9 && t < 5) ashSmoulder(A, dt, t, A.r * 0.75, 0.08, 5); }
-  if (ASH.flakes) { ashPointsStep(ASH.flakes, dt, true); ashPointsStep(ASH.embers, dt, true); }
+  if (ASH.flakes) { ashPointsStep(ASH.flakes, dt, true); ashPointsStep(ASH.embers, dt, true); } fireStep(dt);
 }
 function ashPile(at, sx, sy, sz) { const p = new THREE.Mesh(ASH.pileGeo || (ASH.pileGeo = ashPileGeo()), ASH.mat || (ASH.mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 })));
   p.position.copy(at); p.rotation.y = Math.random() * TAU; p.scale.set(0.001, 0.001, 0.001); p.receiveShadow = true; p.castShadow = true; p.userData.dyn = true; R.scene.add(p); ASH.piles.push(p); return p; }
 function ashSmoulder(A, dt, t, r, h, end = 6) { A.emberT -= dt; if (A.emberT > 0) return; A.emberT = rnd(0.05, 0.16); const an = Math.random() * TAU, rr = Math.random() * r;
   ashEmit(ASH.embers, _a1.set(A.feet.x + Math.cos(an) * rr, A.base + h * (1 - rr / (r * 1.35)), A.feet.z + Math.sin(an) * rr), rnd(-0.04, 0.04), rnd(0.05, 0.25), rnd(-0.04, 0.04), rnd(0.4, 1.0), (end - t) / 5, A.base);
   if (Math.random() < 0.15) puff(_a2.set(A.feet.x, A.base + h * 0.8, A.feet.z), 1, r * 0.7, 0.12, 0.6, 0.25, 0x5a5450); }
+// ---- v42: a man already down, in the beam: he burns to ash where he lies ----
+function ashBody(E, at, rd, floor) { if (E.ash || !E.a.root.visible) return; ashBurn(E, at, rd, { lying: true, floor }); }
+// the bodies the beam can find: the shootout's dead, the getaway's riders lying on the trail
+function bodyRay(list, ro, rd) { let best = null; for (const E of list) { if (E.alive || E.ash || !E.a.hang || !E.a.root.visible) continue; const h = rayActor(E.a, ro, rd, E.female); if (h && (!best || h.t < best.t)) best = Object.assign(h, { E }); } return best; }
+function bodyLaser(B, at, rd, dt, floor) { const E = B.E; E.laserT = (E.laserT || 0) + dt; if (E.laserT >= 0.12) ashBody(E, at, rd, floor); }
+
+// ---- v42: a tumbleweed in the beam catches fire: it rolls on ablaze, blackens, and falls to ash; another blows in later ----
+const FIRE = { list: [], tex: null };
+function fireTex() { const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d"), gr = g.createRadialGradient(32, 36, 0, 32, 32, 32);
+  gr.addColorStop(0, "rgba(255,250,220,1)"); gr.addColorStop(0.25, "rgba(255,200,90,0.95)"); gr.addColorStop(0.55, "rgba(255,110,30,0.55)"); gr.addColorStop(1, "rgba(200,40,10,0)"); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return canvasTex(c); }
+function fireEmit(p, size, life) {
+  let f = FIRE.list.find(q => q.t >= q.life); if (!f) { if (FIRE.list.length >= 90) return; if (!FIRE.tex) FIRE.tex = fireTex(); const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: FIRE.tex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false }));
+    s.renderOrder = 6; R.scene.add(s); f = { s, t: 1, life: 1, v: new THREE.Vector3(), size: 1 }; FIRE.list.push(f); }
+  f.t = 0; f.life = life; f.size = size; f.s.position.copy(p); f.v.set(rnd(-0.25, 0.25), rnd(0.9, 1.7), rnd(-0.25, 0.25)); f.s.visible = true; f.s.material.rotation = Math.random() * TAU;
+}
+function fireStep(dt) { for (const f of FIRE.list) { if (f.t >= f.life) continue; f.t += dt; const u = f.t / f.life; f.s.position.addScaledVector(f.v, dt); f.s.scale.setScalar(f.size * (0.6 + 0.6 * Math.sin(Math.min(1, u) * Math.PI)) * (1 - 0.5 * u));
+  f.s.material.opacity = (1 - u) * 0.95; f.s.material.color.setRGB(1, 1 - 0.55 * u, 1 - 0.85 * u); if (u >= 1) f.s.visible = false; } }
+function weedIgnite(w, at) { if (w.fire || w.gone) return; w.fire = { t: 0, acc: 0, smokeT: 0 }; Sound.ash(at, 0.55); for (let i = 0; i < 10; i++) fireEmit(at, rnd(0.3, 0.5), rnd(0.3, 0.6));
+  if (!ASH.flakes) { ASH.flakes = ashPoints(900, 0.034, 0x9a948c, false); ASH.embers = ashPoints(160, 0.06, 0xff8a3a, true); } crowsStartle(at, 20, 0.8); }
+// each frame while it burns (07c updateTumbleweeds, which has just placed it at w.c): returns how big it still is, and its colour
+const WEED_BURN = 3.2;
+function weedFireStep(w, dt, col) {
+  const F = w.fire; F.t += dt; const t = F.t, r = w.rad, k = 1 - smoothstep(WEED_BURN - 0.9, WEED_BURN, t), heat = Math.min(1, t / 0.5) * k;
+  F.acc += dt * 34 * heat; while (F.acc >= 1) { F.acc -= 1; fireEmit(_a1.set(w.c.x + rnd(-r, r) * 0.7, w.c.y + rnd(-r, r) * 0.6, w.c.z + rnd(-r, r) * 0.7), r * rnd(0.9, 1.5), rnd(0.35, 0.7)); }
+  if (Math.random() < dt * 14 * heat) ashEmit(ASH.embers, _a1.set(w.c.x + rnd(-r, r) * 0.6, w.c.y + r * 0.4, w.c.z + rnd(-r, r) * 0.6), rnd(-0.3, 0.3), rnd(0.8, 2.2), rnd(-0.3, 0.3), rnd(0.6, 1.3), 1, w.c.y - r);
+  F.smokeT -= dt; if (F.smokeT <= 0) { F.smokeT = 0.12; puff(_a2.set(w.c.x, w.c.y + r * 0.8, w.c.z), 2, 0.25, 0.3, 1.6, 0.35 * heat + 0.1, 0x3a3632); }
+  if (t > WEED_BURN - 0.9) for (let i = 0; i < 3; i++) ashEmit(ASH.flakes, _a1.set(w.c.x + rnd(-r, r) * 0.8, w.c.y + rnd(-r, r) * 0.6, w.c.z + rnd(-r, r) * 0.8), rnd(-0.3, 0.3), rnd(-0.1, 0.3), rnd(-0.3, 0.3), rnd(2, 3.5), rnd(0.35, 0.7), w.c.y - r * 0.9);
+  const ch = Math.min(1, t / 1.4); col.setRGB(1 - 0.88 * ch, 1 - 0.9 * ch, 1 - 0.92 * ch);
+  if (t >= WEED_BURN) { w.fire = null; w.gone = rnd(6, 12); } // (gone to ash: another blows in after a while)
+  return k;
+}
+
 // ---- meat on the ground (v39) ----
 const _ami = new THREE.Matrix4();
 function meatRayOne(M, ro, rd) {
@@ -133,7 +170,7 @@ function meatRayOne(M, ro, rd) {
     _ami.copy(m.matrixWorld).invert(); const o = _a1.copy(ro).applyMatrix4(_ami), d = _a2.copy(ro).add(rd).applyMatrix4(_ami).sub(o), ax = STEAK.a * 1.1, ay = STEAK.T / 2 + 0.012, az = STEAK.b * 1.1;
     o.set(o.x / ax, o.y / ay, o.z / az); d.set(d.x / ax, d.y / ay, d.z / az); const A = d.dot(d), B = 2 * o.dot(d), C = o.dot(o) - 1, D = B * B - 4 * A * C; if (D < 0) return -1;
     const t = (-B - Math.sqrt(D)) / (2 * A); return t > 0 ? t : -1; }
-  return rayCapsule(ro, rd, m.localToWorld(_a1.set(0, -0.09, 0)), m.localToWorld(_a2.set(0, 0.1, 0)), 0.048 * m.scale.x); // (the drumstick: knob to the meat)
+  return rayCapsule(ro, rd, m.localToWorld(_a1.set(0, -0.09, 0)), m.localToWorld(_a2.set(0, 0.1, 0)), 0.064 * m.scale.x); // (the drumstick: knob to the meat)
 }
 // what the beam meets first among the meat lying on the ground
 function meatRay(ro, rd) { let best = null; for (const M of MEAT.list) { if (!M.rest || M.settle || M.ash || !M.m.visible) continue; const t = meatRayOne(M, ro, rd); if (t > 0 && (!best || t < best.t)) best = { t, M }; } return best; }
@@ -143,7 +180,7 @@ function meatAsh(M, at, rd) {
   if (M.ash) return; const m = M.m, mat = ashMat(); if (!ASH.flakes) { ASH.flakes = ashPoints(900, 0.034, 0x9a948c, false); ASH.embers = ashPoints(160, 0.06, 0xff8a3a, true); }
   m.material = Array.isArray(m.material) ? m.material.map(() => mat) : mat; m.castShadow = false; m.updateMatrixWorld(true);
   const bb = new THREE.Box3().setFromObject(m), ground = meatFloor(M), yaw = new THREE.Euler().setFromQuaternion(m.quaternion, "YXZ").y;
-  const rx = M.steak ? STEAK.a * 1.05 * M.s : 0.11 * M.s, rz = M.steak ? STEAK.b * 1.05 * M.s : 0.05 * M.s; // (its footprint: the slab, or the drumstick lying on its side)
+  const rx = M.steak ? STEAK.a * 1.05 * M.s : 0.11 * M.s, rz = M.steak ? STEAK.b * 1.05 * M.s : 0.065 * M.s; // (its footprint: the slab, or the drumstick lying on its side)
   const ax = V3(Math.cos(yaw), 0, -Math.sin(yaw)).multiplyScalar(M.steak ? rx : rz), az = V3(Math.sin(yaw), 0, Math.cos(yaw)).multiplyScalar(M.steak ? rz : rx);
   // where it falls: a scatter of little heaps over where the steak lay (one for a drumstick), low and grey
   const heaps = M.steak ? [[0, 0, 1.05, 0.62], [0.55, 0.25, 0.8, 0.5], [-0.5, -0.2, 0.85, 0.55], [0.2, -0.55, 0.65, 0.42], [-0.3, 0.55, 0.7, 0.45], [0.75, -0.35, 0.5, 0.35], [-0.78, 0.3, 0.55, 0.38]].map(([u, v, sc, sy]) => [u + rnd(-0.08, 0.08), v + rnd(-0.08, 0.08), sc * rnd(0.85, 1.15), sy * rnd(0.85, 1.15)])

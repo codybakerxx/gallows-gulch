@@ -3,10 +3,10 @@
 // together and harder to read, and the posse behind gains on you every time you hit something. Nothing on screen to press. ----------
 const RUN = {
   lanes: [-2.3, 0, 2.3], shift: 0.19,                  // lane centres across the trail (m); seconds to change lane
-  speed0: 19.5, speed1: 24.5, fx0: 13, first: 70, course: 1000, // m/s at the start and the end of the course (v34: flat out the whole way; v41: and faster as it goes, 19.5 to 24.5, over a longer course); the speed the view's
+  speed0: 19.5, speed1: 25, fx0: 13, first: 70, course: 1000, // m/s at the start and the end of the course (v34: flat out the whole way; v41: and faster as it goes, over a longer course; v42: 70 to 90 km/h); the speed the view's
                                                         // stretch and blur count up from; where the first row is; how long the course runs
   jump: { up: 1.5, dur: 0.76 },                         // how high (m) and how long (s) a jump is
-  react: [1.45, 0.8], spread: 0.3,                     // seconds between rows at the start and the end (plus up to this share more, at random)
+  react: [1.3, 0.72], spread: 0.3,                      // seconds between rows at the start and the end (plus up to this share more, at random; v42: closer, more rows)
   horse: { half: 0.42, front: 1.45, back: 1.15 },       // the horse for collisions: half its width; nose and rump from the saddle (m)
   hit: { crash: 14, trip: 9, scrape: 5 },               // metres the posse gains when you ride into something, trip on it, or clip it changing lane
   slow: { crash: 0.42, trip: 0.62, scrape: 0.86 }, recover: 1.5, ghost: 0.55, // how hard each checks the horse; seconds back to full speed; seconds after a hit when nothing else can
@@ -161,7 +161,7 @@ function runSceneryUpdate() { if (!CHASE.sceneryOn) return; for (const m of CHAS
 // ---- the course: rows across the three lanes, every one with a way through ----
 // a row is three cells, one per lane: null (open), "tall", "low" or "long". The patterns come in harder as the course goes on
 const RUN_PATTERNS = [
-  { f: 0, w: [3, 1, 0.6], cells: r => { const c = [null, null, null]; c[(r() * 3) | 0] = "tall"; return c; } },                                    // one in the way
+  { f: 0, w: [2, 0.6, 0.3], cells: r => { const c = [null, null, null]; c[(r() * 3) | 0] = "tall"; return c; } },                                    // one in the way
   { f: 0.08, w: [0.8, 3, 2.5], cells: r => { const c = ["tall", "tall", "tall"]; c[(r() * 3) | 0] = null; return c; } },                          // one way through
   { f: 0.04, w: [1, 1.1, 1.2], jump: true, cells: () => ["low", "low", "low"], full: true },                                                     // jump it, all the way across
   { f: 0.2, w: [0, 1.6, 2.6], jump: true, cells: r => { const c = ["tall", "tall", "tall"]; c[(r() * 3) | 0] = "low"; return c; } },            // find the low one and jump it
@@ -202,7 +202,7 @@ function runRow(s, f) {
     runCells(zag, s2, false); C.rows.push({ s: s2, cells: zag, len: 1, jump: zj, zag: true }); len += s2 - s; jump = zj; } //  at least, however fast; more if it has to be jumped or is two lanes over)
   C.rowsLaid = first + 1;
   // dressing at the edges of the trail: nothing you can hit, just what's out there
-  if (r() < 0.55) { const side = r() < 0.5 ? -1 : 1, k = r() < 0.6 ? "rock" : "cactus"; placeObstacle(k, s + (r() - 0.5) * 6, side * (4.6 + r() * 1.6), r() * 6, 0.7 + r() * 0.5); }
+  if (r() < 0.85) { const side = r() < 0.5 ? -1 : 1, k = r() < 0.6 ? "rock" : "cactus"; placeObstacle(k, s + (r() - 0.5) * 6, side * (4.6 + r() * 1.6), r() * 6, 0.7 + r() * 0.5); }
   const react = lerp(RUN.react[0], RUN.react[1], f) * (1 + r() * RUN.spread) * (jump ? 1.35 : 1), v = lerp(RUN.speed0, RUN.speed1, f);
   return len + react * v;
 }

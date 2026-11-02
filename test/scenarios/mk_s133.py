@@ -1,7 +1,7 @@
 # builds test/s133.json: the gun and the hearts (v30; v31 gives the getaway a second reload; v37: eight in the town shootout's cylinder) (run it at 390 x 844, and at 1280 x 720)
 #  1) the shootout: five hearts, six in the gun and one reload shown beside it; the top bar fits; empty the cylinder and it reloads itself
 #     (you can't fire while it does, the spare goes); empty it again and you're out: they finish you, one heart a shot, five shots
-#  2) the getaway: the same gun and hearts, drawn the same way, with two reloads (two speedloaders) in the run and the fight; every rider still
+#  2) the getaway: the same gun and hearts, drawn the same way, with two reloads (v42: one, five in the gun) in the run and the fight; every rider still
 #     in the fight on screen (a phone held upright sees a narrow slice behind you), the last one too; down to the last reload, empty it,
 #     empty it again with riders left: out of bullets, and caught
 import json, os, sys

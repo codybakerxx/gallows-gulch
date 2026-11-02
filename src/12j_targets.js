@@ -135,7 +135,7 @@ function resetTargets() {
   for (const K of Object.values(TGT.debris)) { K.P.forEach((D, i) => { D.on = false; K.im.setMatrixAt(i, _tm.makeScale(0, 0, 0)); }); K.im.instanceMatrix.needsUpdate = true; K.im.visible = false; K.live = 0; }
   for (const Pp of [TGT.sparks, TGT.water, TGT.dirt]) if (Pp) { Pp.life.fill(0); Pp.pts.geometry.attributes.position.array.fill(-50); Pp.pts.geometry.attributes.position.needsUpdate = true; Pp.pts.visible = false; }
   for (const D of [TGT.holes, TGT.cracks]) if (D) { D.used = D.next = 0; D.im.count = 0; }
-  TGT.spouts = [];
+  TGT.spouts = []; const W = DRESS.weeds; if (W) W.weeds.forEach(w => { if (w.fire || w.gone > 0) { w.fire = null; w.gone = 0; tumbleSpawn(w); } }); if (W && W.im.instanceColor) { for (let i = 0; i < W.weeds.length; i++) W.im.setColorAt(i, W.col.setRGB(1, 1, 1)); W.im.instanceColor.needsUpdate = true; } /* (v42: none left burning) */
 }
 
 // ---- a shot: the nearest target along the ray (a bottle, a can, a tumbleweed), or null ----
@@ -144,7 +144,7 @@ function targetRay(ro, rd) {
   for (const T of TGT.items) { if (T.state === "broken" || !T.mesh.visible) continue; const far = T.mesh.position.distanceTo(ro), pad = clamp((far - 5) * 0.006, 0, 0.07);
     const up = _t3.set(0, 1, 0).applyQuaternion(T.mesh.quaternion), h = T.kind === "bottle" ? 0.25 : 0.11, a = T.kind === "bottle" ? T.mesh.position.clone() : T.mesh.position.clone().addScaledVector(up, -0.055);
     const b = a.clone().addScaledVector(up, h), t = rayCapsule(ro, rd, a, b, (T.kind === "bottle" ? 0.04 : 0.038) + pad); if (t > 0 && (!best || t < best.t)) best = { t, T }; }
-  const W = DRESS.weeds; if (W && W.im.visible) W.weeds.forEach(w => { const c = _t1.set(w.p.x, groundVis(w.p.x, w.p.z) + w.rad * 0.9 + w.y, w.p.z), ox = ro.x - c.x, oy = ro.y - c.y, oz = ro.z - c.z, r = w.rad * 0.85;
+  const W = DRESS.weeds; if (W && W.im.visible) W.weeds.forEach(w => { if (w.gone > 0) return; const c = _t1.set(w.p.x, groundVis(w.p.x, w.p.z) + w.rad * 0.9 + w.y, w.p.z), ox = ro.x - c.x, oy = ro.y - c.y, oz = ro.z - c.z, r = w.rad * 0.85;
     const bb = ox * rd.x + oy * rd.y + oz * rd.z, hh = bb * bb - (ox * ox + oy * oy + oz * oz - r * r); if (hh < 0) return; const t = -bb - Math.sqrt(hh); if (t > 0 && (!best || t < best.t)) best = { t, weed: w }; });
   return best;
 }

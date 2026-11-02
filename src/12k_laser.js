@@ -140,17 +140,18 @@ function updateLaser(rdt, dt) {
 function laserBeam(dt) {
   const L = LASER, S = SIEGE; R.camera.updateMatrixWorld(); const ro = R.camera.position.clone(), rd = V3(0, 0, -1).applyQuaternion(R.camera.quaternion).normalize();
   let man = null; for (const E of S.enemies) { if (!E.alive) continue; const far = E.a.ch.bones.Spine2.getWorldPosition(_l1).distanceTo(ro), h = rayActor(E.a, ro, rd, E.female, clamp((far - 12) * 0.007, 0, 0.12)); if (h && (!man || h.t < man.t)) man = Object.assign(h, { E }); }
-  const env = sceneryRay(ro, rd, 80), bt = bellRay(ro, rd), cr = crowRay(ro, rd), tg = targetRay(ro, rd), hr = townHorseRay(ro, rd), mt = meatRay(ro, rd), cands = [];
-  if (bt > 0) cands.push([bt, "bell"]); if (man) cands.push([man.t, "man"]); if (cr) cands.push([cr.t, "crow"]); if (tg) cands.push([tg.t, "tgt"]); if (hr) cands.push([hr.t, "horse"]); if (mt) cands.push([mt.t, "meat"]); if (env) cands.push([env.distance, "env"]);
+  const env = sceneryRay(ro, rd, 80), bt = bellRay(ro, rd), cr = crowRay(ro, rd), tg = targetRay(ro, rd), hr = townHorseRay(ro, rd), mt = meatRay(ro, rd), bd = bodyRay(S.enemies, ro, rd), cands = [];
+  if (bt > 0) cands.push([bt, "bell"]); if (man) cands.push([man.t, "man"]); if (cr) cands.push([cr.t, "crow"]); if (tg) cands.push([tg.t, "tgt"]); if (hr) cands.push([hr.t, "horse"]); if (mt) cands.push([mt.t, "meat"]); if (bd) cands.push([bd.t, "body"]); if (env) cands.push([env.distance, "env"]);
   cands.sort((a, b) => a[0] - b[0]); const first = cands[0], at = first ? ro.clone().addScaledVector(rd, first[0]) : ro.clone().addScaledVector(rd, 80);
   L.bellT -= dt; L.envT -= dt; L.scorchT -= dt; L.smokeT -= dt;
-  for (const E of S.enemies) if (E.alive && (!man || man.E !== E)) E.laserT = 0;
+  for (const E of S.enemies) if ((!man || man.E !== E) && (!bd || bd.E !== E)) E.laserT = 0;
   if (first) { const k = first[1];
     if (k === "man") { const E = man.E; E.laserT = (E.laserT || 0) + dt; if (E.laserT >= LASER_CFG.kill) { ashHit(E, at, rd); if (!S.enemies.some(q => q.alive) && (S.phase === "fight" || S.phase === "doomed")) siegeWin(); } }
     else if (k === "crow") crowLaser(cr.c, at, rd);
     else if (k === "horse") horseLaser(hr.H, at, rd);
     else if (k === "meat") meatLaser(mt.M, at, rd, dt); // (a drumstick or a steak on the ground: to ash, 12o)
-    else if (k === "tgt") { const T = tg.T; if (tg.weed || (T.laserT || 0) <= L.t) { if (T) T.laserT = L.t + 0.3; targetShot(tg, at, rd); } }
+    else if (k === "body") bodyLaser(bd, at, rd, dt, goreFloor); // (v42: one of them already down: to ash where he lies, 12o)
+    else if (k === "tgt") { if (tg.weed) weedIgnite(tg.weed, at); /* (v42: a tumbleweed catches fire, 12o) */ else { const T = tg.T; if ((T.laserT || 0) <= L.t) { T.laserT = L.t + 0.3; targetShot(tg, at, rd); } } }
     else if (k === "bell") { if (L.bellT <= 0) { L.bellT = 0.7; bellShot(at, rd); } }
     else { const n = env.face ? _l2.copy(env.face.normal).transformDirection(env.object.matrixWorld) : _l2.set(0, 1, 0); if (n.dot(rd) > 0) n.negate();
       const bk = brkFromHit(env); if (bk) brkHit(bk, dt * 4, at, rd, true); // (a thing that breaks burns through in under a second: 12m)

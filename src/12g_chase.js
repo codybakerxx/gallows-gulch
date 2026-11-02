@@ -20,7 +20,7 @@ const CHASE_CFG = {
   turn: 1.8, safe: 3.4, // seconds to twist round; seconds nobody can hurt you from the shot that starts it
   // the second half: the fight
   // (the gun and the hearts are the shootout's: GUN in 12d, six rounds and five hearts; out here you get one more automatic reload than in the shootout)
-  reloads: 2,
+  reloads: 1, // (v42: one reload in the getaway's fight, was two)
   fireCool: 0.28, sens: 0.0048, yawLim: 1.05, pitchLo: -0.4, pitchHi: 0.3, follow: 0.6, mouseFollow: 0.4, basePitch: -0.17, // (basePitch: the view's tilt down when you face back, so the horse's rump shows under the gun)
   sway: { yaw: 0.024, nod: 0.012, cam: 0.3 }, // aim drift (rad) per m/s² of the horse's sideways swing, the gallop's nod (rad), and how much of either the view takes
   swerve: { calm: [2.0, 3.0], move: [1.3, 1.8], lat: 2.6 }, // the horse's own line: steady spells (s), swerves (s), how far it swerves (m)
@@ -75,6 +75,9 @@ function seatRider(a, H, opt) {
     const foot = saddlePt(H, e * St[0], St[1] + 0.06, St[2] + 0.05, _c2), pole = saddlePt(H, e * 0.8, -0.15, 1.0, _c3); // (feet in the stirrups, knees out round the barrel)
     twoBoneIK(B[S + "UpLeg"], B[S + "Leg"], B[S + "Foot"], foot, pole, 1); }
   turnBone(B.Spine, a, (opt.twist || 0) * 0.35, (opt.lean ?? 0.18) * 0.5, 0); turnBone(B.Spine1, a, (opt.twist || 0) * 0.35, (opt.lean ?? 0.18) * 0.3, 0); turnBone(B.Spine2, a, (opt.twist || 0) * 0.3, (opt.lean ?? 0.18) * 0.2, 0);
+  if (opt.tall !== undefined) { // (v42: sat up tall, whatever the clip and the gallop do: the line from his spine to his head stood up straight, leaning forward opt.tall and no more, and never to the side)
+    B.Head.getWorldPosition(_c2); B.Spine.getWorldPosition(_c3); const d = _c2.sub(_c3).applyQuaternion(_cq1.copy(a.root.quaternion).invert()), fw = Math.atan2(d.z, d.y), sd = Math.atan2(d.x, d.y);
+    turnBone(B.Spine, a, 0, clamp(opt.tall - fw, -0.6, 0.6), clamp(sd, -0.6, 0.6)); }
   for (const [S, k] of [["Left", "L"], ["Right", "R"]]) { const tgt = opt[k]; if (!tgt) continue; const sh = B[S + "Arm"].getWorldPosition(_c4), e = S === "Left" ? 1 : -1;
     const pole = sh.clone().add(_c2.set(e * 0.55, -0.9, -0.35).applyQuaternion(g.quaternion)); twoBoneIK(B[S + "Arm"], B[S + "ForeArm"], B[S + "Hand"], tgt, pole, 1); }
   a.root.updateMatrixWorld(true);
@@ -246,7 +249,7 @@ function chaseBegin(first) {
   MAN.hang = null; MAN.root.visible = false; MAN.ride = true; MAN.pre = null; MAN.bound = false; if (MAN.tie) MAN.tie.visible = false; GAL.rope.lowHidden = true;
   C.horse.grp.visible = true; horseTackShow(C.horse, true); C.ribbon.visible = true; C.dust.pts.visible = true; runSceneryShow(true);
   meatClearTrail(); // (the last ride's steaks: 12o)
-  for (const R0 of C.riders) { const a = R0.a; ashUndo(R0); R0.ashRel = null; R0.laserT = 0; if (R0.H.tack.reins) R0.H.tack.reins.visible = true; a.hang = null; a.ride = true; a.pre = (actor, dt) => riderPose(R0, dt); a.root.visible = true; a.wounds = []; for (const m of [a.ch.body.material.userData.U, a.ch.skin.userData.U]) m.woundN.value = 0;
+  for (const R0 of C.riders) { const a = R0.a; const pl = R0.ash && R0.ash.pile; if (pl) { R.scene.remove(pl); ASH.piles.splice(ASH.piles.indexOf(pl), 1); } /* (v42: a man burnt where he lay leaves a heap: gone with a retry) */ ashUndo(R0); R0.ashRel = null; R0.laserT = 0; if (R0.H.tack.reins) R0.H.tack.reins.visible = true; a.hang = null; a.ride = true; a.pre = (actor, dt) => riderPose(R0, dt); a.root.visible = true; a.wounds = []; for (const m of [a.ch.body.material.userData.U, a.ch.skin.userData.U]) m.woundN.value = 0;
     R0.alive = true; R0.state = "trail"; R0.H.grp.visible = true; horseTackShow(R0.H, true); R0.gun.visible = R0.kind !== "lasso"; R0.hp = R0.kind === "last" ? K.last.hp : 1; R0.t = 0; R0.cool = 0; R0.free = null; R0.l = (R0.i - 2) * 1.5; R0.dl = 0;
     C.posseHidden = false; R0.d = K.pursuit.gap0 + R0.i * 3; R0.wob = Math.random() * TAU; R0.side = Math.random() < 0.5 ? -1 : 1; R0.stagger = 0; R0.lockL = null; R0.inPlace = false; setDetail(a.ch, false); if (R0.hatOff) { const h = R0.hatOff; h.parent.add(h.obj); h.obj.position.copy(h.p); h.obj.quaternion.copy(h.q); R0.hatOff = null; } }
   chaseUI("mount"); $("hud").classList.add("chase"); $("meta").textContent = ""; Sound.duck(0.25, 1.2);
@@ -345,7 +348,7 @@ function updateTurn(dt) {
   C.safeT -= dt; C.speed += (K.speed2 - C.speed) * Math.min(1, dt * 1.5); C.latV = (0 - C.lat) * 1.2; C.lat += C.latV * dt; C.s += C.speed * dt; recycleObstacles();
   C.yawOff = Math.PI * Ease.inOut(k); placeHorse(C.horse, C.s, C.lat, C.latV, C.speed, dt, 0); gallopFeet(C.horse, dt, null, 0.8); Sound.rush(C.speed / K.speed);
   if (k >= 1) { chaseState("combat"); C.yawOff = Math.PI; C.ay = C.ap = C.cy = C.cp = 0; chaseUI("combat"); chaseHud();
-    const touch = matchMedia("(pointer: coarse)").matches; chaseTip(C.laser ? (touch ? "Drag to aim · hold Fire for the beam" : "Aim with the mouse · hold the button for the beam") : touch ? "Drag to aim · Fire · it reloads itself, twice" : "Aim with the mouse · Click to fire · it reloads itself, twice", 3.6);
+    const touch = matchMedia("(pointer: coarse)").matches; chaseTip(C.laser ? (touch ? "Drag to aim · hold Fire for the beam" : "Aim with the mouse · hold the button for the beam") : touch ? "Drag to aim · Fire · five in the gun, one reload" : "Aim with the mouse · Click to fire · five in the gun, one reload", 3.6);
     C.swerve = { seg: "calm", t: 0, dur: rnd(K.swerve.calm[0], K.swerve.calm[1]), from: C.lat, to: C.lat }; }
 }
 // the second half: the horse keeps to the trail and swerves round what's on it by itself, a steady spell, a swerve, a steady spell; you shoot
@@ -420,7 +423,7 @@ function updateRiders(dt) {
 }
 function riderPose(R0, dt) {
   const a = R0.a, H = R0.H, B = a.ch.bones, C = CHASE, eye = R.camera.position, ph = H.act.time / H.act.getClip().duration % 1, bob = Math.sin(ph * TAU * 2) * 0.05;
-  const head = B.Head.getWorldPosition(_c4).clone(), rein = H.grp.localToWorld(V3(0.04, 1.95, SEAT.z + 0.5)), opt = { bob, lean: 0.22, L: rein, R: null };
+  const head = B.Head.getWorldPosition(_c4).clone(), rein = H.grp.localToWorld(V3(0.04, 1.95, SEAT.z + 0.5)), opt = { bob, lean: 0.06, tall: 0.05, L: rein, R: null }; /* (v42: upright in the saddle, was a 0.22 lean) */
   if (R0.kind === "lasso" && (R0.state === "windup")) { const t = R0.spin || 0; opt.R = head.clone().add(V3(Math.cos(t) * 0.22, 0.42, Math.sin(t) * 0.22)); }
   else if (R0.kind === "lasso") opt.R = H.grp.localToWorld(V3(-0.25, 1.9, SEAT.z + 0.3));
   else { const sh = B.RightArm.getWorldPosition(_c3).clone(), to = eye.clone().sub(sh).normalize(), aim = R0.state === "windup" || R0.state === "attack" ? 1 : 0; R0.aimW = (R0.aimW || 0) + (aim - (R0.aimW || 0)) * Math.min(1, dt * 6);
@@ -516,15 +519,16 @@ function riderHit(R0, part, at, rd, quiet) { // (quiet: no wound: thrown when th
 function chaseBeam(dt) {
   const C = CHASE, L = LASER, ro = R.camera.position.clone(), rd = aimDir(V3()).normalize(); let man = null;
   for (const R0 of C.riders) { if (!R0.alive || !R0.a.root.visible) continue; const far = R0.a.ch.bones.Spine2.getWorldPosition(_c1).distanceTo(ro), h = rayActor(R0.a, ro, rd, false, clamp((far - 10) * 0.006, 0, 0.1)); if (h && (!man || h.t < man.t)) man = Object.assign(h, { R0 }); }
-  const hh = chaseHorseRay(ro, rd), mt = meatRay(ro, rd), cands = []; let gt = -1;
+  const hh = chaseHorseRay(ro, rd), mt = meatRay(ro, rd), bd = bodyRay(C.riders, ro, rd), cands = []; let gt = -1;
   for (let t = 1; t < 90; t += 0.75) { const q = _c1.copy(ro).addScaledVector(rd, t); if (q.y < groundVis(q.x, q.z)) { let lo = t - 0.75, hi = t; for (let i = 0; i < 6; i++) { const m = (lo + hi) / 2; _c1.copy(ro).addScaledVector(rd, m); if (_c1.y < groundVis(_c1.x, _c1.z)) hi = m; else lo = m; } gt = hi; break; } }
-  if (man) cands.push([man.t, "man"]); if (hh) cands.push([hh.t, "horse"]); if (mt) cands.push([mt.t, "meat"]); if (gt > 0) cands.push([gt, "ground"]);
+  if (man) cands.push([man.t, "man"]); if (hh) cands.push([hh.t, "horse"]); if (mt) cands.push([mt.t, "meat"]); if (bd) cands.push([bd.t, "body"]); if (gt > 0) cands.push([gt, "ground"]);
   cands.sort((a, b) => a[0] - b[0]); const first = cands[0], at = ro.clone().addScaledVector(rd, first ? first[0] : 90);
-  for (const R0 of C.riders) if (!man || man.R0 !== R0) R0.laserT = 0; L.scorchT -= dt; L.smokeT -= dt;
+  for (const R0 of C.riders) if ((!man || man.R0 !== R0) && (!bd || bd.E !== R0)) R0.laserT = 0; L.scorchT -= dt; L.smokeT -= dt;
   if (first) { const k = first[1];
     if (k === "man") { const R0 = man.R0; R0.laserT = (R0.laserT || 0) + dt; if (R0.laserT >= LASER_CFG.kill * (R0.kind === "last" ? 4 : 1)) chaseAsh(R0, at, rd); } // (the last of them, a little longer)
     else if (k === "horse") chaseHorseLaser(hh.R0, at, rd);
     else if (k === "meat") meatLaser(mt.M, at, rd, dt);
+    else if (k === "body") bodyLaser(bd, at, rd, dt, groundVis); // (v42: a rider shot down, lying on the trail: to ash)
     else if (L.scorchT <= 0) { L.scorchT = LASER_CFG.scorchGap * 2; decal(L.scorch, at, _c2.set(0, 1, 0), rnd(0.8, 1.3)); L.scorch.im.visible = true; if (Math.random() < 0.3) kickDust(at, 3, 0.5, 0.8, 0.6, 1.0); } }
   for (let i = 0; i < 3; i++) emit(L.sparks, at, _c3.copy(rd).multiplyScalar(-rnd(0.6, 2.2)).add(_c4.set(rnd(-1.4, 1.4), rnd(-0.3, 1.8), rnd(-1.4, 1.4))), rnd(0.12, 0.35));
   if (L.smokeT <= 0 && first) { L.smokeT = 0.12; puff(at.clone().addScaledVector(rd, -0.05), 3, 0.25, 0.14, 1.2, 0.35, 0x8a8682); }
@@ -578,7 +582,7 @@ function chaseResults(won) {
   const S = C.stats, acc = S.shots ? Math.min(100, Math.round(S.hits / S.shots * 100)) : 0, score = (won ? 1000 : 0) + S.downed * 150 + (won ? Math.round(acc * 3) : 0) + (won && !S.bumps ? 200 : 0) + Math.round(Math.max(0, C.s) / 10);
   STATE.bestRide = Math.max(STATE.bestRide || 0, score); if (won) STATE.rides = (STATE.rides || 0) + 1; savePrefs();
   $("resTitle").textContent = won ? "The End" : C.cap && C.cap.from === "ride" ? "Shot Down" : "Captured"; $("resTitle").className = won ? "" : "lose";
-  $("resLine").textContent = won ? "You killed every last one. Should've watched the road." : C.cap && C.cap.from === "ride" ? "They caught you on the trail and shot you out of the saddle. The rope was still warm." : C.cap && C.cap.from === "ammo" ? "Eighteen rounds, and not enough of them hit anything. They took their time." : "Shot out of the saddle. They took you back to town, what was left of you.";
+  $("resLine").textContent = won ? "You killed every last one. Should've watched the road." : C.cap && C.cap.from === "ride" ? "They caught you on the trail and shot you out of the saddle. The rope was still warm." : C.cap && C.cap.from === "ammo" ? "Ten rounds, and not enough of them hit anything. They took their time." : "Shot out of the saddle. They took you back to town, what was left of you.";
   const row = (k, v) => `<dt>${k}</dt><dd>${v}</dd>`;
   $("resStats").innerHTML = row("Riders downed", `${S.downed} of ${C.riders.length}`) + row("Shots", `${S.shots}${S.shots ? ` · ${acc}% hit` : ""}`) + row("Collisions", S.bumps) + row("Time", `${Math.round(S.t)} s`) + (won ? row("Getaway", "Complete") : "");
   $("resScore").textContent = `Score: ${score} · Best: ${STATE.bestRide}`;
