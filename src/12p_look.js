@@ -91,7 +91,7 @@ function buildFreeLook() {
   b.addEventListener("click", e => { e.stopPropagation(); signRestore(); }); $("stage").appendChild(b);
   const h = document.createElement("div"); h.id = "lookHint"; h.hidden = true; h.textContent = "Drag to look round"; $("stage").appendChild(h);
   for (const m of document.querySelectorAll(".signMin")) m.addEventListener("click", e => { e.stopPropagation(); signMinimize(m.closest(".overlay")); });
-  $("menuClose").addEventListener("click", () => { $("menu").hidden = true; Sound.resume(); });
+  $("menuClose").addEventListener("click", () => closeMenu());
 }
 function signMinimize(el) {
   if (!el || el.hidden) return; FREE.on = true; FREE.which = el; FREE.yaw = FREE.pitch = 0; FREE.ease = false; LOOK.drag = null; el.hidden = true;

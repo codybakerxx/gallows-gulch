@@ -151,8 +151,8 @@ grass between them. Nothing on the screen to press.
 the same way, keeping to the trail, and nobody can hurt you while you turn.
 
 **Second half, the fight.**
-- It's the same gun and the same hearts as the shootout, but out here it holds 3 rounds and you get one automatic
-  reload: 6 rounds in all. The speedloader sits beside the cylinder.
+- It's the same gun and the same hearts as the shootout, but out here it holds 4 rounds and you get one automatic
+  reload: 8 rounds in all. The speedloader sits beside the cylinder.
 - Aim with the mouse, by dragging the **Aim** pad (as in the shootout) or by dragging on the view. Any of these works
   while another finger holds **Fire**. **Click** or **Fire** shoots.
 - When the cylinder empties it reloads by itself, once. Run dry with riders still coming and they ride in and finish

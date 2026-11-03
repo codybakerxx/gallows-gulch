@@ -16,10 +16,10 @@ function wireUI() {
   $("poster").addEventListener("submit", e => { e.preventDefault();
     STATE.len = document.querySelector("input[name=len]:checked").value; STATE.diff = document.querySelector("input[name=diff]:checked").value;
     STATE.streak = 0; savePrefs(); $("menu").hidden = true; Sound.resume(); newRound(); });
-  $("resumeBtn").addEventListener("click", () => { $("menu").hidden = true; Sound.resume(); });
-  $("menuBtn").addEventListener("click", () => { $("sign").hidden = true; openMenu(); });
+  $("resumeBtn").addEventListener("click", () => closeMenu());
+  $("menuBtn").addEventListener("click", () => openMenu(true));
   $("againBtn").addEventListener("click", () => { $("sign").hidden = true; Sound.resume(); newRound(); });
-  $("setBtn").addEventListener("click", () => { $("sign").hidden = true; openMenu(); });
+  $("setBtn").addEventListener("click", () => openMenu(true));
   $("muteBtn").addEventListener("click", () => setSound(Sound.muted));
   $("hintBtn").addEventListener("click", () => { if (!$("hintBtn").disabled) showHintBox($("hintBox").hidden); });
   $("hintClose").addEventListener("click", () => showHintBox(false));
@@ -42,7 +42,7 @@ function wireUI() {
   for (const ev of ["pointerup", "pointercancel"]) window.addEventListener(ev, e => { if (!lookUp(e)) playUp(e); });
   document.addEventListener("keydown", e => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (e.key === "Escape") { if (!$("book").hidden) { bookClose(); return; } if ($("menu").hidden) openMenu(); else if (!STATE.over || siegeLive()) { $("menu").hidden = true; Sound.resume(); } return; }
+    if (e.key === "Escape") { if (!$("book").hidden) { bookClose(); return; } if ($("menu").hidden) openMenu(true); else if (!STATE.over || siegeLive()) closeMenu(); return; }
     if (CHASE.on) { chaseKey(e, true); return; } // (the getaway's own keys: 12g)
     if (ARMED.on && $("menu").hidden) { if (e.key === " " || e.key === "Enter") { e.preventDefault(); if (!e.repeat) armedFire(); } return; } // (the revolver from the barrel: 12q)
     if (SIEGE.on && $("menu").hidden) { if (e.key === " " || e.key === "Enter") { e.preventDefault(); if (!e.repeat) fireTap(); } else if (e.key === "Shift" || e.key === "a" || e.key === "A") SIEGE.keyAim = true; return; } // (hold Shift or A to come up)
@@ -56,12 +56,22 @@ function wireUI() {
 }
 // the end sign's button: Try Again after a loss, Play Again after a win
 function signAgain(won) { STATE.lastWon = won; $("againBtn").textContent = won ? "Play Again" : "Try Again"; }
-function openMenu() {
+// v49: whatever end sign the menu was opened over is put away while it's open, and back as it was when the menu's shut (the red X,
+// Resume, Escape) without a new round being started. It used to stay hidden: a GAME OVER or YOU SURVIVED with its Play Again gone,
+// and nothing on the screen to go on with
+const MENU_UNDER = { els: [], round: 0 };
+function openMenu(cover) {
+  if (cover && $("menu").hidden) { MENU_UNDER.els = ["sign", "chaseRes"].map(id => $(id)).filter(el => el && !el.hidden); MENU_UNDER.round = STATE.roundId; for (const el of MENU_UNDER.els) el.hidden = true; }
   $("resumeBtn").hidden = STATE.over && !siegeLive(); $("menuClose").hidden = !STATE.played; $("menu").hidden = false; /* (the red X: shut it, whatever's under it, v40) */ $("bestOut").textContent = STATE.best;
   // the big button: Ride Out the first time; Restart in the middle of a game; Try Again once it's over (Play Again after a win)
   $("startBtn").textContent = !STATE.played ? "Ride Out" : !$("resumeBtn").hidden ? "Restart" : STATE.lastWon ? "Play Again" : "Try Again";
   document.querySelector(`input[name=len][value=${STATE.len}]`).checked = true; document.querySelector(`input[name=diff][value=${STATE.diff}]`).checked = true;
   $("diffNote").textContent = DIFF[STATE.diff].note;
+}
+function closeMenu() {
+  $("menu").hidden = true; Sound.resume();
+  if (STATE.roundId === MENU_UNDER.round) for (const el of MENU_UNDER.els) el.hidden = false; // (still the same round: the sign it covered comes back)
+  MENU_UNDER.els = [];
 }
 function setQuality(tier) {
   if (!TIERS[tier] || tier === R.tier) return; R.tier = tier; const T = TIERS[tier];

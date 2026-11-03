@@ -2,6 +2,12 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v49
+- **The menu gives the sign back.** Opening the menu over an end sign (GAME OVER, YOU SURVIVED, the getaway's results)
+  with the Menu button or Change Settings put the sign away; shutting the menu again with its X (or Resume, or Escape)
+  left it gone, and nothing on the screen to carry on with. Now it comes back, as long as you didn't start a new round.
+- **Four in the gun for the getaway.** One more round a load in the horseback fight: 4, with one reload (8 in all).
+
 ## v48
 - **Three in the gun for the getaway.** The horseback fight's revolver holds 3 (was 5), with one reload: 6 rounds in
   all.

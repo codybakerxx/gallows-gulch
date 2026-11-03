@@ -45,13 +45,14 @@ E("""(async () => { await __go(200, () => gunPropLive()); armedStart(); await __
     { on: S.on, phase: S.phase, hostDown: !!HOST.hang, shown: HOST.root.visible, enemies: S.enemies.length, standing: S.enemies.filter(q => q.alive).length }); })()""")
 shot("a_host_down")
 E("""(async () => { const S = SIEGE; S.reloadT = 1.2; S.bullets = 0; siegeHud(); const spun = $('gun').classList.contains('reloading'); S.health = 0; siegeDie(); await __go(400, () => !$('sign').hidden);
+  const menuX = []; for (const b of ['menuBtn', 'setBtn']) { $(b).click(); await __go(2); const open = !$('menu').hidden && $('sign').hidden; $('menuClose').click(); await __go(2); menuX.push(open && $('menu').hidden && !$('sign').hidden); } /* (v49: the menu shut with its X: the sign back) */
   const chains = [...document.querySelectorAll('.chain')].filter(c => getComputedStyle(c).display !== 'none').length; S.reloadT = 99; siegeHud(); newRound(); await __go(120); /* (a new round with a reload still under way) */
   const whole = !HOST.hang && HOST.root.visible && !S.hostE && (HOST.wounds || []).length === 0, B = HOST.ch.bones, up = +(B.Head.getWorldPosition(V3()).y - HOST.root.position.y).toFixed(2);
   const miss = [...'QZXJVKWYFBPGMHUDCLNRSTOIEA'].find(c => !STATE.word.includes(c)); guess(miss); let q0 = null, spin = 0, low = 9; // (he walks off and back: his head mustn't spin)
   for (let k = 0; k < 30; k++) { await __go(8); const q = B.Spine2.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(B.Head.getWorldQuaternion(new THREE.Quaternion())); /* (the head against his chest: turning round to walk off isn't a spin. A host never shot turns his head up to 66° in 8 frames as he sets off; frozen, it turned 80 to 110° again and again) */ if (q0) spin = Math.max(spin, 2 * Math.acos(Math.min(1, Math.abs(q.dot(q0)))) * 57.3); q0 = q; low = Math.min(low, B.Head.getWorldPosition(V3()).y - HOST.root.position.y); }
   const still = !$('gun').classList.contains('reloading');
-  return __check('the next round: the host whole and on his feet, his head steady; the chambers still; no ropes on the sign', whole && !S.on && up > 1.3 && low > 1.3 && spin < 80 && spun && still && chains === 0,
-    { hang: !!HOST.hang, wounds: (HOST.wounds || []).length, headUp: up, lowestHead: +low.toFixed(2), maxTurnPer8Frames: +spin.toFixed(0), spinningDuringReload: spun, stillAfter: still, chainsShown: chains }); })()""")
+  return __check('the next round: the host whole and on his feet, his head steady; the chambers still; no ropes on the sign; the menu shut, the sign back', whole && !S.on && up > 1.3 && low > 1.3 && spin < 80 && spun && still && chains === 0 && menuX.every(Boolean),
+    { hang: !!HOST.hang, wounds: (HOST.wounds || []).length, headUp: up, lowestHead: +low.toFixed(2), maxTurnPer8Frames: +spin.toFixed(0), spinningDuringReload: spun, stillAfter: still, chainsShown: chains, menuOpenedAndShut: menuX }); })()""")
 shot("b_host_back")
 E("""JSON.stringify({ errs: __errs })""")
 json.dump(steps, open("test/s144.json", "w"), indent=0)
