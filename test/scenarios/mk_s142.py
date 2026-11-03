@@ -79,7 +79,7 @@ shot("b_body_ash")
 E("""(async () => { const S = SIEGE, ro = upEye(V3()), C = S.covers[S.cover], at = ro.clone().addScaledVector(V3(Math.sin(C.yaw0), 0, Math.cos(C.yaw0)), 6); at.y = groundVis(at.x, at.z) + 1.5; const n0 = MEAT.list.length;
   spawnMeat('steak', at, V3(0, 2, 0), 3); const M = MEAT.list[n0]; await __go(3); const label = MEAT.labels.find(L => L.t < 1 && L.word === 'STEAK!' && L.s.visible), ring = MEAT.rings.some(g => g.t < 1 && g.m.visible);
   await __go(240, () => M.landT != null); await __go(20); const steam = M.landT != null, bb = new THREE.Box3().setFromObject(M.m), sz = bb.getSize(V3()); window.__M = M;
-  return __check('the meat: a reward as it comes, thicker, and steaming once down', label && ring && steam && STEAK.T >= 0.11 && sz.y > 0.3, { label: !!label, ring, steam, thick: +sz.y.toFixed(2), T: STEAK.T }); })()""")
+  return __check('the meat: thicker, steaming once down, and (v48) no words over it', !label && ring && steam && STEAK.T >= 0.11 && sz.y > 0.3, { label: !!label, ring, steam, thick: +sz.y.toFixed(2), T: STEAK.T }); })()""")
 E("""(async () => { const p = __M.m.position; window.__cam = { p: [p.x + 2.4, p.y + 1.6, p.z + 2.2], t: [p.x, p.y + 0.3, p.z], fov: 42 }; await __go(2); return 1; })()""")
 shot("c_steak_steaming")
 E("""(async () => { window.__cam = null; await __go(1); return 1; })()""")
