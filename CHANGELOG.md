@@ -2,6 +2,16 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v46
+- **The host gets back up.** Shot from the barrel, the host lay where he fell even after a restart, and once he walked
+  his head spun round and round. His standing animation had been left paused; it runs again now when the round
+  restarts.
+- **The chambers stop spinning.** The cylinder in the top left spins while a reload goes in. If the shootout or the
+  revolver from the barrel ended mid-reload, it went on spinning for good, even in the hangman game.
+- **No ropes on the end signs.** GAME OVER and the getaway's results no longer hang from two ropes.
+- **A harder run.** Half as many rows again (the rows come a third closer together), and the horse builds to 100 km/h
+  by the end (was 90).
+
 ## v45
 - **The host can be shot.** From the barrel, before any shootout, a shot at the host used to whip past him. Now he goes
   down where he stood, and the town draws on you just as it does when you shoot one of the townsfolk (with nobody left

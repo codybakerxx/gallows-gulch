@@ -135,7 +135,7 @@ grass between them. Nothing on the screen to press.
   Logs, hay bales, troughs and fences can be jumped; sometimes a fence runs right across the trail. Every row has a
   way through, and every course can be ridden clean: `test/scenarios/mk_s134.py` searches 300 of them frame by frame
   to prove it.
-- It's flat out from the first stride and keeps getting faster (from 70 to 90 km/h), the rows come quicker and
+- It's flat out from the first stride and keeps getting faster (from 70 to 100 km/h), the rows come quicker and
   harder to read as it goes, and there's more to ride round between them. The edges of the view
   blur with the speed.
 - A swipe every row: whatever lane you came through one row in, the next row blocks it with something you can't

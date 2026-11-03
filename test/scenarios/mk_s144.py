@@ -2,6 +2,7 @@
 #   - the horses' hit shapes, fitted to the mesh: a shot at the head hits, standing up and grazing; so do the top of the back and the
 #     belly; a shot just past the muzzle, over the back, under the belly or beside the body misses
 #   - the revolver from the barrel: the host can be shot; he goes down where he stood and the shootout starts; the next round he's whole
+#     (v46: and on his feet, his head steady as he walks; the chambers in the top bar not left spinning; the end sign without its ropes)
 # Prints one JSON line per check; "ok" is true when it passed.
 import json, os, sys
 pre = sys.argv[1] if len(sys.argv) > 1 else "g144"
@@ -43,8 +44,14 @@ E("""(async () => { await __go(200, () => gunPropLive()); armedStart(); await __
   return __check('the host shot from the barrel: down where he stood, and the shootout', S.on && S.phase === 'fight' && !!S.hostE && !!HOST.hang && HOST.root.visible && !ARMED.on && S.enemies.length >= 7 && S.enemies.filter(q => q.alive).length >= 7,
     { on: S.on, phase: S.phase, hostDown: !!HOST.hang, shown: HOST.root.visible, enemies: S.enemies.length, standing: S.enemies.filter(q => q.alive).length }); })()""")
 shot("a_host_down")
-E("""(async () => { const S = SIEGE; S.health = 0; siegeDie(); await __go(400, () => !$('sign').hidden); newRound(); await __go(120); const whole = !HOST.hang && HOST.root.visible && !S.hostE && (HOST.wounds || []).length === 0;
-  return __check('the next round: the host whole again', whole && !S.on, { hang: !!HOST.hang, shown: HOST.root.visible, wounds: (HOST.wounds || []).length, on: S.on }); })()""")
+E("""(async () => { const S = SIEGE; S.reloadT = 1.2; S.bullets = 0; siegeHud(); const spun = $('gun').classList.contains('reloading'); S.health = 0; siegeDie(); await __go(400, () => !$('sign').hidden);
+  const chains = [...document.querySelectorAll('.chain')].filter(c => getComputedStyle(c).display !== 'none').length; S.reloadT = 99; siegeHud(); newRound(); await __go(120); /* (a new round with a reload still under way) */
+  const whole = !HOST.hang && HOST.root.visible && !S.hostE && (HOST.wounds || []).length === 0, B = HOST.ch.bones, up = +(B.Head.getWorldPosition(V3()).y - HOST.root.position.y).toFixed(2);
+  const miss = [...'QZXJVKWYFBPGMHUDCLNRSTOIEA'].find(c => !STATE.word.includes(c)); guess(miss); let q0 = null, spin = 0, low = 9; // (he walks off and back: his head mustn't spin)
+  for (let k = 0; k < 30; k++) { await __go(8); const q = B.Head.getWorldQuaternion(new THREE.Quaternion()); if (q0) spin = Math.max(spin, 2 * Math.acos(Math.min(1, Math.abs(q.dot(q0)))) * 57.3); q0 = q; low = Math.min(low, B.Head.getWorldPosition(V3()).y - HOST.root.position.y); }
+  const still = !$('gun').classList.contains('reloading');
+  return __check('the next round: the host whole and on his feet, his head steady; the chambers still; no ropes on the sign', whole && !S.on && up > 1.3 && low > 1.3 && spin < 45 && spun && still && chains === 0,
+    { hang: !!HOST.hang, wounds: (HOST.wounds || []).length, headUp: up, lowestHead: +low.toFixed(2), maxTurnPer8Frames: +spin.toFixed(0), spinningDuringReload: spun, stillAfter: still, chainsShown: chains }); })()""")
 shot("b_host_back")
 E("""JSON.stringify({ errs: __errs })""")
 json.dump(steps, open("test/s144.json", "w"), indent=0)
