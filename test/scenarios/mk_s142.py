@@ -41,7 +41,7 @@ E("""(async () => { const S = SIEGE, D = DRESS.weeds; if (!D) return __check('a 
   if (!spot) { __windBack(); return __check('a tumbleweed in the beam catches fire', false, { err: 'no clear spot', why }); }
   const got = await __track(() => { w.vy = Math.min(w.vy, 0); return w.c.clone(); }, (ro, rd) => { const h = targetRay(ro, rd), e = sceneryRay(ro, rd, 80); return h && h.weed === w && (!e || h.t < e.distance); }, 120);
   laserTrigger(true); await __go(8); laserTrigger(false); const lit = !!w.fire; /* (the beam comes on a frame or two after the trigger) */ await __go(30); const flames = fireLive(); const col = new THREE.Color(); D.im.getColorAt(0, col);
-  return __check('a tumbleweed on the ground in the beam catches fire', got && lit && flames > 10 && col.r < 0.5, { got, lit, flames, colour: +col.r.toFixed(2), spot: spot.toArray().map(v => +v.toFixed(1)) }); })()""")
+  return __check('a tumbleweed on the ground in the beam catches fire', got && lit && flames > 10 && col.r < 0.8, /* (v48: it chars over 1.3 s now, from where it caught) */ { got, lit, flames, colour: +col.r.toFixed(2), spot: spot.toArray().map(v => +v.toFixed(1)) }); })()""")
 shot("a_weed_fire")
 E("""(async () => { const p = __W.c; window.__cam = { p: [p.x + 3.2, p.y + 1.4, p.z + 3.2], t: [p.x, p.y + 0.6, p.z], fov: 45 }; await __go(2); return 1; })()""")
 shot("a2_weed_fire_close")
@@ -59,7 +59,7 @@ E("""(async () => { const S = SIEGE, W = LIFE.weed, C = S.covers[S.cover], saved
   const hold = () => { W.p.x = spot.x; W.p.z = spot.z; W.v.x = W.v.z = 0; return false; };
   const got = await __track(() => { hold(); return W.p.clone(); }, (ro, rd) => { const h = targetRay(ro, rd), e = sceneryRay(ro, rd, 80); return h && h.weed === W && (!e || e.distance > h.t); }, 120);
   laserTrigger(true); await __go(8, hold); laserTrigger(false); const lit = !!W.fire; await __go(30, hold); const flames = fireLive(), col = W.m.material.color.r / W.base.r;
-  return __check('the tumbleweed by the gallows catches fire in the beam', got && lit && flames > 10 && col < 0.5, { got, lit, flames, colour: +col.toFixed(2), at: spot.toArray().map(v => +v.toFixed(1)) }); })()""")
+  return __check('the tumbleweed by the gallows catches fire in the beam', got && lit && flames > 10 && col < 0.8, { got, lit, flames, colour: +col.toFixed(2), at: spot.toArray().map(v => +v.toFixed(1)) }); })()""")
 E("""(async () => { const p = LIFE.weed.p; window.__cam = { p: [p.x + 3.2, p.y + 1.4, p.z + 3.2], t: [p.x, p.y + 0.6, p.z], fov: 45 }; await __go(2); return 1; })()""")
 shot("a3_gallows_weed_fire")
 E("""(async () => { window.__cam = null; await __go(1); return 1; })()""")
@@ -69,7 +69,7 @@ E("""(async () => { const W = LIFE.weed; await __go(600, () => !W.on); const gon
 # ---- a dead man in the beam: he burns to ash where he lies ----
 E("""(async () => { const S = SIEGE, ro = upEye(V3()); const list = S.enemies.filter(q => q.alive).map(q => [q, q.a.ch.bones.Spine2.getWorldPosition(V3())]).filter(([q, p]) => { const rd = p.clone().sub(ro).normalize(), e = sceneryRay(ro, rd, 80); return !e || e.distance > p.distanceTo(ro); }).sort((a, b) => a[1].distanceTo(ro) - b[1].distanceTo(ro)).map(x => x[0]);
   let E = null, got = false, tried = 0; for (const q of list) { tried++; shotHits(q, SIEGE_PARTS[2], q.a.ch.bones.Spine2.getWorldPosition(V3()), V3(0, -0.2, -1).normalize()); await __go(120, () => { __calm(); return false; }); // (shot down; then if he fell where the cover hides him, the next one)
-    got = await __track(() => q.a.ch.bones.Hips.getWorldPosition(V3()), (ro, rd) => { const b = bodyRay(S.enemies, ro, rd), e = sceneryRay(ro, rd, 80); return b && b.E === q && (!e || b.t < e.distance); }, 160); if (got) { E = q; break; } if (tried >= 3) break; }
+    got = await __track(() => q.a.ch.bones.Hips.getWorldPosition(V3()), (ro, rd) => { const b = bodyRay(S.enemies, ro, rd), e = sceneryRay(ro, rd, 80); return b && b.E === q && (!e || b.t < e.distance); }, 160); if (got) { E = q; break; } if (tried >= 5) break; }
   if (!E) return __check('a dead man in the beam burns to ash where he lies', false, { err: 'none lying in sight', tried });
   const h0 = E.a.ch.bones.Hips.getWorldPosition(V3()); for (let i = 0; i < 20 && !E.ash; i++) { __aimPt(E.a.ch.bones.Hips.getWorldPosition(V3())); laserTrigger(true); await __go(1, () => { __calm(); return false; }); } laserTrigger(false);
   const ash = !!(E.ash && E.ash.lying); await __go(150, () => { __calm(); return false; }); const A = E.ash, pile = A && A.pile, d = pile && Math.hypot(pile.position.x - h0.x, pile.position.z - h0.z);
