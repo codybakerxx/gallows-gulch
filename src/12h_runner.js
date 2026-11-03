@@ -15,9 +15,9 @@ const RUN = {
 };
 // what can be in a lane: tall things you go round, low things you jump (low: their height), long ones that fill a lane for a while
 const RUN_KINDS = {
-  boulder: { tall: true, half: 1.0, depth: 0.85, n: 18 }, cactus: { tall: true, half: 0.95, depth: 0.55, n: 18 }, crates: { tall: true, half: 1.0, depth: 0.6, n: 14 },
-  wagon: { tall: true, half: 0.85, depth: 2.1, n: 7 }, log: { low: 0.66, half: 1.15, depth: 0.32, n: 12 }, bales: { low: 0.98, half: 1.1, depth: 0.42, n: 9 },
-  fence: { low: 1.08, half: 1.15, depth: 0.14, n: 12 }, trough: { low: 0.76, half: 1.0, depth: 0.34, n: 9 } }; // (n: how many of each are kept: the most a course ever has out at once, 30 m behind to 170 m ahead, over 300 courses, plus two: mk_s134)
+  boulder: { tall: true, half: 1.0, depth: 0.85, n: 19 }, cactus: { tall: true, half: 0.95, depth: 0.55, n: 21 }, crates: { tall: true, half: 1.0, depth: 0.6, n: 14 },
+  wagon: { tall: true, half: 0.85, depth: 2.1, n: 9 }, log: { low: 0.66, half: 1.15, depth: 0.32, n: 12 }, bales: { low: 0.98, half: 1.1, depth: 0.42, n: 9 },
+  fence: { low: 1.08, half: 1.15, depth: 0.14, n: 12 }, trough: { low: 0.76, half: 1.0, depth: 0.34, n: 9 } }; // (n: how many of each are kept: the most a course ever has out at once, 30 m behind to 170 m ahead, over 300 courses, plus two (v46: boulder, cactus and wagon raised for the denser course): mk_s134)
 
 // ---- building them (each merged into a mesh or two per material, so a row costs a handful of draw calls) ----
 function mergeLocal(g) { // a group of meshes → the same, merged by material, in the group's own frame

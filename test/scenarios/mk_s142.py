@@ -69,7 +69,7 @@ E("""(async () => { window.__cam = null; await __go(1); return 1; })()""")
 E("""(async () => { const S = SIEGE; revTake && LASER.state === 'held' && (S.cover = 1, revTake()); await __go(40, () => { __calm(); return false; }); bellShot(bellCentre(V3()), V3(1, 0, 0));
   for (const q of S.enemies) if (q.alive) shotHits(q, SIEGE_PARTS[2], q.a.ch.bones.Spine2.getWorldPosition(V3()), V3(0, -0.2, -1).normalize()); siegeWin(); const C = CHASE; await __go(600, () => C.state === 'ride');
   const v0 = C.speed; RUN.strikes = 99; C.s = C.turnAt - 30; await __go(60); const v1 = C.speed;
-  return __check('the run: 70 km/h at the start (as set), 90 by the end', !C.laser && RUN.speed0 * 3.6 > 69 && RUN.speed0 * 3.6 < 71 && Math.round(RUN.speed1 * 3.6) === 90 && v1 > v0 + 3, { start: +(v0 * 3.6).toFixed(0), end: +(v1 * 3.6).toFixed(0), cfg: [RUN.speed0, RUN.speed1] }); })()""")
+  return __check('the run: 70 km/h at the start (as set), 100 by the end (v46; 90 in v42)', !C.laser && RUN.speed0 * 3.6 > 69 && RUN.speed0 * 3.6 < 71 && Math.round(RUN.speed1 * 3.6) === 100 && v1 > v0 + 3, { start: +(v0 * 3.6).toFixed(0), end: +(v1 * 3.6).toFixed(0), cfg: [RUN.speed0, RUN.speed1] }); })()""")
 E("""(async () => { const C = CHASE; for (const ob of C.obs) dropObstacle(ob); C.obs = []; C.rows = []; C.nextRow = 1e9; await __go(400, () => C.state === 'combat' && C.safeT <= 0); C.hp = 99; C.attackT = 99;
   const r0 = C.rounds, n0 = C.reloads; C.ay = 0.9; C.ap = 0.6; for (let i = 0; i < r0; i++) { C.cool = 0; chaseFire(); await __go(2); } await __go(140, () => C.reloadT <= 0); const after = [C.rounds, C.reloads];
   for (let i = 0; i < 5; i++) { C.cool = 0; chaseFire(); await __go(2); } await __go(60); const dry = { rounds: C.rounds, reloads: C.reloads, doom: !!C.doom };

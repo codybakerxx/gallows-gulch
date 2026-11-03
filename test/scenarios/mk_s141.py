@@ -1,6 +1,6 @@
 # builds test/s141.json: v41.
 #   - after a hanging, with the GAME OVER sign put away (a drag looking round), a tap on the sword still cuts him down: the shootout starts
-#   - the getaway's run is longer (1000 m of course) and builds speed as it goes, 19.5 m/s to 24.5 m/s, riding it with the autopilot
+#   - the getaway's run is longer (1000 m of course; v46: 1100) and builds speed as it goes, 19.5 m/s to 24.5 m/s, riding it with the autopilot
 # Prints one JSON line per check; "ok" is true when it passed.
 import json, os, sys
 pre = sys.argv[1] if len(sys.argv) > 1 else "g141"
@@ -25,7 +25,7 @@ E("""(async () => { await __go(120, () => !STATE.locked); STATE.misses = STATE.m
 shot("a_cut_down")
 E("""(async () => { RUN.strikes = 99; await __shootBell(); await __lastOne(1); const C = CHASE; await __go(600, () => C.state === 'ride'); const sp = []; let next = 100;
   await __go(5000, () => { __auto(); if (C.s > next) { sp.push([Math.round(C.s), +C.speed.toFixed(1)]); next += 150; } return C.state !== 'ride'; });
-  const top = Math.max(...sp.map(p => p[1])); return __check('the run: longer, and faster as it goes', C.courseEnd === RUN.first + 1000 && sp[0][1] < 20.5 && top > 23.8 && (C.state === 'turn' || C.state === 'combat'), { speeds: sp, rideTime: +C.stats.t.toFixed(1), state: C.state, bumps: C.stats.bumps }); })()""")
+  const top = Math.max(...sp.map(p => p[1])); return __check('the run: longer, and faster as it goes', C.courseEnd === RUN.first + RUN.course && RUN.course >= 1000 && sp[0][1] < 20.5 && top > 23.8 && (C.state === 'turn' || C.state === 'combat'), { speeds: sp, rideTime: +C.stats.t.toFixed(1), state: C.state, bumps: C.stats.bumps }); })()""")
 E("""JSON.stringify({ errs: __errs })""")
 json.dump(steps, open("test/s141.json", "w"), indent=0)
 print(len(steps), "steps")
