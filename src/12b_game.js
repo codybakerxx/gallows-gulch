@@ -118,7 +118,7 @@ function resetScene() {
   MAN.ik.L.goal = MAN.ik.R.goal = 0; MAN.lookPt = null; MAN.act.idle.timeScale = 1; MAN.place(MAN_PATH[0][0], MAN_PATH[0][1], Math.PI);
   MAN.panic = 0; MAN.lookT = 0; const U = MAN.ch.skin.userData.U; U.fear.value = 0; U.jaw.value = 0;
   EXEC.gripping = false; EXEC.setIK("R", null, 0); EXEC.setIK("L", null, 0); EXEC.ik.L.fast = EXEC.ik.R.fast = false; if (EXEC.grip) Object.assign(EXEC.grip, { L: 0, R: 0, tL: 0, tR: 0 }); EXEC.place(LAY.exec.x, LAY.exec.z, Math.PI / 2); EXEC.lookPt = V3(LAY.trap.x, 3.9, LAY.trap.z);
-  const [hx, hz] = hostIdle(); HOST.place(hx, hz, Math.atan2(CAM.pos.x - hx, CAM.pos.z - hz)); HOST.setIK("R", null, 0); HOST.ch.marker.visible = false; HOST.lookPt = null;
+  const [hx, hz] = hostIdle(); HOST.place(hx, hz, Math.atan2(CAM.pos.x - hx, CAM.pos.z - hz)); HOST.setIK("R", null, 0); HOST.ch.marker.visible = false; HOST.lookPt = null; HOST.act.idle.timeScale = 1;
   if (HOST.ch.hat) { HOST.ch.hat.rotation.x = -0.15; HOST.ch.hat.position.y = 2.86; }
 }
 function newRound() {
@@ -142,6 +142,7 @@ function buildKeyboard() { ROWS.forEach(r => { const row = document.createElemen
   $("kb").appendChild(row); }); }
 function resetKeys() { document.querySelectorAll(".key").forEach(k => { k.className = "key"; k.disabled = false; }); }
 function hud() {
+  $("gun").classList.remove("reloading"); // (v46: the hangman's chambers never spin: a reload under way when a shootout or the barrel's revolver ended had left it spinning for good)
   const n = STATE.maxWrong, left = n - STATE.misses; let s = `<circle r="46" fill="#3a3430" stroke="#14110f" stroke-width="3"/><circle r="40" fill="none" stroke="#5b524a" stroke-width="1.5"/><g style="transform:rotate(${-STATE.misses * 360 / n}deg)">`;
   const cr = Math.min(11, 27 * Math.sin(Math.PI / n) - 1.3).toFixed(1), pr = (cr * 0.36).toFixed(1); // chambers shrink to fit when there are many
   for (let i = 0; i < n; i++) { const a = i / n * TAU - Math.PI / 2, x = (Math.cos(a) * 27).toFixed(1), y = (Math.sin(a) * 27).toFixed(1), f = i < left;

@@ -221,7 +221,7 @@ function chaseUI(mode) { // "mount" and "ride" (the run: the whole screen is the
   $("pursuit").hidden = mode !== "ride"; $("chaseRet").hidden = mode !== "combat"; $("app").classList.toggle("aiming", mode === "combat");
   $("hp").hidden = $("reloads").hidden = !play; $("gun").style.visibility = play ? "" : "hidden"; // (the same gun and hearts as the shootout's, all the way through)
   $("left").hidden = on; $("hintBtn").style.display = on ? "none" : ""; $("xhair").hidden = true; $("siegeTip").hidden = true;
-  if (!on) { $("gun").style.visibility = ""; $("app").classList.remove("aiming"); for (const id of ["pursuit", "chaseRet", "chaseTip", "chaseMsg", "chaseSkip"]) $(id).hidden = true; }
+  if (!on) { $("gun").style.visibility = ""; $("gun").classList.remove("reloading"); $("app").classList.remove("aiming"); for (const id of ["pursuit", "chaseRet", "chaseTip", "chaseMsg", "chaseSkip"]) $(id).hidden = true; }
 }
 function chaseHud() {
   const C = CHASE; if (C.laser) { laserHud(); heartsHud(C.hp); } else gunHud(C.rounds, C.reloads, C.reloadT > 0 ? 1 - C.reloadT / GUN.reload : -1, C.hp, CHASE_CFG.reloads);
