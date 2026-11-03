@@ -2,6 +2,13 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v47
+- **The tumbleweed you see burns.** There are two kinds of tumbleweed: a few rolling far down the street, and one that
+  bounces right past the gallows and the covers. Only the far ones could be shot or set alight (and from the covers the
+  gallows hides most of them), so the one in front of you didn't catch fire. Now it does: in the laser's beam it goes up
+  in flames, rolls on burning and blackening, and falls away to ash, and the next one blows in later. A bullet knocks it
+  on, spinning.
+
 ## v46
 - **The host gets back up.** Shot from the barrel, the host lay where he fell even after a restart, and once he walked
   his head spun round and round. His standing animation had been left paused; it runs again now when the round

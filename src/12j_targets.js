@@ -135,7 +135,7 @@ function resetTargets() {
   for (const K of Object.values(TGT.debris)) { K.P.forEach((D, i) => { D.on = false; K.im.setMatrixAt(i, _tm.makeScale(0, 0, 0)); }); K.im.instanceMatrix.needsUpdate = true; K.im.visible = false; K.live = 0; }
   for (const Pp of [TGT.sparks, TGT.water, TGT.dirt]) if (Pp) { Pp.life.fill(0); Pp.pts.geometry.attributes.position.array.fill(-50); Pp.pts.geometry.attributes.position.needsUpdate = true; Pp.pts.visible = false; }
   for (const D of [TGT.holes, TGT.cracks]) if (D) { D.used = D.next = 0; D.im.count = 0; }
-  TGT.spouts = []; const W = DRESS.weeds; if (W) W.weeds.forEach(w => { if (w.fire || w.gone > 0) { w.fire = null; w.gone = 0; tumbleSpawn(w); } }); if (W && W.im.instanceColor) { for (let i = 0; i < W.weeds.length; i++) W.im.setColorAt(i, W.col.setRGB(1, 1, 1)); W.im.instanceColor.needsUpdate = true; } /* (v42: none left burning) */
+  TGT.spouts = []; const W = DRESS.weeds; if (W) W.weeds.forEach(w => { if (w.fire || w.gone > 0) { w.fire = null; w.gone = 0; tumbleSpawn(w); } }); if (W && W.im.instanceColor) { for (let i = 0; i < W.weeds.length; i++) W.im.setColorAt(i, W.col.setRGB(1, 1, 1)); W.im.instanceColor.needsUpdate = true; } /* (v42: none left burning) */ const LW = LIFE.weed; if (LW && (LW.fire || LW.gone)) { weedLifeReset(LW); LW.on = false; LW.m.visible = false; LW.wait = 4; } /* (v47: nor the one by the gallows) */
 }
 
 // ---- a shot: the nearest target along the ray (a bottle, a can, a tumbleweed), or null ----
@@ -146,10 +146,13 @@ function targetRay(ro, rd) {
     const b = a.clone().addScaledVector(up, h), t = rayCapsule(ro, rd, a, b, (T.kind === "bottle" ? 0.04 : 0.038) + pad); if (t > 0 && (!best || t < best.t)) best = { t, T }; }
   const W = DRESS.weeds; if (W && W.im.visible) W.weeds.forEach(w => { if (w.gone > 0) return; const c = _t1.set(w.p.x, groundVis(w.p.x, w.p.z) + w.rad * 0.9 + w.y, w.p.z), ox = ro.x - c.x, oy = ro.y - c.y, oz = ro.z - c.z, r = w.rad * 1.05; /* (v42b: the whole of it, a touch generous: it's a small thing for a thumb to hold the beam on) */
     const bb = ox * rd.x + oy * rd.y + oz * rd.z, hh = bb * bb - (ox * ox + oy * oy + oz * oz - r * r); if (hh < 0) return; const t = -bb - Math.sqrt(hh); if (t > 0 && (!best || t < best.t)) best = { t, weed: w }; });
+  const LW = LIFE.weed; if (LW && LW.on && LW.m.visible && LW.p) { const c = LW.p, ox = ro.x - c.x, oy = ro.y - c.y, oz = ro.z - c.z, r = LW.r * 1.05; // (v47: and the one bouncing past the gallows, 10)
+    const bb = ox * rd.x + oy * rd.y + oz * rd.z, hh = bb * bb - (ox * ox + oy * oy + oz * oz - r * r); if (hh >= 0) { const t = -bb - Math.sqrt(hh); if (t > 0 && (!best || t < best.t)) best = { t, weed: LW }; } }
   return best;
 }
 function targetShot(hit, at, rd) {
-  if (hit.weed) { const w = hit.weed; w.vy = 2.2 + Math.random(); w.y += 0.02; w.kick = (w.kick || V3()).copy(rd).setY(0).multiplyScalar(3.5); Sound.straw(at, 0.7);
+  if (hit.weed) { const w = hit.weed; if (w.life) { w.v.addScaledVector(_t1.copy(rd).setY(0).normalize(), 3.2); w.v.y += 2.4 + Math.random(); w.w.add(_t1.set(rnd(-9, 9), rnd(-9, 9), rnd(-9, 9))); } /* (the one by the gallows has its own physics: knocked on and spun) */
+    else { w.vy = 2.2 + Math.random(); w.y += 0.02; w.kick = (w.kick || V3()).copy(rd).setY(0).multiplyScalar(3.5); } Sound.straw(at, 0.7);
     for (let i = 0; i < 10; i++) debris("straw", at, _t1.copy(rd).multiplyScalar(rnd(0.5, 2)).add(_t2.set(rnd(-1, 1), rnd(0.5, 2), rnd(-1, 1))), 0.6); return; }
   const T = hit.T;
   if (T.kind === "bottle") { T.state = "broken"; T.mesh.visible = false; if (T.base) { T.base.position.copy(T.mesh.position); T.base.visible = Math.random() < 0.8; }

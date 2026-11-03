@@ -2,6 +2,7 @@
 #   - the shootout with the laser: a tumbleweed in the beam catches fire, rolls on ablaze and blackening, burns down to ash; another blows in later
 #   - a gunman shot down, then held in the beam: he burns to ash where he lies, a long low heap under him
 #   - the meat: STEAK! over it as it comes, a ring and sparks; thicker; steaming once it's down
+#   - v47: the tumbleweed bouncing past the gallows and the covers (a second one, of its own) burns in the beam too, and a bullet knocks it on
 #   - v43: the weed on the ground, as it rolls; the fire drawn over the scene; out of bullets and down behind cover, safe from their shots
 #     till one of them comes round the side of it; the laser on the crate silent, and no hum left after
 #   - the getaway: the run from 70 km/h to 90; the revolver five in the gun and one reload; the riders sitting up straight
@@ -48,6 +49,23 @@ E("""(async () => { window.__cam = null; await __go(1); return 1; })()""")
 E("""(async () => { const w = __W, D = DRESS.weeds; await __go(400, () => w.gone > 0); const gone = w.gone > 0, m = new THREE.Matrix4(); D.im.getMatrixAt(0, m); const s = new THREE.Vector3().setFromMatrixScale(m).x;
   const hit = targetRay(upEye(V3()), w.p.clone().sub(upEye(V3())).normalize()); const ignored = !hit || hit.weed !== w; w.gone = 0.05; await __go(10); const back = !w.gone && !w.fire; const col = new THREE.Color(); D.im.getColorAt(0, col); __windBack();
   return __check('it burns down to ash, and another blows in later', gone && s < 0.01 && ignored && back && col.r > 0.99, { gone, scale: +s.toFixed(3), ignoredWhileGone: ignored, back, colour: +col.r.toFixed(2) }); })()""")
+# ---- v47: the tumbleweed you see, bouncing past the gallows and the covers (10 LIFE.weed): the laser sets it alight too ----
+E("""(async () => { const S = SIEGE, W = LIFE.weed, C = S.covers[S.cover], savedV = WIND.v.clone(); WIND.v.set(0.001, 0, 0); window.__windBack = () => WIND.v.copy(savedV);
+  if (!W.on) { W.wait = 0; await __go(3); } let spot = null; const why = { blocked: 0 };
+  for (const dist of [4, 5, 6, 3.5, 7, 8]) { for (const da of [0, 0.25, -0.25, 0.5, -0.5, 0.8, -0.8]) { const ro = upEye(V3()), at = ro.clone().addScaledVector(V3(Math.sin(C.yaw0 + da), 0, Math.cos(C.yaw0 + da)), dist);
+      at.y = groundHeight(at.x, at.z) + W.r; W.p.copy(at); W.v.set(0, 0, 0); W.w.set(0, 0, 0); await __go(2, () => { W.p.x = at.x; W.p.z = at.z; W.v.set(0, Math.min(0, W.v.y), 0); return false; }); /* (held where it's put: the breeze would roll it off) */
+      const c = W.p.clone(), rd = c.clone().sub(ro).normalize(), e = sceneryRay(ro, rd, 80), h = targetRay(ro, rd); if (h && h.weed === W && (!e || e.distance > h.t)) { spot = at; break; } why.blocked++; } if (spot) break; }
+  if (!spot) { __windBack(); return __check('the tumbleweed by the gallows catches fire in the beam', false, { err: 'no clear spot', why }); }
+  const hold = () => { W.p.x = spot.x; W.p.z = spot.z; W.v.x = W.v.z = 0; return false; };
+  const got = await __track(() => { hold(); return W.p.clone(); }, (ro, rd) => { const h = targetRay(ro, rd), e = sceneryRay(ro, rd, 80); return h && h.weed === W && (!e || e.distance > h.t); }, 120);
+  laserTrigger(true); await __go(8, hold); laserTrigger(false); const lit = !!W.fire; await __go(30, hold); const flames = FIRE.list.filter(f => f.t < f.life && !f.core).length, col = W.m.material.color.r / W.base.r;
+  return __check('the tumbleweed by the gallows catches fire in the beam', got && lit && flames > 10 && col < 0.5, { got, lit, flames, colour: +col.toFixed(2), at: spot.toArray().map(v => +v.toFixed(1)) }); })()""")
+E("""(async () => { const p = LIFE.weed.p; window.__cam = { p: [p.x + 3.2, p.y + 1.4, p.z + 3.2], t: [p.x, p.y + 0.6, p.z], fov: 45 }; await __go(2); return 1; })()""")
+shot("a3_gallows_weed_fire")
+E("""(async () => { window.__cam = null; await __go(1); return 1; })()""")
+E("""(async () => { const W = LIFE.weed; await __go(600, () => !W.on); const gone = !W.on && !W.m.visible && !W.fire, waiting = W.wait > 1; W.wait = 0.05; await __go(10); const back = W.on && W.m.visible && !W.fire && W.m.scale.x === 1 && W.m.material.color.equals(W.base);
+  const hit = targetRay(W.p.clone().add(V3(0, 0, 4)), V3(0, 0, -1)); const v0 = W.v.clone(); targetShot({ weed: W }, W.p.clone(), V3(0, 0, -1)); const kicked = W.v.clone().sub(v0).length(); __windBack();
+  return __check('it burns away; the next blows in unburnt; a bullet knocks it on', gone && waiting && back && !!hit && hit.weed === W && kicked > 3, { gone, waiting, back, inRay: !!hit && hit.weed === W, kicked: +kicked.toFixed(2) }); })()""")
 # ---- a dead man in the beam: he burns to ash where he lies ----
 E("""(async () => { const S = SIEGE, ro = upEye(V3()); const list = S.enemies.filter(q => q.alive).map(q => [q, q.a.ch.bones.Spine2.getWorldPosition(V3())]).filter(([q, p]) => { const rd = p.clone().sub(ro).normalize(), e = sceneryRay(ro, rd, 80); return !e || e.distance > p.distanceTo(ro); }).sort((a, b) => a[1].distanceTo(ro) - b[1].distanceTo(ro)).map(x => x[0]);
   let E = null, got = false, tried = 0; for (const q of list) { tried++; shotHits(q, SIEGE_PARTS[2], q.a.ch.bones.Spine2.getWorldPosition(V3()), V3(0, -0.2, -1).normalize()); await __go(120, () => { __calm(); return false; }); // (shot down; then if he fell where the cover hides him, the next one)
