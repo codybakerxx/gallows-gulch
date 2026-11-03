@@ -123,7 +123,7 @@ function updateAsh(dt) {
     if (!A.piles && t > 0.3) A.piles = A.heaps.map(([u, v, sc, sy]) => { const p = ashPile(_a1.set(A.feet.x + u * A.ax.x + v * A.az.x, A.base, A.feet.z + u * A.ax.z + v * A.az.z), 1, 1, 1); p.position.y = M.floor ? M.floor(p.position.x, p.position.z) : goreFloor(p.position.x, p.position.z, A.base + 0.3); return [p, sc, sy]; });
     if (A.piles) { const s = Ease.out(clamp((t - 0.3) / 0.9, 0, 1)); for (const [p, sc, sy] of A.piles) p.scale.set(sc * (0.35 + 0.65 * s), Math.max(0.001, sy * s), sc * (0.35 + 0.65 * s)); }
     if (A.piles && t > 0.9 && t < 5) ashSmoulder(A, dt, t, A.r * 0.75, 0.08, 5); }
-  if (ASH.flakes) { ashPointsStep(ASH.flakes, dt, true); ashPointsStep(ASH.embers, dt, true); } fireStep(dt);
+  if (ASH.flakes) { ashPointsStep(ASH.flakes, dt, true); ashPointsStep(ASH.embers, dt, true); } fireStep(dt); /* (v48) */
 }
 function ashPile(at, sx, sy, sz) { const p = new THREE.Mesh(ASH.pileGeo || (ASH.pileGeo = ashPileGeo()), ASH.mat || (ASH.mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 })));
   p.position.copy(at); p.rotation.y = Math.random() * TAU; p.scale.set(0.001, 0.001, 0.001); p.receiveShadow = true; p.castShadow = true; p.userData.dyn = true; R.scene.add(p); ASH.piles.push(p); return p; }
@@ -137,42 +137,116 @@ function bodyRay(list, ro, rd) { let best = null; for (const E of list) { if (E.
 function bodyLaser(B, at, rd, dt, floor) { const E = B.E; E.laserT = (E.laserT || 0) + dt; if (E.laserT >= 0.12) ashBody(E, at, rd, floor); }
 
 // ---- v42: a tumbleweed in the beam catches fire: it rolls on ablaze, blackens, and falls to ash; another blows in later ----
-// (v42b: the flames drawn over the scene, not added to it: added light vanished against the sunset's orange street. Tall tongues of fire,
-// yellow-white at the root and dark red at the tips, a bright core over them, black smoke, and the weed itself charred black)
-const FIRE = { list: [], tex: null, core: null };
-function fireTex() { const W = 64, H = 128, c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d");
-  // a tongue of flame: wide and round at the bottom, drawn up to a point, hot at the root
-  g.beginPath(); g.moveTo(W / 2, 2); g.bezierCurveTo(W * 0.62, H * 0.3, W * 0.98, H * 0.55, W * 0.92, H * 0.76); g.bezierCurveTo(W * 0.86, H * 0.96, W * 0.14, H * 0.96, W * 0.08, H * 0.76); g.bezierCurveTo(W * 0.02, H * 0.55, W * 0.38, H * 0.3, W / 2, 2); g.closePath();
-  const gr = g.createLinearGradient(0, H, 0, 0); gr.addColorStop(0, "rgba(255,248,200,1)"); gr.addColorStop(0.25, "rgba(255,214,80,1)"); gr.addColorStop(0.55, "rgba(255,120,20,0.95)"); gr.addColorStop(0.85, "rgba(190,40,10,0.75)"); gr.addColorStop(1, "rgba(120,20,10,0)");
-  g.fillStyle = gr; g.filter = "blur(3px)"; g.fill(); return canvasTex(c); }
-function fireCoreTex() { const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d"), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-  gr.addColorStop(0, "rgba(255,255,235,1)"); gr.addColorStop(0.35, "rgba(255,220,120,0.8)"); gr.addColorStop(1, "rgba(255,140,40,0)"); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return canvasTex(c); }
-function fireEmit(p, size, life, core) {
-  let f = FIRE.list.find(q => q.t >= q.life && q.core === !!core); if (!f) { if (FIRE.list.length >= 140) return; if (!FIRE.tex) { FIRE.tex = fireTex(); FIRE.core = fireCoreTex(); }
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: core ? FIRE.core : FIRE.tex, blending: core ? THREE.AdditiveBlending : THREE.NormalBlending, depthWrite: false, transparent: true, fog: false }));
-    s.renderOrder = core ? 7 : 6; s.center.set(0.5, core ? 0.5 : 0.12); R.scene.add(s); f = { s, t: 1, life: 1, v: new THREE.Vector3(), size: 1, core: !!core }; FIRE.list.push(f); } // (a tongue stands up from its root)
-  f.t = 0; f.life = life; f.size = size; f.s.position.copy(p); f.v.set(rnd(-0.2, 0.2), core ? rnd(0.2, 0.5) : rnd(1.2, 2.2), rnd(-0.2, 0.2)); f.s.visible = true; f.s.material.rotation = core ? Math.random() * TAU : rnd(-0.25, 0.25);
-}
-function fireStep(dt) { for (const f of FIRE.list) { if (f.t >= f.life) continue; f.t += dt; const u = Math.min(1, f.t / f.life); f.s.position.addScaledVector(f.v, dt);
-  const k = f.size * (0.55 + 0.6 * Math.sin(u * Math.PI)) * (1 - 0.35 * u); if (f.core) f.s.scale.setScalar(k); else f.s.scale.set(k, k * (1.7 + 0.5 * Math.sin(f.t * 23 + f.size * 40)), 1);
-  f.s.material.opacity = f.core ? (1 - u) * 0.9 : Math.min(1, (1 - u) * 1.6); if (!f.core) f.s.material.color.setRGB(1, 1 - 0.35 * u, 1 - 0.6 * u); if (f.t >= f.life) f.s.visible = false; } }
-function weedIgnite(w, at) { if (w.fire || w.gone) return; w.fire = { t: 0, acc: 0, smokeT: 0, crackT: 0.3 }; Sound.ash(at, 0.7); Sound.straw(at, 0.8);
-  for (let i = 0; i < 14; i++) fireEmit(_a3.set(at.x + rnd(-0.2, 0.2), at.y - 0.15, at.z + rnd(-0.2, 0.2)), rnd(0.5, 0.9), rnd(0.35, 0.7)); fireEmit(at, 1.6, 0.5, true); // (a whoomph as it goes up)
-  if (!ASH.flakes) { ASH.flakes = ashPoints(900, 0.034, 0x9a948c, false); ASH.embers = ashPoints(160, 0.06, 0xff8a3a, true); } crowsStartle(at, 20, 0.8); }
-// each frame while it burns (07c updateTumbleweeds, which has just placed it at w.c): returns how big it still is, and its colour
-const WEED_BURN = 4.5;
+// v48, the fire made over to look like fire. Three GPU particle pools, all in world space so the flames stream off a weed as it rolls:
+//  - flames: hundreds of small tongues, each a soft teardrop torn up by two layers of noise scrolling upward through it, coloured by how
+//    hot that bit of it is (white-yellow at the root, through orange to a dark red at the ragged tips), and drawn "premultiplied": bright
+//    enough to light up what's behind (and bloom, on the tiers that have it) while still covering it, so it shows against a sunlit street;
+//  - sparks: tiny hot points flung up, swaying as they rise and winking out;
+//  - smoke: soft noisy puffs, near black while it blazes, paler as it smoulders, rising, spreading and drifting off on the wind.
+// Under it a warm glow on the ground, and the twigs themselves glow hot in patches before they char (07c, 10 weedGlowPatch)
+const FIREFX = { flames: null, smoke: null, noise: null, t: 0, tU: { value: 0 }, glows: [], gi: 0 };
+function fireNoiseTex() { // tileable value noise, four octaves, 128 square
+  const N = 128, c = document.createElement("canvas"); c.width = c.height = N; const g = c.getContext("2d"), im = g.createImageData(N, N), r = rng(4242), L = [];
+  for (const cells of [8, 16, 32, 64]) { const v = new Float32Array(cells * cells); for (let k = 0; k < v.length; k++) v[k] = r(); L.push([cells, v]); }
+  const sm = x => x * x * (3 - 2 * x);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { let a = 0, w = 0.5, tw = 0;
+    for (const [cells, v] of L) { const fx = x / N * cells, fy = y / N * cells, x0 = Math.floor(fx), y0 = Math.floor(fy), tx = sm(fx - x0), ty = sm(fy - y0), x1 = (x0 + 1) % cells, y1 = (y0 + 1) % cells;
+      const q = (v[y0 * cells + x0] * (1 - tx) + v[y0 * cells + x1] * tx) * (1 - ty) + (v[y1 * cells + x0] * (1 - tx) + v[y1 * cells + x1] * tx) * ty; a += q * w; tw += w; w *= 0.5; }
+    const o = (y * N + x) * 4, val = Math.round(a / tw * 255); im.data[o] = im.data[o + 1] = im.data[o + 2] = val; im.data[o + 3] = 255; }
+  g.putImageData(im, 0, 0); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; }
+const FIRE_VS = `uniform float uTime, uScale, uRise, uGrow; uniform vec3 uWind; attribute vec3 aP0, aV; attribute vec4 aT; attribute float aH;
+  varying float vU, vSeed, vH;
+  void main() { float age = uTime - aT.x, u = age / aT.y; vU = u; vSeed = aT.w; vH = aH;
+    if (u < 0.0 || u > 1.0) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); gl_PointSize = 0.0; return; }
+    float s = aT.w * 40.0; vec3 p = aP0 + aV * age + uWind * age * age * 0.5; p.y += uRise * age * age;
+    p.x += sin(age * 7.0 + s) * 0.05 * age * 2.5; p.z += cos(age * 6.1 + s * 1.3) * 0.05 * age * 2.5; // (the sway of hot air)
+    vec4 mv = modelViewMatrix * vec4(p, 1.0); gl_Position = projectionMatrix * mv;
+    float size = aT.z * mix(0.55 + 0.75 * sin(min(1.0, u * 1.6) * 1.5708) * (1.0 - 0.45 * u), 1.0 + uGrow * u, step(0.5, uGrow));
+    gl_PointSize = max(aH < 0.0 ? 1.5 : 0.0, size * uScale / -mv.z); }`;
+const FLAME_FS = `uniform sampler2D uNoise; uniform float uTime; varying float vU, vSeed, vH;
+  void main() { vec2 c = gl_PointCoord - 0.5; c.y = -c.y;
+    if (vH < 0.0) { // a spark: a hot point, winking out
+      float d = length(c); float a = (1.0 - smoothstep(0.1, 0.5, d)) * (1.0 - vU) * (0.6 + 0.4 * sin(uTime * 40.0 + vSeed * 90.0));
+      gl_FragColor = vec4(vec3(1.0, 0.55, 0.15) * 3.0 * a, a * 0.6); return; }
+    float w = 0.5 - 0.3 * clamp(c.y + 0.5, 0.0, 1.0); // (a tongue: round at the root, narrowing upward)
+    float shape = 1.0 - smoothstep(0.0, 1.0, length(vec2(c.x / max(0.12, w), (c.y + 0.12) * 1.1)));
+    vec2 uv = vec2(c.x * 0.75 + vSeed * 3.1, c.y * 0.55 - uTime * 1.6 - vSeed * 7.3);
+    float n = texture2D(uNoise, uv).r * 0.62 + texture2D(uNoise, uv * 2.3 + vec2(0.41, uTime * -0.9)).r * 0.38;
+    float f = shape * (0.35 + 1.25 * n) - vU * 0.6; // (torn and eaten away from the tip as it rises)
+    float a = smoothstep(0.16, 0.4, f); if (a < 0.01) discard;
+    float heat = clamp((f - 0.16) * 1.6, 0.0, 1.0) * (1.0 - vU * 0.65) * vH;
+    vec3 col = mix(vec3(0.32, 0.03, 0.005), vec3(0.95, 0.24, 0.02), smoothstep(0.04, 0.4, heat));
+    col = mix(col, vec3(1.0, 0.55, 0.12), smoothstep(0.36, 0.72, heat)); col = mix(col, vec3(1.0, 0.86, 0.55), smoothstep(0.78, 1.0, heat));
+    float al = a * (1.0 - smoothstep(0.7, 1.0, vU)) * min(1.0, vU * 10.0), flick = 0.85 + 0.3 * fract(vSeed * 13.7);
+    gl_FragColor = vec4(col * (0.9 + 2.1 * heat * heat) * flick * al, al * 0.8); }`;
+const SMOKE_FS = `uniform sampler2D uNoise; uniform float uTime; varying float vU, vSeed, vH;
+  void main() { vec2 c = gl_PointCoord - 0.5; float d = length(c);
+    float n = texture2D(uNoise, c * 0.8 + vec2(vSeed * 5.0, vSeed * 3.0 - uTime * 0.12)).r * 0.6 + texture2D(uNoise, c * 1.9 + vec2(vSeed * 2.0, -uTime * 0.2)).r * 0.4;
+    float a = (1.0 - smoothstep(0.1, 0.5, d)) * (0.4 + 0.9 * n); a = smoothstep(0.28, 0.9, a) * sin(clamp(vU, 0.0, 1.0) * 3.14159) * abs(vH);
+    if (a < 0.004) discard; float grey = clamp(vSeed * 0.0 + (vH < 0.0 ? 1.0 : 0.0), 0.0, 1.0);
+    vec3 col = mix(vec3(0.035, 0.03, 0.028), vec3(0.3, 0.29, 0.28), grey) * (0.75 + 0.5 * n);
+    gl_FragColor = vec4(col * a, a); }`;
+function firePool(n, fs, rise, grow, order) {
+  const g = new THREE.BufferGeometry(), A = (k, w) => { const b = new THREE.BufferAttribute(new Float32Array(n * w), w); b.setUsage(THREE.DynamicDrawUsage); g.setAttribute(k, b); return b; };
+  A("position", 3); const P = { n, next: 0, p0: A("aP0", 3), v: A("aV", 3), t: A("aT", 4), h: A("aH", 1), dirty: false, live: 0 };
+  for (let k = 0; k < n; k++) P.t.setXYZW(k, -999, 1, 0, 0); // (all dead)
+  const m = new THREE.ShaderMaterial({ vertexShader: FIRE_VS, fragmentShader: fs, transparent: true, depthWrite: false, depthTest: true, blending: THREE.CustomBlending,
+    blendEquation: THREE.AddEquation, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor, // (premultiplied: it lights and it covers)
+    uniforms: { uTime: FIREFX.tU, uScale: { value: 500 }, uRise: { value: rise }, uGrow: { value: grow }, uWind: { value: new THREE.Vector3() }, uNoise: { value: FIREFX.noise } } });
+  P.pts = new THREE.Points(g, m); P.pts.frustumCulled = false; P.pts.renderOrder = order; P.pts.visible = false; R.scene.add(P.pts); return P; }
+function fireInit() { if (FIREFX.flames) return; FIREFX.noise = fireNoiseTex(); FIREFX.smoke = firePool(260, SMOKE_FS, 0.25, 2.4, 5); FIREFX.flames = firePool(900, FLAME_FS, 0.9, 0, 6);
+  if (!ASH.flakes) { ASH.flakes = ashPoints(900, 0.034, 0x9a948c, false); ASH.embers = ashPoints(160, 0.06, 0xff8a3a, true); } }
+// one particle: where, its velocity, how long it lives, its size (m), and its heat (flames: 0-1, a spark below 0; smoke: its opacity, below 0 for pale smoke)
+function fireEmit(P, p, vx, vy, vz, life, size, h) { const k = P.next; P.next = (P.next + 1) % P.n;
+  P.p0.setXYZ(k, p.x, p.y, p.z); P.v.setXYZ(k, vx, vy, vz); P.t.setXYZW(k, FIREFX.t, life, size, Math.random()); P.h.setX(k, h); P.dirty = true; P.live = Math.max(P.live, FIREFX.t + life); P.pts.visible = true; }
+// the warm light it casts on the ground: a soft orange pool, flickering, under each fire
+function fireGlowTex() { const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d"), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, "rgba(255,170,80,0.9)"); gr.addColorStop(0.4, "rgba(255,110,30,0.45)"); gr.addColorStop(1, "rgba(255,80,10,0)"); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return canvasTex(c); }
+function fireGlow(c, r, k) { if (k <= 0.01) return; let G = FIREFX.glows[FIREFX.gi]; if (!G) { const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: FIREFX.glowTex || (FIREFX.glowTex = fireGlowTex()), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, fog: false }));
+    m.rotation.x = -Math.PI / 2; m.renderOrder = 4; R.scene.add(m); G = FIREFX.glows[FIREFX.gi] = { m }; } FIREFX.gi++;
+  const fl = 0.8 + 0.2 * Math.sin(FIREFX.t * 23 + c.x * 3) * Math.sin(FIREFX.t * 9.7 + c.z * 2); G.m.visible = true; G.m.position.set(c.x, groundVis(c.x, c.z) + 0.03, c.z); G.m.scale.setScalar(r * 9 * (0.85 + 0.15 * fl));
+  G.m.material.opacity = Math.min(1, k * fl * 0.85); }
+function fireLive() { const P = FIREFX.flames; if (!P) return 0; let n = 0; const T = P.t.array; for (let k = 0; k < P.n; k++) { const u = (FIREFX.t - T[k * 4]) / T[k * 4 + 1]; if (u >= 0 && u <= 1 && P.h.array[k] >= 0) n++; } return n; } // (for the tests)
+function fireStep(dt) { if (!FIREFX.flames) return; FIREFX.t += dt; FIREFX.tU.value = FIREFX.t; for (const G of FIREFX.glows) G.m.visible = false; FIREFX.gi = 0; // (the glows are laid again each frame, by the fires still burning)
+  const cam = R.camera, sc = R.renderer.domElement.height * 0.5 / Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2);
+  for (const P of [FIREFX.flames, FIREFX.smoke]) { P.pts.material.uniforms.uScale.value = sc; if (P.dirty) { for (const b of [P.p0, P.v, P.t, P.h]) b.needsUpdate = true; P.dirty = false; } if (FIREFX.t > P.live) P.pts.visible = false; }
+  FIREFX.smoke.pts.material.uniforms.uWind.value.set(WIND.v.x * 0.35, 0, WIND.v.z * 0.35); FIREFX.flames.pts.material.uniforms.uWind.value.set(WIND.v.x * 0.5, 0, WIND.v.z * 0.5); }
+function weedIgnite(w, at) { if (w.fire || w.gone) return; fireInit(); const r = w.rad || w.r || 0.35, c = w.c || w.p;
+  w.fire = { t: 0, acc: 0, sAcc: 0, kAcc: 0, crackT: 0.15, o: c ? V3().subVectors(at, c).clampLength(0, r) : V3() }; w.glow = 0; // (o: where it caught, from its middle: the fire spreads from there)
+  Sound.fireCatch(at, 0.9); Sound.fireCrackle(at, 0.8); for (let i = 0; i < 10; i++) fireEmit(FIREFX.flames, _a3.set(at.x + rnd(-0.08, 0.08), at.y + rnd(-0.08, 0.05), at.z + rnd(-0.08, 0.08)), rnd(-0.2, 0.2), rnd(0.5, 1.1), rnd(-0.2, 0.2), rnd(0.25, 0.5), r * rnd(0.9, 1.4), rnd(0.8, 1));
+  crowsStartle(at, 20, 0.8); }
+// each frame while it burns (07c updateTumbleweeds, 10 updateWeed, which have just placed it at w.c): returns how big it still is, sets its
+// colour (charring) and w.glow (its twigs glowing hot). It catches where it was hit, spreads over it in under a second, blazes, dies down
+// to smouldering embers in a skeleton of black twigs, and falls in to ash
+const WEED_BURN = 5.4;
 function weedFireStep(w, dt, col) {
-  const F = w.fire; F.t += dt; const t = F.t, r = w.rad, k = 1 - smoothstep(WEED_BURN - 1.1, WEED_BURN, t), heat = Math.min(1, 0.4 + t / 0.4) * (0.25 + 0.75 * k);
-  F.acc += dt * 30 * heat; while (F.acc >= 1) { F.acc -= 1; fireEmit(_a1.set(w.c.x + rnd(-r, r) * 0.6, w.c.y + rnd(-0.6, 0.2) * r, w.c.z + rnd(-r, r) * 0.6), r * rnd(1.7, 2.7) * (0.5 + 0.5 * k), rnd(0.4, 0.75)); }
-  if (Math.random() < dt * 9 * heat) fireEmit(_a1.set(w.c.x, w.c.y, w.c.z), r * rnd(2.4, 3.4) * (0.4 + 0.6 * k), rnd(0.15, 0.3), true); // (the glow at its heart)
-  if (Math.random() < dt * 22 * heat) ashEmit(ASH.embers, _a1.set(w.c.x + rnd(-r, r) * 0.6, w.c.y + r * 0.6, w.c.z + rnd(-r, r) * 0.6), rnd(-0.4, 0.4), rnd(1.2, 3), rnd(-0.4, 0.4), rnd(0.7, 1.5), 1, w.c.y - r);
-  F.smokeT -= dt; if (F.smokeT <= 0) { F.smokeT = 0.09; puff(_a2.set(w.c.x, w.c.y + r * 1.6, w.c.z), 3, 0.3, 0.45, 2.2, 0.55 * heat + 0.1, 0x221e1c); } // (black smoke rolling up off it)
-  F.crackT -= dt; if (F.crackT <= 0 && k > 0.3) { F.crackT = rnd(0.35, 0.7); Sound.sizzle(w.c, 0.55); } // (it crackles as it goes)
-  if (t > WEED_BURN - 1.1) for (let i = 0; i < 4; i++) ashEmit(ASH.flakes, _a1.set(w.c.x + rnd(-r, r) * 0.8, w.c.y + rnd(-r, r) * 0.6, w.c.z + rnd(-r, r) * 0.8), rnd(-0.3, 0.3), rnd(-0.1, 0.3), rnd(-0.3, 0.3), rnd(2, 3.5), rnd(0.35, 0.7), w.c.y - r * 0.9);
-  const ch = Math.min(1, t / 0.9); col.setRGB(1 - 0.95 * ch, 1 - 0.96 * ch, 1 - 0.97 * ch); // (black through in under a second)
-  if (t >= WEED_BURN) { w.fire = null; w.gone = rnd(6, 12); } // (gone to ash: another blows in after a while)
+  const F = w.fire; F.t += dt; const t = F.t, r = w.rad, c = w.c, sm = smoothstep;
+  const spread = sm(0, 0.8, t), blaze = sm(0, 0.45, t) * (1 - sm(3.0, 4.3, t)), dying = sm(2.8, 4.4, t) * (1 - sm(4.9, WEED_BURN, t));
+  const k = 1 - 0.45 * sm(3.4, 4.9, t) - 0.55 * sm(4.7, WEED_BURN, t);
+  const pt = out => { const u = _a2.set(rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)); if (u.lengthSq() > 1) u.multiplyScalar(0.7); return out.copy(F.o).lerp(u.multiplyScalar(r * 0.75 * k), spread).add(c); }; // (somewhere in it that's alight)
+  F.acc += dt * (80 * blaze + 14 * dying); while (F.acc >= 1) { F.acc -= 1; const p = pt(_a1), h = (0.55 + 0.45 * blaze) * rnd(0.75, 1);
+    fireEmit(FIREFX.flames, p, rnd(-0.15, 0.15), rnd(0.55, 1.15) * (0.6 + 0.4 * blaze), rnd(-0.15, 0.15), rnd(0.42, 0.85), r * rnd(1.0, 1.8) * (0.45 + 0.55 * blaze + 0.2 * dying), h); }
+  F.kAcc += dt * (16 * blaze + 7 * dying); while (F.kAcc >= 1) { F.kAcc -= 1; const p = pt(_a1); fireEmit(FIREFX.flames, p, rnd(-0.7, 0.7), rnd(1.4, 3.6), rnd(-0.7, 0.7), rnd(0.6, 1.5), 0.035, -1); } // (sparks)
+  F.sAcc += dt * (18 * blaze + 11 * dying); while (F.sAcc >= 1) { F.sAcc -= 1; _a1.set(c.x + rnd(-r, r) * 0.4, c.y + r * (0.9 + blaze * 1.3), c.z + rnd(-r, r) * 0.4); // (smoke: off the top of the flames)
+    fireEmit(FIREFX.smoke, _a1, rnd(-0.12, 0.12), rnd(0.55, 0.95), rnd(-0.12, 0.12), rnd(2.2, 3.6), r * rnd(1.8, 2.9), dying > blaze ? -(0.4 + 0.25 * dying) : 0.55 + 0.35 * blaze); }
+  F.crackT -= dt; if (F.crackT <= 0 && blaze + dying > 0.2) { F.crackT = rnd(0.12, 0.32); Sound.fireCrackle(c, 0.35 + 0.5 * blaze); }
+  if (t > WEED_BURN - 0.9) for (let i = 0; i < 3; i++) ashEmit(ASH.flakes, _a1.set(c.x + rnd(-r, r) * 0.8, c.y + rnd(-r, r) * 0.6, c.z + rnd(-r, r) * 0.8), rnd(-0.3, 0.3), rnd(-0.1, 0.3), rnd(-0.3, 0.3), rnd(2, 3.5), rnd(0.35, 0.7), c.y - r * 0.9);
+  if (dying > 0.3 && Math.random() < dt * 10) ashEmit(ASH.embers, _a1.set(c.x + rnd(-r, r) * 0.5, c.y + rnd(-r, r) * 0.4, c.z + rnd(-r, r) * 0.5), rnd(-0.05, 0.05), rnd(0.1, 0.4), rnd(-0.05, 0.05), rnd(0.4, 0.9), 1, c.y - r);
+  const ch = sm(0.05, 1.3, t) * (0.4 + 0.6 * spread); col.setRGB(1 - 0.95 * ch, 1 - 0.96 * ch, 1 - 0.97 * ch);
+  w.glow = Math.min(1, spread * (1.0 * blaze + 0.75 * dying)) * (0.8 + 0.2 * Math.sin(t * 19 + r * 30)); // (the twigs, glowing in the heart of it, and as embers after)
+  fireGlow(c, r, blaze * 0.9 + dying * 0.4);
+  if (t >= WEED_BURN) { w.fire = null; w.glow = 0; w.gone = rnd(6, 12); } // (gone to ash: another blows in after a while)
   return k;
 }
+// a tumbleweed's twigs glowing where they burn: an emissive orange laid over the material, in patches along the twigs, flickering.
+// glow: an instanced float attribute (aGlow, the street's tumbleweeds, 07c) or a uniform (the one by the gallows, 10)
+function weedGlowPatch(mat, uniform) {
+  mat.customProgramCacheKey = () => uniform ? "weedGlowU" : "weedGlowA";
+  mat.onBeforeCompile = sh => { sh.uniforms.uFireT = FIREFX.tU; if (uniform) sh.uniforms.uGlow = uniform;
+    sh.vertexShader = (uniform ? "uniform float uGlow;\n" : "attribute float aGlow;\n") + "varying float vGlow; varying vec3 vTw;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vGlow = " + (uniform ? "uGlow" : "aGlow") + "; vTw = position;");
+    sh.fragmentShader = "uniform float uFireT; varying float vGlow; varying vec3 vTw;\n" + sh.fragmentShader.replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
+      if (vGlow > 0.001) { float tw = fract(sin(dot(floor(vTw * 13.0), vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+        float fl = 0.7 + 0.3 * sin(uFireT * 13.0 + tw * 40.0); totalEmissiveRadiance += vec3(1.0, 0.32, 0.05) * vGlow * (0.15 + 0.85 * tw * tw) * fl * 3.5; }`); }; }
 
 // ---- meat on the ground (v39) ----
 const _ami = new THREE.Matrix4();

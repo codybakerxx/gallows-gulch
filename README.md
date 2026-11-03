@@ -99,7 +99,7 @@ two on the rooftops, behind the false fronts of the sheriff's office and the gen
   up at any time (if the revolver runs dry first, its lights pulse). **Hold Fire** for a blue beam: a man in it
   burns to ash and crumbles into a little heap, and it scorches and breaks what it touches. It holds **20 seconds**
   of firing (the blue ring where the cylinder was), then takes **7 seconds** to charge itself (the ring fills amber).
-  What it does to a horse or a crow is best seen (STEAK! or DRUMSTICK!, thick and steaming), and what that leaves on
+  What it does to a horse or a crow is best seen (a thick steak or a drumstick, steaming), and what that leaves on
   the ground burns to ash in the beam too. So do the men already down, where they lie. A tumbleweed in the beam
   catches fire, rolls on ablaze and burns away to ash; another blows in after a while.
 - Taking the laser leaves your revolver on the crate. Tap the revolver to swap back (the laser keeps its charge on
@@ -143,7 +143,7 @@ grass between them. Nothing on the screen to press.
 - Ride into something and the horse shies off it into an open lane; trip over something low and you stumble; clip
   something changing lane and you're bounced back. Each costs ground, and the posse gains.
 - **Two strikes.** The first thing you hit warns you; hit a second and they've caught you: a shot from behind and you
-  go off the horse into the dirt.
+  go off the horse into the dirt, blood across your view.
 - The bar at the top shows how close they are. Once they're close they shoot at you (dirt kicks up ahead) and the
   screen's edges pulse red.
 
@@ -151,8 +151,8 @@ grass between them. Nothing on the screen to press.
 the same way, keeping to the trail, and nobody can hurt you while you turn.
 
 **Second half, the fight.**
-- It's the same gun and the same hearts as the shootout, but out here it holds 5 rounds and you get one automatic
-  reload: 10 rounds in all. The speedloader sits beside the cylinder.
+- It's the same gun and the same hearts as the shootout, but out here it holds 3 rounds and you get one automatic
+  reload: 6 rounds in all. The speedloader sits beside the cylinder.
 - Aim with the mouse, by dragging the **Aim** pad (as in the shootout) or by dragging on the view. Any of these works
   while another finger holds **Fire**. **Click** or **Fire** shoots.
 - When the cylinder empties it reloads by itself, once. Run dry with riders still coming and they ride in and finish

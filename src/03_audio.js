@@ -364,9 +364,18 @@ const Sound = (() => {
       const z = ctx.createOscillator(), zg = ctx.createGain(); z.type = "sawtooth"; z.frequency.setValueAtTime(160, t + 0.05); z.frequency.exponentialRampToValueAtTime(1500, t + 0.35); zg.gain.setValueAtTime(0.0001, t + 0.05); zg.gain.exponentialRampToValueAtTime(0.12, t + 0.25); zg.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
       const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1100; bp.Q.value = 0.8; z.connect(bp); bp.connect(zg); zg.connect(sfx); z.start(t + 0.05); z.stop(t + 0.42); },
     // meat (12l): the flash that turns a horse or a crow into meat, it landing, and the sizzle
-    zap(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, 0.3, 4 * k), z = ctx.createOscillator(), zg = ctx.createGain(); z.type = "square"; z.frequency.setValueAtTime(500, t); z.frequency.exponentialRampToValueAtTime(2600, t + 0.08); z.frequency.exponentialRampToValueAtTime(300, t + 0.22);
-      zg.gain.setValueAtTime(0.0001, t); zg.gain.exponentialRampToValueAtTime(0.35 * Math.min(1, k), t + 0.02); zg.gain.exponentialRampToValueAtTime(0.0001, t + 0.24); const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 3500; z.connect(lp); lp.connect(zg); zg.connect(d); z.start(t); z.stop(t + 0.26);
-      noise(t + 0.03, 0.12, 0.5, "bandpass", 1800, 0.7, d); drum(t + 0.02, 220, 80, 0.12, 0.5, d); },
+    // the beam striking flesh (v48: no more cartoon "pew", a square wave swept up and down): a hard electric crack, the thump of it
+    // going in, a searing hiss that dies away with a few sharp pops in it, like fat spitting on a fire
+    zap(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, 0.3, 4 * k), g = Math.min(1, k);
+      noise(t, 0.018, 0.75 * g, "highpass", 2200, 0.7, d); noise(t + 0.004, 0.05, 0.45 * g, "bandpass", 900, 0.9, d); // (the crack)
+      noise(t + 0.01, 0.16, 0.5 * g, "lowpass", 320, 0.7, d); drum(t + 0.005, 95, 42, 0.16, 0.42 * g, d); // (the thump)
+      noise(t + 0.03, 0.75, 0.22 * g, "bandpass", 5200, 0.6, d); noise(t + 0.05, 0.5, 0.12 * g, "highpass", 7000, 0.6, d); // (the sear)
+      for (let i = 0; i < 4; i++) noise(t + 0.08 + Math.random() * 0.45, 0.006 + Math.random() * 0.008, (0.2 + Math.random() * 0.25) * g, "highpass", 2500 + Math.random() * 2500, 0.7, d); }, // (pops)
+    // v48: fire: a handful of dry crackles, twigs splitting in the flames
+    fireCrackle(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, 0.2, 3), n = 2 + ((Math.random() * 4) | 0);
+      for (let i = 0; i < n; i++) { const tt = t + Math.random() * 0.28; noise(tt, 0.004 + Math.random() * 0.01, (0.18 + Math.random() * 0.4) * k, "highpass", 1600 + Math.random() * 3200, 0.7, d); if (Math.random() < 0.3) noise(tt, 0.03, 0.1 * k, "bandpass", 700, 1.2, d); } },
+    // and the soft roar of it catching: a rush of low air
+    fireCatch(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, 0.3, 4); noise(t, 0.9, 0.42 * k, "lowpass", 420, 0.7, d); noise(t + 0.05, 0.6, 0.18 * k, "bandpass", 1300, 0.6, d); drum(t, 70, 40, 0.3, 0.25 * k, d); },
     // a man burnt to ash (12o): a soft roar of flame that dies, a crackle through it, and a dry hiss as he falls in
     ash(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, 0.3, 4);
       const s = ctx.createBufferSource(); s.buffer = buf(1.6, tt => (Math.random() * 2 - 1) * Math.min(1, tt * 12) * Math.exp(-tt * 2.2)); const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.setValueAtTime(700, t); lp.frequency.exponentialRampToValueAtTime(2600, t + 0.3); lp.frequency.exponentialRampToValueAtTime(500, t + 1.5);

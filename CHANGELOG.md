@@ -2,6 +2,20 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v48
+- **Three in the gun for the getaway.** The horseback fight's revolver holds 3 (was 5), with one reload: 6 rounds in
+  all.
+- **Shot off the horse, and you see it.** Caught after two strikes in the run, the shot from behind now throws blood
+  across your view (and more as you hit the dirt), as a hit does in a fight.
+- **No words, no chime.** The laser no longer puts STEAK! or DRUMSTICK! over the meat, or plays a chime; and the sound
+  of it striking a horse, a crow or a man is no longer a cartoon "pew" but a hard crack, a thump, and a searing hiss
+  with a few pops in it.
+- **Fire that looks like fire.** The burning tumbleweeds are lit with a new particle fire: hundreds of small tongues of
+  flame, torn and flickering, coloured by how hot they are (yellow at the root through orange to dark red at the tips),
+  with sparks flung up, thick black smoke that greys as it smoulders and drifts on the wind, a warm glow on the ground
+  around it, and the twigs themselves glowing hot in patches before they char black. It catches where it's hit,
+  spreads over the weed in under a second, blazes, dies down to embers, and falls in to ash; it crackles as it burns.
+
 ## v47
 - **The tumbleweed you see burns.** There are two kinds of tumbleweed: a few rolling far down the street, and one that
   bounces right past the gallows and the covers. Only the far ones could be shot or set alight (and from the covers the

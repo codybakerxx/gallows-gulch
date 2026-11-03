@@ -286,13 +286,7 @@ function mealReward(at, steak, s) {
   for (let i = 0; i < (steak ? 50 : 26); i++) emit(MEAT.gold, at, _mt1.set(rnd(-1, 1), rnd(-0.3, 1.2), rnd(-1, 1)).normalize().multiplyScalar(rnd(2, 5.5) * (steak ? 1.2 : 0.8)), rnd(0.35, 0.8));
   let ring = MEAT.rings.find(q => q.t >= 1); if (!ring) { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: MEAT.ringTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false })); m.renderOrder = 8; R.scene.add(m); ring = { m, t: 1, r: 1 }; MEAT.rings.push(ring); }
   ring.t = 0; ring.r = steak ? 3.2 : 1.4; ring.m.position.copy(at); ring.m.visible = true;
-  const word = steak ? "STEAK!" : "DRUMSTICK!"; let L = MEAT.labels.find(q => q.t >= 1 && q.word === word);
-  if (!L) { const c = document.createElement("canvas"); c.width = 512; c.height = 128; const g = c.getContext("2d"), font = (getComputedStyle(document.documentElement).getPropertyValue("--font-display") || "Georgia").trim();
-    g.font = `76px ${font}`; g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round"; g.lineWidth = 12; g.strokeStyle = "rgba(40,18,6,0.95)"; g.strokeText(word, 256, 66);
-    const gr = g.createLinearGradient(0, 30, 0, 100); gr.addColorStop(0, "#fff2c4"); gr.addColorStop(0.5, "#f6c453"); gr.addColorStop(1, "#c77a1c"); g.fillStyle = gr; g.fillText(word, 256, 66);
-    const s2 = new THREE.Sprite(new THREE.SpriteMaterial({ map: canvasTex(c), transparent: true, depthWrite: false, depthTest: false, fog: false })); s2.renderOrder = 9; R.scene.add(s2); L = { s: s2, t: 1, word }; MEAT.labels.push(L); }
-  const h = steak ? 0.55 : 0.32; L.t = 0; L.w = h * 4; L.h = h; L.y0 = at.y + (steak ? 1.0 : 0.4); L.s.position.set(at.x, L.y0, at.z); L.s.visible = true; L.s.material.opacity = 0;
-  Sound.ding(at, steak ? 1 : 0.7);
+  // (v48: no words over it, and no chime: the repository owner found them too cartoonish)
 }
 // the shootout's begun: the horse comes through soon
 function horseHurry() { const H = LIFE.horse; if (H && !H.run && !H.dead && !H.meat) H.wait = Math.min(H.wait, 4 + Math.random() * 4); }

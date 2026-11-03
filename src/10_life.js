@@ -74,11 +74,12 @@ function buildWeed() {
   }
   const g = mergeGeos(parts); g.clearGroups();
   const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0xb59466, roughness: 1, side: THREE.DoubleSide })); m.castShadow = true; m.visible = false; R.scene.add(m);
-  LIFE.weed = { m, on: false, wait: 4, x: 0, z: 0, vx: 0, y: 0, vy: 0, rot: 0, rustle: 0, life: true, base: m.material.color.clone(), fire: null, gone: 0 };
+  const glowU = { value: 0 }; weedGlowPatch(m.material, glowU); // (v48: its twigs glow hot where they burn: 12o)
+  LIFE.weed = { m, glowU, on: false, wait: 4, x: 0, z: 0, vx: 0, y: 0, vy: 0, rot: 0, rustle: 0, life: true, base: m.material.color.clone(), fire: null, gone: 0 };
 }
 // v47: this is the tumbleweed you see, bouncing past the gallows and the covers, and it's a target now (12j targetRay): a bullet knocks it
 // on, the laser sets it alight (12o weedFireStep, as for the ones down the street). Burnt away, it's gone till the next one blows in
-function weedLifeReset(W) { W.fire = null; W.gone = 0; W.m.scale.setScalar(1); W.m.material.color.copy(W.base); }
+function weedLifeReset(W) { W.fire = null; W.gone = 0; W.glow = 0; W.glowU.value = 0; W.m.scale.setScalar(1); W.m.material.color.copy(W.base); }
 const _wc = new THREE.Color();
 // a tumbleweed is a light, springy, lumpy ball: wind drag pushes it, gravity and the ground make it bounce and roll; its uneven shape makes it hop
 const _w1 = new THREE.Vector3(), _w2 = new THREE.Vector3(), _w3 = new THREE.Vector3(), _wq = new THREE.Quaternion();
@@ -123,7 +124,7 @@ function updateWeed(dt) {
     const wl = W.w.length(); if (wl > 1e-5) { _wq.setFromAxisAngle(_w1.copy(W.w).divideScalar(wl), wl * h); W.q.premultiply(_wq).normalize(); }
   }
   W.m.position.copy(W.p); W.m.quaternion.copy(W.q);
-  if (W.fire) { W.c = W.c || V3(); W.c.copy(W.p); W.rad = W.r; const k = weedFireStep(W, dt, _wc); W.m.scale.setScalar(Math.max(0.001, k)); W.m.material.color.copy(W.base).multiply(_wc); // (alight: 12o)
+  if (W.fire) { W.c = W.c || V3(); W.c.copy(W.p); W.rad = W.r; const k = weedFireStep(W, dt, _wc); W.m.scale.setScalar(Math.max(0.001, k)); W.m.material.color.copy(W.base).multiply(_wc); W.glowU.value = W.glow || 0; // (alight: 12o)
     if (W.gone > 0) { W.on = false; W.m.visible = false; W.wait = W.gone; weedLifeReset(W); return; } } // (burnt to ash: the next blows in after a while)
   W.rustle -= dt; if (W.rustle < 0 && W.p.y < groundHeight(W.p.x, W.p.z) + W.r * 1.15) { W.rustle = 0.22; Sound.rustle(W.m.position, Math.min(0.4, W.v.length() * 0.1)); }
   if (W.p.x > 20 || Math.abs(W.p.z) > 30) { W.on = false; W.m.visible = false; W.wait = 7 + Math.random() * 14; weedLifeReset(W); }

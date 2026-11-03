@@ -348,7 +348,7 @@ function updateTurn(dt) {
   C.safeT -= dt; C.speed += (K.speed2 - C.speed) * Math.min(1, dt * 1.5); C.latV = (0 - C.lat) * 1.2; C.lat += C.latV * dt; C.s += C.speed * dt; recycleObstacles();
   C.yawOff = Math.PI * Ease.inOut(k); placeHorse(C.horse, C.s, C.lat, C.latV, C.speed, dt, 0); gallopFeet(C.horse, dt, null, 0.8); Sound.rush(C.speed / K.speed);
   if (k >= 1) { chaseState("combat"); C.yawOff = Math.PI; C.ay = C.ap = C.cy = C.cp = 0; chaseUI("combat"); chaseHud();
-    const touch = matchMedia("(pointer: coarse)").matches; chaseTip(C.laser ? (touch ? "Drag to aim · hold Fire for the beam" : "Aim with the mouse · hold the button for the beam") : touch ? "Drag to aim · Fire · five in the gun, one reload" : "Aim with the mouse · Click to fire · five in the gun, one reload", 3.6);
+    const touch = matchMedia("(pointer: coarse)").matches; chaseTip(C.laser ? (touch ? "Drag to aim · hold Fire for the beam" : "Aim with the mouse · hold the button for the beam") : touch ? "Drag to aim · Fire · three in the gun, one reload" : "Aim with the mouse · Click to fire · three in the gun, one reload", 3.6);
     C.swerve = { seg: "calm", t: 0, dur: rnd(K.swerve.calm[0], K.swerve.calm[1]), from: C.lat, to: C.lat }; }
 }
 // the second half: the horse keeps to the trail and swerves round what's on it by itself, a steady spell, a swerve, a steady spell; you shoot
@@ -562,7 +562,8 @@ function chaseCapture(from) {
     R.camera.updateMatrixWorld(); const H = C.horse, dir = V3(Math.sin(H.yaw), 0, Math.cos(H.yaw)), side = Math.random() < 0.5 ? -1 : 1, R0 = C.riders[0];
     C.cap.fall = { t: 0, p: R.camera.position.clone(), q: R.camera.quaternion.clone(), v: dir.multiplyScalar(C.speed * 0.8), side, r: V3(1, 0, 0).applyQuaternion(R.camera.quaternion).setY(0).normalize() }; /* (r: the view's right: he rolls and falls the same way) */ $("chaseTip").hidden = true;
     Sound.clip(siegePick("far", 4), R0 && R0.H.grp.position, 1.2, 0, 0.35, rnd(0.95, 1.05), 9); Sound.thud(R.camera.position, 0.9); Sound.clip(siegePick("painm", 7), null, 1.1, 0.06, 0.1, rnd(0.95, 1.02), 3);
-    C.hurt = 1; CAM.shake = Math.max(CAM.shake, reduceMotion() ? 0.3 : 1.4); setTimeout(() => { if (C.state === "captured") Sound.thud(R.camera.position, 1); }, 650); }
+    C.hurt = 1; CAM.shake = Math.max(CAM.shake, reduceMotion() ? 0.3 : 1.4); setTimeout(() => { if (C.state === "captured") Sound.thud(R.camera.position, 1); }, 650);
+    screenBlood(4); $("hurt").style.opacity = 1; Sound.clip(siegePick("hurt", 3), null, 1.0, 0.03, 0.1, rnd(0.96, 1.04)); } // (v48: shot, and you see it: blood across the view, as when they hit you in a fight)
   chaseMsg(from === "ride" ? "<b>Shot</b><span>They caught up with you</span>" : `<b>Captured</b><span>${from === "ammo" ? "An empty gun and riders still coming" : "That's the last of your luck"}</span>`, 2.4, "captured"); Sound.stinger(); Sound.rush(0);
 }
 // shot off the horse in the run: carried on a little, over sideways and down into the dirt, looking up at the sky as the horse runs on
@@ -571,7 +572,7 @@ function chaseFallCam(rdt) {
   p.addScaledVector(F.r, -F.side * 1.6 * Ease.out(Math.min(1, t / 0.7))); // (off to the side he's going over, clear of the horse)
   const g = groundVis(p.x, p.z) + 0.32; p.y = Math.max(g, F.p.y + 1.1 * t - 4.9 * t * t); const land = clamp((F.p.y - p.y) / Math.max(0.1, F.p.y - g), 0, 1);
   cam.position.copy(p); cam.quaternion.copy(F.q).multiply(_cq1.setFromEuler(_ce.set(0.95 * Ease.inOut(Math.min(1, t / 0.9)), 0, F.side * 1.25 * Ease.inOut(Math.min(1, t / 0.8)), "YXZ")));
-  if (land > 0.98 && !F.landed) { F.landed = true; kickDust(_c2.copy(p).setY(g - 0.3), 14, 1.2, 1.4, 1.2, 1.5); }
+  if (land > 0.98 && !F.landed) { F.landed = true; kickDust(_c2.copy(p).setY(g - 0.3), 14, 1.2, 1.4, 1.2, 1.5); screenBlood(2); } // (and more as you hit the dirt)
   cam.updateMatrixWorld();
 }
 function updateCaptured(rdt, dt) { const C = CHASE, K = CHASE_CFG; C.cap.t += rdt; C.speed = Math.max(0, C.speed - dt * 8); C.s += C.speed * dt; placeHorse(C.horse, C.s, C.lat, 0, C.speed, dt, 0);
@@ -582,7 +583,7 @@ function chaseResults(won) {
   const S = C.stats, acc = S.shots ? Math.min(100, Math.round(S.hits / S.shots * 100)) : 0, score = (won ? 1000 : 0) + S.downed * 150 + (won ? Math.round(acc * 3) : 0) + (won && !S.bumps ? 200 : 0) + Math.round(Math.max(0, C.s) / 10);
   STATE.bestRide = Math.max(STATE.bestRide || 0, score); if (won) STATE.rides = (STATE.rides || 0) + 1; savePrefs();
   $("resTitle").textContent = won ? "The End" : C.cap && C.cap.from === "ride" ? "Shot Down" : "Captured"; $("resTitle").className = won ? "" : "lose";
-  $("resLine").textContent = won ? "You killed every last one. Should've watched the road." : C.cap && C.cap.from === "ride" ? "They caught you on the trail and shot you out of the saddle. The rope was still warm." : C.cap && C.cap.from === "ammo" ? "Ten rounds, and not enough of them hit anything. They took their time." : "Shot out of the saddle. They took you back to town, what was left of you.";
+  $("resLine").textContent = won ? "You killed every last one. Should've watched the road." : C.cap && C.cap.from === "ride" ? "They caught you on the trail and shot you out of the saddle. The rope was still warm." : C.cap && C.cap.from === "ammo" ? "Six rounds, and not enough of them hit anything. They took their time." : "Shot out of the saddle. They took you back to town, what was left of you.";
   const row = (k, v) => `<dt>${k}</dt><dd>${v}</dd>`;
   $("resStats").innerHTML = row("Riders downed", `${S.downed} of ${C.riders.length}`) + row("Shots", `${S.shots}${S.shots ? ` · ${acc}% hit` : ""}`) + row("Collisions", S.bumps) + row("Time", `${Math.round(S.t)} s`) + (won ? row("Getaway", "Complete") : "");
   $("resScore").textContent = `Score: ${score} · Best: ${STATE.bestRide}`;

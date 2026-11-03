@@ -40,7 +40,7 @@ E("""(async () => { const S = SIEGE, D = DRESS.weeds; if (!D) return __check('a 
       if (w.p.distanceTo(at.setY(0)) > 0.3) { why.moved++; continue; } const c = w.c.clone(), rd = c.clone().sub(ro).normalize(), e = sceneryRay(ro, rd, 80); if (!e || e.distance > c.distanceTo(ro)) { spot = c; break; } why.blocked++; why.last = [+c.distanceTo(ro).toFixed(1), e && +e.distance.toFixed(1)]; } if (spot) break; }
   if (!spot) { __windBack(); return __check('a tumbleweed in the beam catches fire', false, { err: 'no clear spot', why }); }
   const got = await __track(() => { w.vy = Math.min(w.vy, 0); return w.c.clone(); }, (ro, rd) => { const h = targetRay(ro, rd), e = sceneryRay(ro, rd, 80); return h && h.weed === w && (!e || h.t < e.distance); }, 120);
-  laserTrigger(true); await __go(8); laserTrigger(false); const lit = !!w.fire; /* (the beam comes on a frame or two after the trigger) */ await __go(30); const flames = FIRE.list.filter(f => f.t < f.life && !f.core).length; const col = new THREE.Color(); D.im.getColorAt(0, col);
+  laserTrigger(true); await __go(8); laserTrigger(false); const lit = !!w.fire; /* (the beam comes on a frame or two after the trigger) */ await __go(30); const flames = fireLive(); const col = new THREE.Color(); D.im.getColorAt(0, col);
   return __check('a tumbleweed on the ground in the beam catches fire', got && lit && flames > 10 && col.r < 0.5, { got, lit, flames, colour: +col.r.toFixed(2), spot: spot.toArray().map(v => +v.toFixed(1)) }); })()""")
 shot("a_weed_fire")
 E("""(async () => { const p = __W.c; window.__cam = { p: [p.x + 3.2, p.y + 1.4, p.z + 3.2], t: [p.x, p.y + 0.6, p.z], fov: 45 }; await __go(2); return 1; })()""")
@@ -58,7 +58,7 @@ E("""(async () => { const S = SIEGE, W = LIFE.weed, C = S.covers[S.cover], saved
   if (!spot) { __windBack(); return __check('the tumbleweed by the gallows catches fire in the beam', false, { err: 'no clear spot', why }); }
   const hold = () => { W.p.x = spot.x; W.p.z = spot.z; W.v.x = W.v.z = 0; return false; };
   const got = await __track(() => { hold(); return W.p.clone(); }, (ro, rd) => { const h = targetRay(ro, rd), e = sceneryRay(ro, rd, 80); return h && h.weed === W && (!e || e.distance > h.t); }, 120);
-  laserTrigger(true); await __go(8, hold); laserTrigger(false); const lit = !!W.fire; await __go(30, hold); const flames = FIRE.list.filter(f => f.t < f.life && !f.core).length, col = W.m.material.color.r / W.base.r;
+  laserTrigger(true); await __go(8, hold); laserTrigger(false); const lit = !!W.fire; await __go(30, hold); const flames = fireLive(), col = W.m.material.color.r / W.base.r;
   return __check('the tumbleweed by the gallows catches fire in the beam', got && lit && flames > 10 && col < 0.5, { got, lit, flames, colour: +col.toFixed(2), at: spot.toArray().map(v => +v.toFixed(1)) }); })()""")
 E("""(async () => { const p = LIFE.weed.p; window.__cam = { p: [p.x + 3.2, p.y + 1.4, p.z + 3.2], t: [p.x, p.y + 0.6, p.z], fov: 45 }; await __go(2); return 1; })()""")
 shot("a3_gallows_weed_fire")
@@ -91,7 +91,7 @@ E("""(async () => { const S = SIEGE; revTake && LASER.state === 'held' && (S.cov
 E("""(async () => { const C = CHASE; for (const ob of C.obs) dropObstacle(ob); C.obs = []; C.rows = []; C.nextRow = 1e9; await __go(400, () => C.state === 'combat' && C.safeT <= 0); C.hp = 99; C.attackT = 99;
   const r0 = C.rounds, n0 = C.reloads; C.ay = 0.9; C.ap = 0.6; for (let i = 0; i < r0; i++) { C.cool = 0; chaseFire(); await __go(2); } await __go(140, () => C.reloadT <= 0); const after = [C.rounds, C.reloads];
   for (let i = 0; i < 5; i++) { C.cool = 0; chaseFire(); await __go(2); } await __go(60); const dry = { rounds: C.rounds, reloads: C.reloads, doom: !!C.doom };
-  return __check('the getaway revolver: five in the gun, one reload', r0 === 5 && n0 === 1 && after[0] === 5 && after[1] === 0 && dry.rounds === 0 && dry.reloads === 0 && dry.doom, { first: r0, reloads: n0, after, dry }); })()""")
+  return __check('the getaway revolver: three in the gun, one reload (v48; five in v42)', r0 === 3 && n0 === 1 && after[0] === 3 && after[1] === 0 && dry.rounds === 0 && dry.reloads === 0 && dry.doom, { first: r0, reloads: n0, after, dry }); })()""")
 # ---- the riders sit upright ----
 E("""(async () => { chaseRetry(); const C = CHASE; await __go(600, () => C.state === 'ride'); C.s = C.turnAt - 4; for (const ob of C.obs) dropObstacle(ob); C.obs = []; C.rows = []; C.nextRow = 1e9; await __go(400, () => C.state === 'combat' && C.safeT <= 0);
   let worst = 0, side = 0; for (let k = 0; k < 40; k++) { C.hp = 99; await __go(3, () => { C.hp = 99; return false; }); for (const r of C.riders) { if (!r.alive) continue; const B = r.a.ch.bones, d = B.Head.getWorldPosition(V3()).sub(B.Spine.getWorldPosition(V3())).applyQuaternion(r.a.root.quaternion.clone().invert());

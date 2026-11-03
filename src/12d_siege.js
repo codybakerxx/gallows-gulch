@@ -13,7 +13,7 @@
 // of sight between shots. Now and then one of them calls out to you (taunt). Every hit you take shows: the heart breaks in the top bar
 // and a banner says how many you've got left.
 // your revolver and your hearts: the same in the shootout and in the getaway (12g), and drawn the same way in the top bar (gunHud)
-const GUN = { rounds: 5, reloads: 1, /* (rounds: the getaway's cylinder, v42: five, was six) */ reload: 1.6, hearts: 5 }; // (rounds in the cylinder; reloads you get, each automatic when it's empty; seconds a reload takes)
+const GUN = { rounds: 3, reloads: 1, /* (rounds: the getaway's cylinder, v42: five, was six; v48: three) */ reload: 1.6, hearts: 5 }; // (rounds in the cylinder; reloads you get, each automatic when it's empty; seconds a reload takes)
 const SIEGE_ROUNDS = 7; // (the town shootout's revolver: eight in v37, one fewer a load in v40; the getaway's still six)
 const SIEGE_CFG = { window: 4.0, bullets: SIEGE_ROUNDS, health: GUN.hearts, grace: 2.5, telegraph: 0.3, gap: [1.8, 3.0], hitUp: 0.5, hitRun: 0.3, react: 0.3,
   speed: [3.0, 3.7], hold: [0.8, 1.9], // how fast they dash between their spots (m/s), and how long they hold each one
