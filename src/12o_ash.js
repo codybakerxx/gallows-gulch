@@ -225,7 +225,7 @@ function weedFireStep(w, dt, col) {
   const k = 1 - 0.45 * sm(3.4, 4.9, t) - 0.55 * sm(4.7, WEED_BURN, t);
   const pt = out => { const u = _a2.set(rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)); if (u.lengthSq() > 1) u.multiplyScalar(0.7); return out.copy(F.o).lerp(u.multiplyScalar(r * 0.75 * k), spread).add(c); }; // (somewhere in it that's alight)
   F.acc += dt * (80 * blaze + 14 * dying); while (F.acc >= 1) { F.acc -= 1; const p = pt(_a1), h = (0.55 + 0.45 * blaze) * rnd(0.75, 1);
-    fireEmit(FIREFX.flames, p, rnd(-0.15, 0.15), rnd(0.55, 1.15) * (0.6 + 0.4 * blaze), rnd(-0.15, 0.15), rnd(0.42, 0.85), r * rnd(1.0, 1.8) * (0.45 + 0.55 * blaze + 0.2 * dying), h); }
+    fireEmit(FIREFX.flames, p, rnd(-0.15, 0.15), rnd(0.5, 1.0) * (0.45 + 0.55 * blaze), rnd(-0.15, 0.15), rnd(0.38, 0.75) * (0.55 + 0.45 * blaze), r * rnd(1.0, 1.8) * (0.4 + 0.6 * blaze + 0.15 * dying), h); } // (dying: lower, shorter-lived tongues, close on the embers)
   F.kAcc += dt * (16 * blaze + 7 * dying); while (F.kAcc >= 1) { F.kAcc -= 1; const p = pt(_a1); fireEmit(FIREFX.flames, p, rnd(-0.7, 0.7), rnd(1.4, 3.6), rnd(-0.7, 0.7), rnd(0.6, 1.5), 0.035, -1); } // (sparks)
   F.sAcc += dt * (18 * blaze + 11 * dying); while (F.sAcc >= 1) { F.sAcc -= 1; _a1.set(c.x + rnd(-r, r) * 0.4, c.y + r * (0.9 + blaze * 1.3), c.z + rnd(-r, r) * 0.4); // (smoke: off the top of the flames)
     fireEmit(FIREFX.smoke, _a1, rnd(-0.12, 0.12), rnd(0.55, 0.95), rnd(-0.12, 0.12), rnd(2.2, 3.6), r * rnd(1.8, 2.9), dying > blaze ? -(0.4 + 0.25 * dying) : 0.55 + 0.35 * blaze); }
@@ -246,7 +246,7 @@ function weedGlowPatch(mat, uniform) {
     sh.vertexShader = (uniform ? "uniform float uGlow;\n" : "attribute float aGlow;\n") + "varying float vGlow; varying vec3 vTw;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vGlow = " + (uniform ? "uGlow" : "aGlow") + "; vTw = position;");
     sh.fragmentShader = "uniform float uFireT; varying float vGlow; varying vec3 vTw;\n" + sh.fragmentShader.replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
       if (vGlow > 0.001) { float tw = fract(sin(dot(floor(vTw * 13.0), vec3(12.9898, 78.233, 37.719))) * 43758.5453);
-        float fl = 0.7 + 0.3 * sin(uFireT * 13.0 + tw * 40.0); totalEmissiveRadiance += vec3(1.0, 0.32, 0.05) * vGlow * (0.15 + 0.85 * tw * tw) * fl * 3.5; }`); }; }
+        float fl = 0.7 + 0.3 * sin(uFireT * 13.0 + tw * 40.0); totalEmissiveRadiance += vec3(1.0, 0.3, 0.04) * vGlow * (0.03 + 0.97 * tw * tw * tw) * fl * 2.6; }`); }; }
 
 // ---- meat on the ground (v39) ----
 const _ami = new THREE.Matrix4();
