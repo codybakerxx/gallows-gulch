@@ -9,8 +9,8 @@ The version numbers are the published versions of the game (first published as a
 - **The chambers stop spinning.** The cylinder in the top left spins while a reload goes in. If the shootout or the
   revolver from the barrel ended mid-reload, it went on spinning for good, even in the hangman game.
 - **No ropes on the end signs.** GAME OVER and the getaway's results no longer hang from two ropes.
-- **A harder run.** Half as many rows again (the rows come a third closer together), and the horse builds to 100 km/h
-  by the end (was 90).
+- **A harder run.** Half as many obstacles again: about 120 a course (was 79), with the rows closer together, most of
+  all early on, over a course 10% longer. The horse builds to 100 km/h by the end (was 90).
 
 ## v45
 - **The host can be shot.** From the barrel, before any shootout, a shot at the host used to whip past him. Now he goes

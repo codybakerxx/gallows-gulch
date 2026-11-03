@@ -3,10 +3,10 @@
 // together and harder to read, and the posse behind gains on you every time you hit something. Nothing on screen to press. ----------
 const RUN = {
   lanes: [-2.3, 0, 2.3], shift: 0.19,                  // lane centres across the trail (m); seconds to change lane
-  speed0: 19.5, speed1: 27.8, fx0: 13, first: 70, course: 1000, // m/s at the start and the end of the course (v34: flat out the whole way; v41: and faster as it goes, over a longer course; v42: 70 to 90 km/h; v46: to 100); the speed the view's
+  speed0: 19.5, speed1: 27.8, fx0: 13, first: 70, course: 1100, // m/s at the start and the end of the course (v34: flat out the whole way; v41: and faster as it goes, over a longer course; v42: 70 to 90 km/h; v46: to 100); the speed the view's
                                                         // stretch and blur count up from; where the first row is; how long the course runs
   jump: { up: 1.5, dur: 0.76 },                         // how high (m) and how long (s) a jump is
-  react: [0.87, 0.5], spread: 0.3,                      // seconds between rows at the start and the end (plus up to this share more, at random; v42: closer, more rows; v46: half as many again)
+  react: [0.7, 0.6], spread: 0.3,                       // seconds between rows at the start and the end (plus up to this share more, at random; v42: closer, more rows; v46: half as many obstacles again, over a course 10% longer: 120 a course, was 79)
   horse: { half: 0.42, front: 1.45, back: 1.15 },       // the horse for collisions: half its width; nose and rump from the saddle (m)
   hit: { crash: 14, trip: 9, scrape: 5 },               // metres the posse gains when you ride into something, trip on it, or clip it changing lane
   slow: { crash: 0.42, trip: 0.62, scrape: 0.86 }, recover: 1.5, ghost: 0.55, // how hard each checks the horse; seconds back to full speed; seconds after a hit when nothing else can
