@@ -105,6 +105,12 @@ function signRestore() {
 }
 // a sign coming up (or a new round, a new ride): straight back to the game's view
 function freeReset() { FREE.on = false; FREE.which = null; FREE.yaw = FREE.pitch = 0; FREE.ease = false; if ($("signShow")) { $("signShow").hidden = true; $("lookHint").hidden = true; } }
+// v52: once a round's over (its sign up, or put away to look round; the shootout won or lost; the getaway's results up) the bottom panel goes
+// altogether: there's nothing left in it to press, so the view takes the whole screen. It's back the moment there is: a revolver taken up
+// from the barrel, a retry of the getaway, a new round
+const ENDP = { on: false };
+function endPanel() { const S = SIEGE, on = !ARMED.on && (!$("sign").hidden || !$("chaseRes").hidden || FREE.on || (S.on && (S.phase === "dead" || S.phase === "won")));
+  if (on !== ENDP.on) { ENDP.on = on; $("app").classList.toggle("over", on); } }
 function freeTurn(dx, dy) { const k = 0.0042 * (R.camera.fov / 52) * (1 + Math.min(2.5, Math.hypot(dx, dy) / 14)); FREE.ease = false; FREE.yaw -= dx * k; FREE.pitch = clamp(FREE.pitch - dy * k, -1.45, 1.45); }
 // last, after everything that places the camera (12c tick): turn it by as far as you've dragged
 function freeApply(rdt) {

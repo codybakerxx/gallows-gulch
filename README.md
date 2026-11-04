@@ -175,7 +175,7 @@ filmed in a few shots. You can skip it after the first time. Then **Retry chase*
 
 **The signs at the end.** Every end sign (GAME OVER, YOU SAVED HIM, YOU SURVIVED, and the getaway's results) has a
 button at its top right to put it away. With it away, drag anywhere to look round, all the way round and from your
-boots to the sky; **Show the sign** brings it back. The getaway's results sign sits in the middle of the screen. The sword can still be taken up while it's away. The menu has a red **X** to close it.
+boots to the sky; **Show the sign** brings it back. The getaway's results sign sits in the middle of the screen. Once a round's over, the bottom panel (the letters, or the shootout's pad) goes and the view fills the screen; it's back for a new round, a retry, or a revolver taken up. The sword can still be taken up while it's away. The menu has a red **X** to close it.
 
 The run takes about a minute and the fight about 20–40, depending on your shooting. The run's numbers (lanes,
 speeds, jumps, the course, what a hit costs) are in `RUN` at the top of `src/12h_runner.js`; the fight's and the

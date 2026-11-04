@@ -148,6 +148,7 @@ button:focus-visible,input:focus-visible+span,input[type=range]:focus-visible{ou
 #hp{gap:1px}
 /* the run (and the ride up to it, and the cliff): the view takes the whole screen; nothing to press, it takes swipes */
 #app.run #kb{display:none}
+#app.over #kb{display:none} /* (v52: the round's over and the panel's empty: gone, and the view fills the screen; endPanel) */
 #app.run #chaseTip{bottom:max(18px,env(safe-area-inset-bottom,0px))}
 /* the cliff: letterboxed, the top bar gone */
 #cineBars{position:absolute;inset:0;z-index:4;pointer-events:none}

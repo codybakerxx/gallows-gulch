@@ -2,6 +2,13 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v52
+- **No empty panel once a round's over.** Under every end screen (GAME OVER, YOU SAVED HIM, YOU SURVIVED, the
+  getaway's results) and with the sign put away to look round, the bottom panel is gone and the view fills the screen.
+  The same goes from the moment the shootout's won (after Done) or you're shot dead. It's back the moment there's
+  something in it to press: a revolver taken up from the barrel (the pad), a retry of the getaway, or a new round (the
+  letters). (`endPanel`, `#app.over`.)
+
 ## v51
 - **The getaway's hoofbeats are the repository owner's recording.** The recording is cut into 24 single hoof hits on
   dirt (`tools/cut_gallop.py`, `assets/audio/sfx/gallop.mp3`), and one is played for every hoof that lands, your own
