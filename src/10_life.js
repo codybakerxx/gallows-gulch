@@ -14,39 +14,38 @@ function weldMorph(g) {
 }
 function prepHorse(gltf) {
   let mesh; gltf.scene.traverse(o => { if (o.isMesh) mesh = o; });
-  const g = weldMorph(mesh.geometry); mesh.geometry = g; mesh.updateMorphTargets();
+  const g0 = weldMorph(mesh.geometry); horseRegions(g0); // (what part of the horse each vertex is, from the model's paint; 10b)
+  let g = subdivideMorph(g0, 0.75); // (a smoother body: one level of Loop subdivision, morph targets and all; 10b)
   const bb = baseBox(g), h = bb.max.y - bb.min.y, s = 2.2 / h; // ~2.2 m to the top of the head
-  // a bay: warm brown coat with a soft sheen, darker legs, mane and tail (from the bind pose, so it rides with the gallop)
-  const m = new THREE.MeshPhysicalMaterial({ color: 0x6a3f24, roughness: 0.55, sheen: 0.6, sheenRoughness: 0.45, sheenColor: new THREE.Color(0x8a5a3a) });
-  const y0 = bb.min.y.toFixed(1), y1 = bb.max.y.toFixed(1), z0 = bb.min.z.toFixed(1), z1 = bb.max.z.toFixed(1);
-  m.onBeforeCompile = sh => {
-    sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vBind;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvBind = position;");
-    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vBind;").replace("#include <map_fragment>", `#include <map_fragment>
-      float hy = (vBind.y - ${y0}) / (${y1} - ${y0}), hz = (vBind.z - ${z0}) / (${z1} - ${z0});
-      float legs = 1.0 - smoothstep(0.18, 0.34, hy), mane = smoothstep(0.78, 0.9, hy) * smoothstep(0.55, 0.75, hz), tail = smoothstep(0.25, 0.08, hz) * smoothstep(0.35, 0.5, hy);
-      float dk = max(legs * 0.85, max(mane, tail));
-      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.045, 0.032, 0.025), dk);
-      diffuseColor.rgb *= 0.92 + 0.08 * sin(vBind.x * 0.3) * sin(vBind.z * 0.21);`);
-  };
+  { // the horse's own frame (metres, on the ground): fold the paddle of a tail into the dock, normals for every pose, and where the tack attaches
+    const M = new THREE.Matrix4().makeScale(s, s, s).premultiply(new THREE.Matrix4().makeTranslation(0, -bb.min.y * s, 0)), P = g.attributes.position, v = new THREE.Vector3();
+    const isTail = q => q.z < -1.27 && q.y > 1.15; let dockI = 0, dBest = 1e9;
+    for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(M); if (isTail(v)) continue; const d = v.distanceToSquared(_v1.set(0, 1.62, -1.18)); if (d < dBest) { dBest = d; dockI = i; } }
+    foldTail(g, M, isTail, dockI); g.computeVertexNormals(); morphNormals(g); HORSE.geo = g; HORSE.M = M; HORSE.s = s; horseAux(g, M); prepHorseRig(g, M); horseStandPrep(); } // (and a horse that stands still, for the town's horses: 10b, 12n)
+  mesh.geometry = g; mesh.updateMorphTargets();
+  // a bay: a warm brown coat with black points, a soft sheen and hair you can see up close (10b)
+  const m = horseCoatMat(0x6a3f24, { points: 1, pointCol: 0x0d0a08 });
   mesh.material = m; mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false;
   const grp = new THREE.Group(); grp.add(gltf.scene); gltf.scene.scale.setScalar(s); gltf.scene.position.y = -bb.min.y * s; grp.visible = false;
   R.scene.add(grp);
   const mixer = new THREE.AnimationMixer(gltf.scene); const act = mixer.clipAction(gltf.animations[0]); act.play();
-  LIFE.horse = { grp, mixer, act, t: 0, wait: 12 + Math.random() * 10, run: null, stepT: 0, dustT: 0 };
+  LIFE.horse = { grp, mesh, mixer, act, t: 0, wait: 12 + Math.random() * 10, run: null, stepT: 0, dustT: 0 };
 }
 // now and then a loose horse bolts in from the side of town and gallops off down the street into the sunset
 function updateHorse(dt) {
   const H = LIFE.horse; if (!H) return;
+  if (H.meat) { horseMeatStep(H, dt); return; } if (H.dead) { horseFallStep(H, dt); return; } // (shot: 12l)
   if (!H.run) { H.wait -= dt; if (H.wait > 0) return;
-    const pts = [streetPt(-3, 24), streetPt(14, 2.5 + Math.random()), streetPt(110, -1 + Math.random() * 2)].map(q => V3(q[0], 0, q[1]));
-    H.run = { pts, seg: 0, d: 0, v: 5 }; H.grp.visible = true; H.yaw = Math.atan2(pts[1].x - pts[0].x, pts[1].z - pts[0].z); }
+    const fight = SIEGE.on && SIEGE.phase !== "chase"; // (in the shootout it gallops right across the street just past the gallows, where it can be seen and hit from the cover, then off up the street)
+    const pts = (fight ? [streetPt(4, 14), streetPt(5.5, 7), streetPt(5.5, -7), streetPt(16, -2.5), streetPt(70, -1 + Math.random() * 2)] : [streetPt(-3, 24), streetPt(14, 2.5 + Math.random()), streetPt(110, -1 + Math.random() * 2)]).map(q => V3(q[0], 0, q[1]));
+    H.run = { pts, seg: 0, d: 0, v: 5 }; H.grp.visible = true; H.yaw = Math.atan2(pts[1].x - pts[0].x, pts[1].z - pts[0].z); if (!H.tack) horseTack(H, { saddle: false }); horseTackShow(H, true); }
   const Rn = H.run; let a = Rn.pts[Rn.seg], b = Rn.pts[Rn.seg + 1], len = a.distanceTo(b);
   Rn.v = Math.min(7.5, Rn.v + dt * 3); Rn.d += Rn.v * dt;
-  if (Rn.d >= len) { Rn.d -= len; Rn.seg++; if (Rn.seg >= Rn.pts.length - 1) { H.run = null; H.grp.visible = false; H.wait = 45 + Math.random() * 40; return; } a = Rn.pts[Rn.seg]; b = Rn.pts[Rn.seg + 1]; len = a.distanceTo(b); }
+  if (Rn.d >= len) { Rn.d -= len; Rn.seg++; if (Rn.seg >= Rn.pts.length - 1) { H.run = null; H.grp.visible = false; horseTackShow(H, false); H.wait = SIEGE.on ? 9 + Math.random() * 7 : 45 + Math.random() * 40; return; } a = Rn.pts[Rn.seg]; b = Rn.pts[Rn.seg + 1]; len = a.distanceTo(b); }
   const p = _v1.copy(a).lerp(b, Rn.d / len); p.y = groundHeight(p.x, p.z); H.grp.position.copy(p);
   const want = Math.atan2(b.x - a.x, b.z - a.z), dy = ((want - H.yaw + Math.PI) % TAU + TAU) % TAU - Math.PI; H.yaw += dy * Math.min(1, dt * 2.2);
   H.grp.rotation.set(0, H.yaw, -dy * 0.25); // leans into the turn
-  H.act.timeScale = Rn.v / 4.0; H.mixer.update(dt);
+  H.act.timeScale = Rn.v / 4.0; H.mixer.update(dt); H.grp.updateMatrixWorld(true); horseTackUpdate(H, dt);
   H.stepT += dt * Rn.v / 4.0; if (H.stepT > 0.375) { H.stepT = 0; Sound.hoof(H.grp.position); }
   H.dustT -= dt; if (H.dustT < 0 && LIFE.puffs.length < 50) { H.dustT = 0.2; puff(_v2.copy(p).add(_v3.set((Math.random() - 0.5) * 0.4, 0.15, (Math.random() - 0.5) * 0.4)), 5, 0.7, 0.4, 2.2, 0.5); }
 }
@@ -57,13 +56,13 @@ function prepBirds(gltf) {
     mesh.material = new THREE.MeshStandardMaterial({ color: 0x141110, roughness: 0.9 }); mesh.frustumCulled = false; mesh.castShadow = true;
     scn.scale.setScalar(1.9 / span); const grp = new THREE.Group(); grp.add(scn); R.scene.add(grp);
     const mixer = new THREE.AnimationMixer(scn); const act = mixer.clipAction(gltf.animations[0]); act.play(); act.timeScale = 0.55; act.time = i * 0.4;
-    LIFE.birds.push({ grp, mixer, r: 16 + i * 9, h: 26 + i * 7, a: i * 2.4, w: (0.11 - i * 0.03) * (i ? -1 : 1), caw: 6 + i * 5 });
+    LIFE.birds.push({ grp, mixer, r: 16 + i * 9, h: 26 + i * 7, a: i * 2.4, w: (0.11 - i * 0.03) * (i ? -1 : 1), caw: 20 + i * 25 });
   }
 }
 function updateBirds(dt) {
   for (const b of LIFE.birds) { b.a += b.w * dt; const x = LAY.plat.x + Math.cos(b.a) * b.r, z = LAY.plat.z + Math.sin(b.a) * b.r, y = b.h + Math.sin(b.a * 2) * 1.5;
     b.grp.position.set(x, y, z); b.grp.rotation.set(0, -b.a + (b.w > 0 ? 0 : Math.PI), (b.w > 0 ? -0.35 : 0.35));
-    b.mixer.update(dt * (0.6 + 0.4 * Math.max(0, Math.sin(b.a * 3)))); b.caw -= dt; if (b.caw < 0) { b.caw = 9 + Math.random() * 14; Sound.caw(b.grp.position); } }
+    b.mixer.update(dt * (0.6 + 0.4 * Math.max(0, Math.sin(b.a * 3)))); b.caw -= dt; if (b.caw < 0) { b.caw = 40 + Math.random() * 40; Sound.crowCall(b.grp.position.clone(), { v: b.v || (b.v = Sound.crowVoice()), ref: 14, far: 0.12, gain: 0.6 }); } }
 }
 function buildWeed() {
   const r = rng(12), parts = [];
@@ -75,8 +74,13 @@ function buildWeed() {
   }
   const g = mergeGeos(parts); g.clearGroups();
   const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0xb59466, roughness: 1, side: THREE.DoubleSide })); m.castShadow = true; m.visible = false; R.scene.add(m);
-  LIFE.weed = { m, on: false, wait: 4, x: 0, z: 0, vx: 0, y: 0, vy: 0, rot: 0, rustle: 0 };
+  const glowU = { value: 0 }; weedGlowPatch(m.material, glowU); // (v48: its twigs glow hot where they burn: 12o)
+  LIFE.weed = { m, glowU, on: false, wait: 4, x: 0, z: 0, vx: 0, y: 0, vy: 0, rot: 0, rustle: 0, life: true, base: m.material.color.clone(), fire: null, gone: 0 };
 }
+// v47: this is the tumbleweed you see, bouncing past the gallows and the covers, and it's a target now (12j targetRay): a bullet knocks it
+// on, the laser sets it alight (12o weedFireStep, as for the ones down the street). Burnt away, it's gone till the next one blows in
+function weedLifeReset(W) { W.fire = null; W.gone = 0; W.glow = 0; W.glowU.value = 0; W.m.scale.setScalar(1); W.m.material.color.copy(W.base); }
+const _wc = new THREE.Color();
 // a tumbleweed is a light, springy, lumpy ball: wind drag pushes it, gravity and the ground make it bounce and roll; its uneven shape makes it hop
 const _w1 = new THREE.Vector3(), _w2 = new THREE.Vector3(), _w3 = new THREE.Vector3(), _wq = new THREE.Quaternion();
 const WEED_LOBES = (() => { const r = rng(77), L = []; for (let i = 0; i < 7; i++) L.push(V3(r() - 0.5, r() - 0.5, r() - 0.5).normalize()); return L; })();
@@ -84,7 +88,7 @@ function weedRadius(W, down) { // contact radius along a world direction, from t
   _w3.copy(down).applyQuaternion(_wq.copy(W.q).invert()); let k = 0; for (const L of WEED_LOBES) k += Math.pow(Math.max(0, _w3.dot(L)), 6);
   return W.r * (0.9 + 0.16 * k); }
 function spawnWeed(W) {
-  W.on = true; W.m.visible = true; W.p.set(-19, 0, 0.2 + Math.random() * 2.2); W.p.y = groundHeight(W.p.x, W.p.z) + W.r + 0.3;
+  weedLifeReset(W); W.on = true; W.m.visible = true; W.p.set(-19, 0, 0.2 + Math.random() * 2.2); W.p.y = groundHeight(W.p.x, W.p.z) + W.r + 0.3;
   W.v.set(WIND.v.x * 0.8, 0, WIND.v.z * 0.5); W.w.set(0, 0, -W.v.x / W.r); W.q.setFromEuler(new THREE.Euler(Math.random() * 6, Math.random() * 6, Math.random() * 6));
 }
 function updateWeed(dt) {
@@ -120,8 +124,10 @@ function updateWeed(dt) {
     const wl = W.w.length(); if (wl > 1e-5) { _wq.setFromAxisAngle(_w1.copy(W.w).divideScalar(wl), wl * h); W.q.premultiply(_wq).normalize(); }
   }
   W.m.position.copy(W.p); W.m.quaternion.copy(W.q);
+  if (W.fire) { W.c = W.c || V3(); W.c.copy(W.p); W.rad = W.r; const k = weedFireStep(W, dt, _wc); W.m.scale.setScalar(Math.max(0.001, k)); W.m.material.color.copy(W.base).multiply(_wc); W.glowU.value = W.glow || 0; // (alight: 12o)
+    if (W.gone > 0) { W.on = false; W.m.visible = false; W.wait = W.gone; weedLifeReset(W); return; } } // (burnt to ash: the next blows in after a while)
   W.rustle -= dt; if (W.rustle < 0 && W.p.y < groundHeight(W.p.x, W.p.z) + W.r * 1.15) { W.rustle = 0.22; Sound.rustle(W.m.position, Math.min(0.4, W.v.length() * 0.1)); }
-  if (W.p.x > 20 || Math.abs(W.p.z) > 30) { W.on = false; W.m.visible = false; W.wait = 7 + Math.random() * 14; }
+  if (W.p.x > 20 || Math.abs(W.p.z) > 30) { W.on = false; W.m.visible = false; W.wait = 7 + Math.random() * 14; weedLifeReset(W); }
 }
 function buildDust() {
   const n = R.tier === "low" ? 120 : 320, pos = new Float32Array(n * 3), r = rng(31);
