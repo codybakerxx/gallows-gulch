@@ -44,7 +44,7 @@ function chaseState(next) { // the one way a state changes: only from the states
   const C = CHASE, ok = !STATE_FROM[next] || STATE_FROM[next].includes(C.state); if (!ok) return false; C.state = next; C.st = 0; return true; }
 function chaseLive() { return CHASE.on; } // (the menu can send you back to it, at any point from the mount to the results)
 const reduceMotion = () => !!STATE.reduceMotion;
-const CHASE_CLIPS = ["shout0", "shout1", "shout2", "shout3", "shout4", "shout5", "scream0", "canyon0"]; // (fetched when the bell is first rung, or at the start of the ride)
+const CHASE_CLIPS = ["shout0", "shout1", "shout2", "shout3", "shout4", "shout5", "scream0", "canyon0", "gallop"]; // (fetched when the bell is first rung, or at the start of the ride)
 
 // ---- the posse ----
 const POSSE = [
@@ -235,7 +235,7 @@ function startGetaway() {
   if (CHASE.on || !LIFE.horse) return; buildChase(); BELL.pending = false;
   const S = SIEGE; S.phase = "chase"; S.threat = null; S.holding = S.keyAim = false; $("clearMsg").hidden = true; $("warn").hidden = true; $("threat").hidden = true; $("hurt").style.opacity = 0;
   CHASE.laser = laserHeld(); // (v39: the gun in your hand as the street's cleared is the one you ride out with)
-  STATE.locked = true; Sound.rush(0); Sound.preloadClips(CHASE_CLIPS); CHASE.on = true; chaseBegin(true);
+  STATE.locked = true; Sound.rush(0); Sound.preloadClips(CHASE_CLIPS); Sound.warmGallop(); CHASE.on = true; chaseBegin(true);
 }
 function chaseBegin(first) {
   const C = CHASE, K = CHASE_CFG; chaseClear(); freeReset(); CAM.dof = null;

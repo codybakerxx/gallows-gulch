@@ -175,7 +175,7 @@ filmed in a few shots. You can skip it after the first time. Then **Retry chase*
 
 **The signs at the end.** Every end sign (GAME OVER, YOU SAVED HIM, YOU SURVIVED, and the getaway's results) has a
 button at its top right to put it away. With it away, drag anywhere to look round, all the way round and from your
-boots to the sky; **Show the sign** brings it back. The sword can still be taken up while it's away. The menu has a red **X** to close it.
+boots to the sky; **Show the sign** brings it back. The getaway's results sign sits in the middle of the screen. The sword can still be taken up while it's away. The menu has a red **X** to close it.
 
 The run takes about a minute and the fight about 20–40, depending on your shooting. The run's numbers (lanes,
 speeds, jumps, the course, what a hit costs) are in `RUN` at the top of `src/12h_runner.js`; the fight's and the
@@ -205,7 +205,8 @@ or **Play Again** after one ends.
 - A spoken host: 42 recorded lines, with matching subtitles, that react to every letter. Plus gunmen's taunts and
   positional sound effects.
 - A looping soundtrack that brightens as the noose gets closer. Footsteps, wind and a crowd murmur are synthesized
-  live. The crows' calls are real crows, strung into calls as the game goes, with a quiet spell after each.
+  live. The crows' calls are real crows, strung into calls as the game goes, with a quiet spell after each. The
+  getaway's hoofbeats are a real horse at a gallop, one recorded hoof hit for every hoof that lands.
 - 382 vocabulary words, each with a definition written for the game.
 - Graphics tiers (Fast, Balanced, High, Ultra, or Auto). Auto starts phones on High and computers on Ultra, and steps
   down by itself if frames run long. High adds bloom, soft shadows, ambient occlusion, light shafts, volumetric light,

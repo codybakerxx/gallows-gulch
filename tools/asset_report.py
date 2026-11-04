@@ -151,6 +151,7 @@ SFX = {
     "dry": "Empty revolver: the hammer falls on nothing",
     "cock": "A gunman cocking his hammer: your cue to duck",
     "flap": "A crow's wings as it takes off (pitched to the bird)",
+    "gallop": "Every hoofbeat in the getaway: the repository owner's recording cut into 24 single hoof hits, each followed by silence (tools/cut_gallop.py)",
     "glass": "A bottle shot to pieces in the shootout (also the gallows lanterns)",
     "pane": "A shop window shot through",
     "tin": "A tin can hit and sent flying",

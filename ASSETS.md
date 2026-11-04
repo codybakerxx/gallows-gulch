@@ -135,6 +135,7 @@ Short, trimmed and level-matched mono clips, placed in 3D around the listener wh
 | `far3.mp3` | 0.86 s | 44,100 Hz | mono | 99 kb/s | 10.5 KB | A gunman's shot from across the street |
 | `flap0.mp3` | 0.99 s | 44,100 Hz | mono | 98 kb/s | 12.0 KB | A crow's wings as it takes off (pitched to the bird) |
 | `flap1.mp3` | 1.54 s | 44,100 Hz | mono | 97 kb/s | 18.4 KB | A crow's wings as it takes off (pitched to the bird) |
+| `gallop.mp3` | 9.80 s | 44,100 Hz | mono | 128 kb/s | 153.5 KB | Every hoofbeat in the getaway: the repository owner's recording cut into 24 single hoof hits, each followed by silence (tools/cut_gallop.py) |
 | `glass0.mp3` | 0.76 s | 44,100 Hz | mono | 99 kb/s | 9.2 KB | A bottle shot to pieces in the shootout (also the gallows lanterns) |
 | `glass1.mp3` | 1.04 s | 44,100 Hz | mono | 98 kb/s | 12.6 KB | A bottle shot to pieces in the shootout (also the gallows lanterns) |
 | `glass2.mp3` | 0.81 s | 44,100 Hz | mono | 99 kb/s | 9.8 KB | A bottle shot to pieces in the shootout (also the gallows lanterns) |
@@ -229,4 +230,4 @@ Most of the world has no asset file: it is generated when the page loads, sized 
 
 ## Totals
 
-127 asset files: models 5.45 MB, textures 349.9 KB, audio 4.42 MB (together 10.21 MB).
+128 asset files: models 5.45 MB, textures 349.9 KB, audio 4.57 MB (together 10.36 MB).

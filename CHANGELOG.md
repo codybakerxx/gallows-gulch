@@ -2,6 +2,15 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v51
+- **The getaway's hoofbeats are the repository owner's recording.** The recording is cut into 24 single hoof hits on
+  dirt (`tools/cut_gallop.py`, `assets/audio/sfx/gallop.mp3`), and one is played for every hoof that lands, your own
+  horse's and the posse's: never the same one twice running, a little faster or slower each time, each beat of the
+  stride its own weight. They're a little louder to the ear than v50's made hoofbeats were. The made ones are only heard
+  if the recording can't be had (and for the first hoof or two if it isn't decoded yet). v50's breathing and jingle are
+  gone with them.
+- **The End in the middle.** The getaway's results sign sits in the middle of the screen, not down at its foot.
+
 ## v50
 - **A fairer run.** The rows are a little further apart (23 m on average, was 21), and "doubles" (the only way on two
   lanes over, a swipe right across the trail) are a third as common (about 3 a run, was 9), and all but never two in a

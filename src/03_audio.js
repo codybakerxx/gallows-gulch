@@ -134,6 +134,24 @@ const Sound = (() => {
       return L.length ? { b, short: L.filter(c => c[1] < 0.45), long: L.filter(c => c[1] >= 0.45) } : null; });
     return crowBank.p;
   }
+  // ---- the gallop (v51): the repository owner's recording of a horse at a gallop, cut into 24 single hoof hits on dirt (tools/cut_gallop.py:
+  // audio/sfx/gallop.mp3, each hit followed by 0.3 s of silence). Found from those gaps once decoded, as the crows' caws are
+  function gallopMade(pos, own, t, g) { const d = at(pos, own ? 0.05 : 0.18, 5);
+    noise(t, 0.012, 0.3 * g, "bandpass", 1700 + Math.random() * 600, 1.4, d); // (the clop)
+    noise(t + 0.002, 0.11, 0.48 * g, "lowpass", 210 + Math.random() * 40, 0.8, d); drum(t, 88 + Math.random() * 12, 42, 0.13, (own ? 0.46 : 0.3) * g, d); // (the weight)
+    noise(t + 0.016, 0.05 + Math.random() * 0.04, 0.07 * g, "highpass", 3400, 0.7, d); } // (the dirt)
+  const galBank = { p: null, v: null, last: -1, n: 0, synth: 0 };
+  function gallopHits() {
+    if (!ctx) return Promise.resolve(null);
+    if (!galBank.p) galBank.p = clipBuffer("gallop").then(b => { if (!b) { galBank.state = "no clip"; return null; }
+      const D = b.getChannelData(0), sr = b.sampleRate, w = Math.floor(sr * 0.005), n = Math.floor(D.length / w), segs = []; let s0 = -1, quiet = 0;
+      for (let i = 0; i < n; i++) { let m = 0; for (let j = i * w, e = j + w; j < e; j++) { const a = Math.abs(D[j]); if (a > m) m = a; }
+        if (m > 0.004) { if (s0 < 0) s0 = i; quiet = 0; } else if (s0 >= 0 && ++quiet >= 30) { segs.push([s0, i - 29]); s0 = -1; quiet = 0; } } /* (150 ms of quiet ends a hit: the gaps are 300) */
+      if (s0 >= 0) segs.push([s0, n]);
+      const L = segs.filter(([a, e]) => e - a >= 6).map(([a, e]) => [Math.max(0, a * w / sr - 0.004), (e - a) * w / sr + 0.03]);
+      galBank.v = L.length ? { b, hits: L } : null; galBank.state = L.length ? "ready" : "empty"; return galBank.v; }).catch(e => { galBank.state = "error " + e; return null; });
+    return galBank.p;
+  }
   // a bird's own voice: the pitch it calls at, how fast it repeats, whether it's one of the long, drawn callers, and the few caws it uses
   function crowVoice() { const long = Math.random() < 0.22, pick = []; for (let i = 0; i < 5; i++) pick.push(Math.random());
     return { rate: 0.9 + Math.random() * 0.2, period: long ? 1.2 + Math.random() * 0.3 : 0.48 + Math.random() * 0.14, long, pick, last: -1 }; }
@@ -403,16 +421,17 @@ const Sound = (() => {
       noise(t, 0.045, 0.6 * k, "bandpass", 3400, 1.3, d); noise(t, 0.02, 0.4 * k, "highpass", 5200, 0.8, d);
       modes(t, [[f * 0.5, 0.2 * k, 5.5], [f, 0.32 * k, 3.6], [f * 1.183, 0.17 * k, 2.6], [f * 1.506, 0.11 * k, 2.1], [f * 2.0, 0.24 * k, 2.4], [f * 2.514, 0.08 * k, 1.5], [f * 3.011, 0.06 * k, 1.2], [f * 4.166, 0.035 * k, 0.8]], d); },
     // one hoof of a galloping horse: the rider's own (pos null: close, dry, felt as much as heard) or a pursuer's out on the plain.
-    // v50, made over: a short dull clop of hoof on packed dirt, the weight landing (a low thump you feel through the saddle), and a soft
-    // gritty scatter of dirt after it; each beat of the stride its own weight (the leading foreleg hardest), every hit a little different.
-    // Your own horse breathes with the stride, a hard huff of air on the lead, and the bit and rings jingle now and then
-    gallop(pos, k = 1, beat = 3) { if (!ctx) return; const own = !pos, t = now() + Math.random() * 0.006, d = at(pos, own ? 0.05 : 0.18, 5), g = k * [0.8, 0.94, 0.86, 1][beat & 3] * (0.88 + Math.random() * 0.24);
-      noise(t, 0.012, 0.3 * g, "bandpass", 1700 + Math.random() * 600, 1.4, d); // (the clop)
-      noise(t + 0.002, 0.11, 0.48 * g, "lowpass", 210 + Math.random() * 40, 0.8, d); drum(t, 88 + Math.random() * 12, 42, 0.13, (own ? 0.46 : 0.3) * g, d); // (the weight)
-      noise(t + 0.016, 0.05 + Math.random() * 0.04, 0.07 * g, "highpass", 3400, 0.7, d); // (the dirt)
-      if (own && (beat & 3) === 3) { const b = ctx.createBufferSource(), f = ctx.createBiquadFilter(), v = ctx.createGain(), tb = t + 0.03; b.buffer = NOISE; f.type = "bandpass"; f.frequency.value = 480 + Math.random() * 80; f.Q.value = 1.1; // (the breath: a soft rise, a quick fall)
-        v.gain.setValueAtTime(0.0001, tb); v.gain.linearRampToValueAtTime(0.1 * k, tb + 0.05); v.gain.exponentialRampToValueAtTime(0.0001, tb + 0.24); b.connect(f); f.connect(v); v.connect(d); b.start(tb, Math.random() * 1.5); b.stop(tb + 0.3); }
-      if (own && (beat & 3) === 1 && Math.random() < 0.3) modes(t + 0.03, [[3150 + Math.random() * 200, 0.012, 0.09], [4730, 0.008, 0.07]], d); }, // (the bit and rings)
+    // v51: a hit from the repository owner's recording (gallopHits), never the same one twice running, a little faster or slower each time;
+    // each beat of the stride its own weight (the leading foreleg hardest). Until the recording's decoded (or if it can't be had), v50's
+    // made one: a dull clop, the weight landing, a scatter of dirt (gallopMade)
+    gallop(pos, k = 1, beat = 3) { if (!ctx) return; const own = !pos, t = now() + Math.random() * 0.006, g = k * [0.8, 0.94, 0.86, 1][beat & 3] * (0.88 + Math.random() * 0.24);
+      const B = galBank.v; if (!B) { gallopHits(); galBank.synth++; gallopMade(pos, own, t, g); return; }
+      let i = (Math.random() * B.hits.length) | 0; if (i === galBank.last) i = (i + 1 + ((Math.random() * (B.hits.length - 1)) | 0)) % B.hits.length; galBank.last = i; galBank.n++;
+      const [off, dur] = B.hits[i], d = at(pos, own ? 0.05 : 0.18, 5), s = ctx.createBufferSource(), v = ctx.createGain(); s.buffer = B.b;
+      s.playbackRate.value = (own ? 1 : 0.95) * (0.94 + Math.random() * 0.12); v.gain.value = (own ? 0.55 : 0.5) * g; /* (level: weighted for the ear, about 5 dB over v50's made hit, most of whose weight was too low for a phone's speaker to give; peaks about a third of full) */
+      s.connect(v); v.connect(d); s.start(t, off, dur); },
+    warmGallop() { gallopHits(); }, /* (decode the hits ahead of the first hoof: at the bell, and as the getaway starts) */
+    get gallopBank() { return { hits: galBank.v ? galBank.v.hits.length : 0, played: galBank.n, made: galBank.synth, state: galBank.state || (galBank.p ? "loading" : "not asked") }; }, /* (for the tests) */
     // a lasso going round: a swish that rises and falls with each turn of the loop
     swish(pos, k = 1, dur = 0.34) { if (!ctx) return; const t = now(), d = at(pos, 0.12, 4), s = ctx.createBufferSource(); s.buffer = NOISE;
       const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 2.2; f.frequency.setValueAtTime(700, t); f.frequency.exponentialRampToValueAtTime(2300, t + dur * 0.55); f.frequency.exponentialRampToValueAtTime(900, t + dur);
