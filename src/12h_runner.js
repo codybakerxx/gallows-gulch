@@ -6,7 +6,8 @@ const RUN = {
   speed0: 19.5, speed1: 27.8, fx0: 13, first: 70, course: 1100, // m/s at the start and the end of the course (v34: flat out the whole way; v41: and faster as it goes, over a longer course; v42: 70 to 90 km/h; v46: to 100); the speed the view's
                                                         // stretch and blur count up from; where the first row is; how long the course runs
   jump: { up: 1.5, dur: 0.76 },                         // how high (m) and how long (s) a jump is
-  react: [0.7, 0.6], spread: 0.3,                       // seconds between rows at the start and the end (plus up to this share more, at random; v42: closer, more rows; v46: half as many obstacles again, over a course 10% longer: 120 a course, was 79)
+  react: [0.78, 0.66], spread: 0.3, farCut: 0.65,                     // seconds between rows at the start and the end (plus up to this share more, at random; v42: closer, more rows; v46: half as many obstacles again, over a course 10% longer: 120 a course, was 79; v50: spaced out a little.
+                                                        // farCut: v50, how many of the doubles become a move of one lane; never two in a row)
   horse: { half: 0.42, front: 1.45, back: 1.15 },       // the horse for collisions: half its width; nose and rump from the saddle (m)
   hit: { crash: 14, trip: 9, scrape: 5 },               // metres the posse gains when you ride into something, trip on it, or clip it changing lane
   slow: { crash: 0.42, trip: 0.62, scrape: 0.86 }, recover: 1.5, ghost: 0.55, // how hard each checks the horse; seconds back to full speed; seconds after a hit when nothing else can
@@ -190,11 +191,18 @@ function runForce(cells) {
   for (let i = 0; i < 3; i++) if (reach[i] && (c[i] === null || c[i] === "low")) c[i] = "tall";
   if (![0, 1, 2].some(i => !reach[i] && (c[i] === null || c[i] === "low"))) { const L = [0, 1, 2].filter(i => !reach[i] && c[i] !== "long"), k = L.length ? L[(r() * L.length) | 0] : reach.indexOf(false);
     c[k] = r() < 0.7 ? null : "low"; }
+  // v50: a "double" (the only way on two lanes over, a swipe across the whole trail) is the hard one. Most become a move of one lane, and
+  // never two doubles in a row: the way through moves to the lane beside where you can be
+  const near = i => [0, 1, 2].some(j => reach[j] && Math.abs(i - j) <= 1), pass = i => c[i] === null || c[i] === "low";
+  let far = ![0, 1, 2].some(i => pass(i) && near(i));
+  if (far && RUN.farCut > 0 && (C.lastFar || r() < RUN.farCut)) { const A = [0, 1, 2].filter(i => !reach[i] && near(i) && c[i] !== "long");
+    if (A.length) { const k = A[(r() * A.length) | 0], low = [0, 1, 2].some(i => pass(i) && c[i] === "low"); for (const i of [0, 1, 2]) if (pass(i) && c[i] !== "long") c[i] = "tall"; c[k] = low ? "low" : null; far = false; } }
+  C.farN = (C.farN || 0) + (far ? 1 : 0); C.farPairs = (C.farPairs || 0) + (far && C.lastFar ? 1 : 0); C.lastFar = far; // (counted, for the tests)
   C.reach = c.map(x => x === null || x === "low"); return c;
 }
 function runRow(s, f) {
   const C = CHASE, r = C.rng, first = C.rowsLaid || 0; let p = runPick(f);
-  if (first === 0) { p = RUN_PATTERNS[0]; C.reach = [false, true, false]; } else if (first === 2) p = RUN_PATTERNS[2]; // (you start in the middle lane: the first row blocks it; the third teaches the jump, with a swipe)
+  if (first === 0) { p = RUN_PATTERNS[0]; C.reach = [false, true, false]; C.lastFar = false; C.farN = C.farPairs = 0; } else if (first === 2) p = RUN_PATTERNS[2]; // (you start in the middle lane: the first row blocks it; the third teaches the jump, with a swipe)
   const got = first === 0 ? [null, "tall", null] : p.cells(r), cells = runForce(Array.isArray(got) ? got : got.c); let len = runCells(cells, s, cells.every(x => x === "low")), jump = cells.includes("low");
   C.rows.push({ s, cells, len, jump });
   if (got.then) { const zr = C.reach.slice(), zag = runForce(got.then), zj = zag.includes("low"), far = !zag.some((x, i) => (x === null || x === "low") && zr.some((q, j) => q && Math.abs(i - j) <= 1)); // (far: two lanes over)
@@ -210,7 +218,7 @@ function runRow(s, f) {
 // ---- input: a swipe (a drag that travels far enough), or a key ----
 function runLane(dir) { const C = CHASE; if (C.state !== "ride" && C.state !== "mount") return; const to = clamp(C.lane + dir, -1, 1);
   if (to === C.lane) { if (C.state === "ride") { CAM.shake = Math.max(CAM.shake, 0.25); } return; } // (the edge of the trail: a nudge, nothing more)
-  C.shift = { from: C.lat, to: RUN.lanes[to + 1], t: 0, back: C.lane }; C.lane = to; if (C.state === "ride") Sound.swish(C.horse.grp.position, 0.35); }
+  C.shift = { from: C.lat, to: RUN.lanes[to + 1], t: 0, back: C.lane }; C.lane = to; if (C.state === "ride") Sound.swish(C.horse.grp.position, 0.16); } // (v50: softer)
 function runJump() { const C = CHASE; if (C.state !== "ride" || C.air) return; C.air = { t: 0 }; C.stats.jumps = (C.stats.jumps || 0) + 1; Sound.horseSnort(C.horse.grp.position);
   kickDust(C.horse.grp.localToWorld(_c1.set(0, 0.1, -0.8)), 6, 1.0, 1.2, 1.0, 1.0); }
 function runSwipeStart(e) { CHASE.swipe = { id: e.pointerId, x: e.clientX, y: e.clientY, side: false, up: false }; }

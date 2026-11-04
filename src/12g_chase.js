@@ -20,7 +20,7 @@ const CHASE_CFG = {
   turn: 1.8, safe: 3.4, // seconds to twist round; seconds nobody can hurt you from the shot that starts it
   // the second half: the fight
   // (the gun and the hearts are the shootout's: GUN in 12d, six rounds and five hearts; out here you get one more automatic reload than in the shootout)
-  reloads: 1, // (v42: one reload in the getaway's fight, was two)
+  reloads: 0, // (v42: one reload in the getaway's fight, was two; v50: none, nine in the gun)
   fireCool: 0.28, sens: 0.0048, yawLim: 1.05, pitchLo: -0.4, pitchHi: 0.3, follow: 0.6, mouseFollow: 0.4, basePitch: -0.17, // (basePitch: the view's tilt down when you face back, so the horse's rump shows under the gun)
   sway: { yaw: 0.024, nod: 0.012, cam: 0.3 }, // aim drift (rad) per m/s² of the horse's sideways swing, the gallop's nod (rad), and how much of either the view takes
   swerve: { calm: [2.0, 3.0], move: [1.3, 1.8], lat: 2.6 }, // the horse's own line: steady spells (s), swerves (s), how far it swerves (m)
@@ -308,7 +308,7 @@ function placeHorse(H, s, lat, latV, speed, dt, latA = 0, lift = 0, pitchAdd = 0
 }
 function gallopFeet(H, dt, pos, k) { // the four beats of a stride: a hoof hits at each, and throws up a little dust
   const ph = H.act.time / H.act.getClip().duration % 1, prev = H.ph ?? ph; H.ph = ph;
-  for (const c of [0.06, 0.16, 0.5, 0.6]) { const hit = prev <= ph ? (prev < c && ph >= c) : (c > prev || c <= ph); if (hit) { Sound.gallop(pos, k); if (pos !== null) kickDust(H.grp.position, 2, 0.8, 1.2, 0.9, 1.4); else if (Math.random() < 0.5) kickDust(H.grp.localToWorld(_c1.set(0, 0.1, -1.4)), 1, 0.8, 0.9, 0.7, 1.0); } } // (your own horse: a little, low; the posse throw up the clouds you see them through)
+  [0.06, 0.16, 0.5, 0.6].forEach((c, beat) => { const hit = prev <= ph ? (prev < c && ph >= c) : (c > prev || c <= ph); if (hit) { Sound.gallop(pos, k, beat); if (pos !== null) kickDust(H.grp.position, 2, 0.8, 1.2, 0.9, 1.4); else if (Math.random() < 0.5) kickDust(H.grp.localToWorld(_c1.set(0, 0.1, -1.4)), 1, 0.8, 0.9, 0.7, 1.0); } }); // (your own horse: a little, low; the posse throw up the clouds you see them through)
 }
 function updateMount(rdt, dt) {
   const C = CHASE, K = CHASE_CFG, M = C.mount, k = clamp(C.st / M.dur, 0, 1);
@@ -348,7 +348,7 @@ function updateTurn(dt) {
   C.safeT -= dt; C.speed += (K.speed2 - C.speed) * Math.min(1, dt * 1.5); C.latV = (0 - C.lat) * 1.2; C.lat += C.latV * dt; C.s += C.speed * dt; recycleObstacles();
   C.yawOff = Math.PI * Ease.inOut(k); placeHorse(C.horse, C.s, C.lat, C.latV, C.speed, dt, 0); gallopFeet(C.horse, dt, null, 0.8); Sound.rush(C.speed / K.speed);
   if (k >= 1) { chaseState("combat"); C.yawOff = Math.PI; C.ay = C.ap = C.cy = C.cp = 0; chaseUI("combat"); chaseHud();
-    const touch = matchMedia("(pointer: coarse)").matches; chaseTip(C.laser ? (touch ? "Drag to aim · hold Fire for the beam" : "Aim with the mouse · hold the button for the beam") : touch ? "Drag to aim · Fire · four in the gun, one reload" : "Aim with the mouse · Click to fire · four in the gun, one reload", 3.6);
+    const touch = matchMedia("(pointer: coarse)").matches; chaseTip(C.laser ? (touch ? "Drag to aim · hold Fire for the beam" : "Aim with the mouse · hold the button for the beam") : touch ? "Drag to aim · Fire · nine in the gun, no reload" : "Aim with the mouse · Click to fire · nine in the gun, no reload", 3.6);
     C.swerve = { seg: "calm", t: 0, dur: rnd(K.swerve.calm[0], K.swerve.calm[1]), from: C.lat, to: C.lat }; }
 }
 // the second half: the horse keeps to the trail and swerves round what's on it by itself, a steady spell, a swerve, a steady spell; you shoot
@@ -583,7 +583,7 @@ function chaseResults(won) {
   const S = C.stats, acc = S.shots ? Math.min(100, Math.round(S.hits / S.shots * 100)) : 0, score = (won ? 1000 : 0) + S.downed * 150 + (won ? Math.round(acc * 3) : 0) + (won && !S.bumps ? 200 : 0) + Math.round(Math.max(0, C.s) / 10);
   STATE.bestRide = Math.max(STATE.bestRide || 0, score); if (won) STATE.rides = (STATE.rides || 0) + 1; savePrefs();
   $("resTitle").textContent = won ? "The End" : C.cap && C.cap.from === "ride" ? "Shot Down" : "Captured"; $("resTitle").className = won ? "" : "lose";
-  $("resLine").textContent = won ? "You killed every last one. Should've watched the road." : C.cap && C.cap.from === "ride" ? "They caught you on the trail and shot you out of the saddle. The rope was still warm." : C.cap && C.cap.from === "ammo" ? "Eight rounds, and not enough of them hit anything. They took their time." : "Shot out of the saddle. They took you back to town, what was left of you.";
+  $("resLine").textContent = won ? "You killed every last one. Should've watched the road." : C.cap && C.cap.from === "ride" ? "They caught you on the trail and shot you out of the saddle. The rope was still warm." : C.cap && C.cap.from === "ammo" ? "Nine rounds, and not enough of them hit anything. They took their time." : "Shot out of the saddle. They took you back to town, what was left of you.";
   const row = (k, v) => `<dt>${k}</dt><dd>${v}</dd>`;
   $("resStats").innerHTML = row("Riders downed", `${S.downed} of ${C.riders.length}`) + row("Shots", `${S.shots}${S.shots ? ` · ${acc}% hit` : ""}`) + row("Collisions", S.bumps) + row("Time", `${Math.round(S.t)} s`) + (won ? row("Getaway", "Complete") : "");
   $("resScore").textContent = `Score: ${score} · Best: ${STATE.bestRide}`;

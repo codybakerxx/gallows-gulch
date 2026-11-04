@@ -151,12 +151,11 @@ grass between them. Nothing on the screen to press.
 the same way, keeping to the trail, and nobody can hurt you while you turn.
 
 **Second half, the fight.**
-- It's the same gun and the same hearts as the shootout, but out here it holds 4 rounds and you get one automatic
-  reload: 8 rounds in all. The speedloader sits beside the cylinder.
+- It's the same gun and the same hearts as the shootout, but out here it holds 9 rounds and there's no
+  reload.
 - Aim with the mouse, by dragging the **Aim** pad (as in the shootout) or by dragging on the view. Any of these works
   while another finger holds **Fire**. **Click** or **Fire** shoots.
-- When the cylinder empties it reloads by itself, once. Run dry with riders still coming and they ride in and finish
-  you.
+- Run dry with riders still coming and they ride in and finish you.
 - If the laser was in your hand when the street was cleared, you ride out with it instead: hold **Fire** (or the mouse
   button, or Space) for the beam, 20 seconds of it, then 7 to recharge. A rider in it burns to ash in the saddle and
   his horse runs on without him; a horse in it is a steak, and its rider goes into the dirt. A rider already shot

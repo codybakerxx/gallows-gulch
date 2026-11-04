@@ -2,6 +2,16 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v50
+- **A fairer run.** The rows are a little further apart (23 m on average, was 21), and "doubles" (the only way on two
+  lanes over, a swipe right across the trail) are a third as common (about 3 a run, was 9), and all but never two in a
+  row (about 3 back to back a run, before).
+- **The gallop, not the wind.** The run's wind was a loud band of white noise over everything; now it's a low, quiet push
+  of air. The hooves are made over: a dull clop on packed dirt, the weight landing (a thump you feel through the
+  saddle), a gritty scatter of dirt, each beat of the stride its own weight; your horse breathes with the stride, and the
+  bit and rings jingle now and then. The swish of a lane change is softer too.
+- **Nine in the gun, no reload** for the horseback fight. The speedloader's gone from beside the cylinder.
+
 ## v49
 - **The menu gives the sign back.** Opening the menu over an end sign (GAME OVER, YOU SURVIVED, the getaway's results)
   with the Menu button or Change Settings put the sign away; shutting the menu again with its X (or Resume, or Escape)

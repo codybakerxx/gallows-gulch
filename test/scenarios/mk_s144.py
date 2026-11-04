@@ -3,6 +3,7 @@
 #     belly; a shot just past the muzzle, over the back, under the belly or beside the body misses
 #   - the revolver from the barrel: the host can be shot; he goes down where he stood and the shootout starts; the next round he's whole
 #     (v46: and on his feet, his head steady as he walks; the chambers in the top bar not left spinning; the end sign without its ropes)
+#   - v50: the run's course, laid 200 times: rows a little further apart, few doubles (two lanes over), almost never two in a row
 # Prints one JSON line per check; "ok" is true when it passed.
 import json, os, sys
 pre = sys.argv[1] if len(sys.argv) > 1 else "g144"
@@ -27,6 +28,13 @@ window.__toFight = async () => { const C = CHASE; await __go(600, () => C.state 
 window.__cam = null; if (!window.__camHook) { window.__camHook = true; const rf0 = window.renderFrame; window.renderFrame = function (t) { const C = window.__cam; if (C) { R.camera.position.set(...C.p); R.camera.lookAt(...C.t); R.camera.fov = C.fov || 50; R.camera.updateProjectionMatrix(); R.camera.updateMatrixWorld(); } return rf0.apply(this, arguments); }; }
 window.__aimHorse = R0 => { const C = CHASE, c = R.camera.position, p = R0.H.grp.localToWorld(V3(0, 1.0, 0.2)), Sw = C.sway || { y: 0, p: 0 }; let ay = Math.atan2(p.x - c.x, p.z - c.z) - (C.horse.yaw + Math.PI) - Sw.y; ay = ((ay + Math.PI) % TAU + TAU) % TAU - Math.PI;
   C.ay = ay; C.ap = Math.atan2(p.y - c.y, Math.hypot(p.x - c.x, p.z - c.z)) - Sw.p; C.mouse = null; }; 1""")
+# ---- v50: the run's course: spaced out a little; few doubles (the way on two lanes over), never two in a row ----
+E("""(() => { const C = CHASE, real = window.placeObstacle; let far = 0, pairs = 0, gaps = 0; const N = 200;
+  for (let seed = 1; seed <= N; seed++) { window.placeObstacle = () => ({ o: { scale: { set() {} }, position: { set() {} }, rotation: { set() {} }, visible: true } });
+    C.rng = rng(seed * 7919); C.rowsLaid = 0; C.rows = []; let s = RUN.first; const end = RUN.first + RUN.course; try { while (s <= end) { const f = clamp((s - RUN.first) / RUN.course, 0, 1); s += runRow(s, f); } } finally { window.placeObstacle = real; }
+    far += C.farN; pairs += C.farPairs; const rs = C.rows.map(r => r.s).sort((a, b) => a - b); let g = 0; for (let i = 1; i < rs.length; i++) g += rs[i] - rs[i - 1]; gaps += g / Math.max(1, rs.length - 1); }
+  const res = { doubles: +(far / N).toFixed(1), backToBack: +(pairs / N).toFixed(2), meanGapM: +(gaps / N).toFixed(1) };
+  return __check('the run: rows spaced out, few doubles and almost never two in a row', res.doubles < 4.5 && res.backToBack < 0.3 && res.meanGapM > 22.5, res); })()""")
 # ---- the horses ----
 E("""(async () => { await __go(200, () => !STATE.locked); const F = horseFit(), L = HERD.list.filter(h => !h.dead && !h.meat), H = L[0]; if (!F || !H) return __check('the horses: fitted hit shapes', false, { fit: !!F, horses: L.length });
   const g = H.grp; g.updateMatrixWorld(); const shoot = (from, to) => { const ro = g.localToWorld(V3(...from)), p = g.localToWorld(V3(...to)); return horseRayOne(H, ro, p.sub(ro).normalize()) > 0; };

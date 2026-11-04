@@ -402,18 +402,28 @@ const Sound = (() => {
     bell(pos, k = 1) { if (!ctx || k <= 0.01) return; const t = now(), d = at(pos, 0.55, 7), f = 392;
       noise(t, 0.045, 0.6 * k, "bandpass", 3400, 1.3, d); noise(t, 0.02, 0.4 * k, "highpass", 5200, 0.8, d);
       modes(t, [[f * 0.5, 0.2 * k, 5.5], [f, 0.32 * k, 3.6], [f * 1.183, 0.17 * k, 2.6], [f * 1.506, 0.11 * k, 2.1], [f * 2.0, 0.24 * k, 2.4], [f * 2.514, 0.08 * k, 1.5], [f * 3.011, 0.06 * k, 1.2], [f * 4.166, 0.035 * k, 0.8]], d); },
-    // one hoof of a galloping horse: the rider's own (pos null: close, dry, felt as much as heard) or a pursuer's out on the plain
-    gallop(pos, k = 1) { if (!ctx) return; const t = now(), d = at(pos, pos ? 0.18 : 0.05, 5);
-      noise(t, 0.09, 0.42 * k, "lowpass", 420, 0.9, d); drum(t, 120, 48, 0.12, 0.38 * k, d); noise(t + 0.004, 0.03, 0.1 * k, "bandpass", 1500, 1.2, d); },
+    // one hoof of a galloping horse: the rider's own (pos null: close, dry, felt as much as heard) or a pursuer's out on the plain.
+    // v50, made over: a short dull clop of hoof on packed dirt, the weight landing (a low thump you feel through the saddle), and a soft
+    // gritty scatter of dirt after it; each beat of the stride its own weight (the leading foreleg hardest), every hit a little different.
+    // Your own horse breathes with the stride, a hard huff of air on the lead, and the bit and rings jingle now and then
+    gallop(pos, k = 1, beat = 3) { if (!ctx) return; const own = !pos, t = now() + Math.random() * 0.006, d = at(pos, own ? 0.05 : 0.18, 5), g = k * [0.8, 0.94, 0.86, 1][beat & 3] * (0.88 + Math.random() * 0.24);
+      noise(t, 0.012, 0.3 * g, "bandpass", 1700 + Math.random() * 600, 1.4, d); // (the clop)
+      noise(t + 0.002, 0.11, 0.48 * g, "lowpass", 210 + Math.random() * 40, 0.8, d); drum(t, 88 + Math.random() * 12, 42, 0.13, (own ? 0.46 : 0.3) * g, d); // (the weight)
+      noise(t + 0.016, 0.05 + Math.random() * 0.04, 0.07 * g, "highpass", 3400, 0.7, d); // (the dirt)
+      if (own && (beat & 3) === 3) { const b = ctx.createBufferSource(), f = ctx.createBiquadFilter(), v = ctx.createGain(), tb = t + 0.03; b.buffer = NOISE; f.type = "bandpass"; f.frequency.value = 480 + Math.random() * 80; f.Q.value = 1.1; // (the breath: a soft rise, a quick fall)
+        v.gain.setValueAtTime(0.0001, tb); v.gain.linearRampToValueAtTime(0.1 * k, tb + 0.05); v.gain.exponentialRampToValueAtTime(0.0001, tb + 0.24); b.connect(f); f.connect(v); v.connect(d); b.start(tb, Math.random() * 1.5); b.stop(tb + 0.3); }
+      if (own && (beat & 3) === 1 && Math.random() < 0.3) modes(t + 0.03, [[3150 + Math.random() * 200, 0.012, 0.09], [4730, 0.008, 0.07]], d); }, // (the bit and rings)
     // a lasso going round: a swish that rises and falls with each turn of the loop
     swish(pos, k = 1, dur = 0.34) { if (!ctx) return; const t = now(), d = at(pos, 0.12, 4), s = ctx.createBufferSource(); s.buffer = NOISE;
       const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 2.2; f.frequency.setValueAtTime(700, t); f.frequency.exponentialRampToValueAtTime(2300, t + dur * 0.55); f.frequency.exponentialRampToValueAtTime(900, t + dur);
       const v = ctx.createGain(); v.gain.setValueAtTime(0.0001, t); v.gain.linearRampToValueAtTime(0.32 * k, t + dur * 0.5); v.gain.exponentialRampToValueAtTime(0.0001, t + dur);
       s.connect(f); f.connect(v); v.connect(d); s.start(t, Math.random() * 1.5); s.stop(t + dur + 0.05); },
     // wind rushing past at a gallop (a loop, its level set every frame; 0 stops it)
-    rush(k) { if (!ctx) return; if (!api._rush) { const s = ctx.createBufferSource(); s.buffer = NOISE; s.loop = true; const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 520; f.Q.value = 0.5;
+    // (v50: much quieter, and low: a soft push of air under the hooves, not a hiss. It was a bandpass over 380 to 900 Hz at up to a third of
+    // full level, scaled past full at the run's top speed: white noise over everything)
+    rush(k) { if (!ctx) return; if (!api._rush) { const s = ctx.createBufferSource(); s.buffer = NOISE; s.loop = true; const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 260; f.Q.value = 0.4;
         const g = ctx.createGain(); g.gain.value = 0; s.connect(f); f.connect(g); g.connect(sfx); s.start(); api._rush = { s, f, g }; }
-      const R0 = api._rush; R0.g.gain.setTargetAtTime(Math.max(0, k) * 0.16, now(), 0.15); R0.f.frequency.setTargetAtTime(380 + k * 380, now(), 0.3); },
+      const R0 = api._rush, kk = clamp(k, 0, 1.3); R0.g.gain.setTargetAtTime(kk * 0.035, now(), 0.15); R0.f.frequency.setTargetAtTime(240 + kk * 120, now(), 0.3); },
     // a recorded sound that moves (a man falling away from you): returns a handle to move it each frame and to stop it. Through the same
     // output as everything else, so mute and the volume slider apply
     track(nm, gain = 1, ref = 4, wet = 0.3) { const h = { p: null, src: null, g: null, done: false, last: null,

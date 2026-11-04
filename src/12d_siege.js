@@ -13,7 +13,7 @@
 // of sight between shots. Now and then one of them calls out to you (taunt). Every hit you take shows: the heart breaks in the top bar
 // and a banner says how many you've got left.
 // your revolver and your hearts: the same in the shootout and in the getaway (12g), and drawn the same way in the top bar (gunHud)
-const GUN = { rounds: 4, reloads: 1, /* (rounds: the getaway's cylinder, v42: five, was six; v48: three; v49: four) */ reload: 1.6, hearts: 5 }; // (rounds in the cylinder; reloads you get, each automatic when it's empty; seconds a reload takes)
+const GUN = { rounds: 9, reloads: 1, /* (rounds: the getaway's cylinder, v42: five, was six; v48: three; v49: four; v50: nine, and no reload: CHASE_CFG) */ reload: 1.6, hearts: 5 }; // (rounds in the cylinder; reloads you get, each automatic when it's empty; seconds a reload takes)
 const SIEGE_ROUNDS = 7; // (the town shootout's revolver: eight in v37, one fewer a load in v40; the getaway's still six)
 const SIEGE_CFG = { window: 4.0, bullets: SIEGE_ROUNDS, health: GUN.hearts, grace: 2.5, telegraph: 0.3, gap: [1.8, 3.0], hitUp: 0.5, hitRun: 0.3, react: 0.3,
   speed: [3.0, 3.7], hold: [0.8, 1.9], // how fast they dash between their spots (m/s), and how long they hold each one
@@ -801,7 +801,7 @@ function gunHud(loaded, reloads, reloadK, hp, total = GUN.reloads, n = GUN.round
       s += `<circle cx="${x}" cy="${y}" r="${cr}" fill="${f ? "#d8a246" : "#0e0b09"}" stroke="#6b5a45" stroke-width="2"/>` + (f ? `<circle cx="${x}" cy="${y}" r="${(cr * 0.36).toFixed(1)}" fill="#9c6f22"/>` : ""); }
     $("cyl").innerHTML = s + `</g><circle r="7" fill="#262120"/>`;
     const rb = $("reloads"), spare = reloads > 0, left = reloads === 1 ? "one reload left" : `${reloads} reloads left`; let d = ""; for (let i = 0; i < n; i++) { const a = i / n * TAU - Math.PI / 2; d += `<circle cx="${(12 + Math.cos(a) * 6.3).toFixed(1)}" cy="${(12 + Math.sin(a) * 6.3).toFixed(1)}" r="${n > 6 ? 2 : 2.5}"/>`; }
-    const px = total > 1 ? 18 : 22; rb.classList.toggle("many", total > 1);
+    const px = total > 1 ? 18 : 22; rb.classList.toggle("many", total > 1); rb.style.visibility = total ? "" : "hidden"; // (v50: no reloads at all, as in the getaway: no speedloader beside it)
     rb.innerHTML = Array.from({ length: Math.max(1, total) }, (_, i) => `<svg viewBox="0 0 24 24" width="${px}" height="${px}" aria-hidden="true" class="${i < reloads ? "full" : "spent"}"><circle cx="12" cy="12" r="10.5" fill="#3a3430" stroke="#14110f" stroke-width="1.5"/><g fill="${i < reloads ? "#d8a246" : "#0e0b09"}" stroke="#6b5a45" stroke-width=".8">${d}</g></svg>`).join("");
     rb.classList.toggle("used", !spare); rb.title = spare ? left[0].toUpperCase() + left.slice(1) : "No reloads left"; rb.setAttribute("aria-label", rb.title);
     $("gun").title = reloadK >= 0 ? "Reloading" : `${loaded} round${loaded === 1 ? "" : "s"} loaded, ${spare ? left : "no reloads left"}`; $("gun").setAttribute("aria-label", $("gun").title); }
