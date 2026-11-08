@@ -30,7 +30,8 @@ python3 test/play.py 390 844 test/s129.json 0.05 medium
 ```
 
 `play.py` loads `test/game.html`, which runs each module from `src/` separately so errors name the right file. It then
-runs the steps in the JSON: `eval`, `wait`, `waitfor`, `shot`, `click`, `press`, `moveto`, `release` and `viewport`.
+runs the steps in the JSON: `eval`, `dump` (an eval whose whole result goes to a file, for results longer than the
+4,000 characters printed), `wait`, `waitfor`, `shot`, `click`, `press`, `moveto`, `release` and `viewport`.
 The scenarios define `__go(frames, until)`, which steps the game's clock frame by frame without drawing, so a whole
 round plays in seconds and only the screenshots are rendered.
 
@@ -62,6 +63,8 @@ round plays in seconds and only the screenshots are rendered.
 | `mk_s144.py` | v50: the run's course laid 200 times (rows a little further apart, few doubles, almost never two in a row). v45: the horses' fitted hit shapes (the head hits standing and grazing, from the side and the front; the top of the back, the belly and the flank hit; over the back, under the belly, beside the body and past the muzzle miss); the host shot from the barrel goes down where he stood and the shootout starts, and he's whole the next round (v46: on his feet, his head steady as he walks off and back; the top bar's chambers not left spinning after a reload cut short; the end sign without its ropes; v49: the menu opened over the sign and shut with its X gives the sign back). Run at 390 × 844 on High |
 | `mk_s145.py` | v51: the getaway's hoofbeats are the recording's hits (24 found in `gallop.mp3`, none made once it's decoded); the getaway's results sign in the middle of the screen (or, too tall for it, starting at the top and scrolling). Run at phone, landscape phone and desktop sizes. |
 | `mk_s146.py` | v52: no bottom panel once a round's over: under GAME OVER (and with it put away), YOU SAVED HIM, YOU SURVIVED (from Done), GAME OVER after being shot, and the getaway's results; back for a revolver taken up, Play Again, and a retry of the getaway. Run at phone and desktop sizes. |
+| `mk_s147.py` | v53: the noose clear of the man's head going on, on for 12 s and coming off, the executioner's fists turned to what they hold (`nz_helpers.js`); the spare rounds by the board (glimmering, a tap in the shootout one more reload, saving you when dry, not outside the shootout, back each shootout); the gunmen's grip; the laser on the revolver's line; the buildings solid (a long run of the town, every way the loose horse runs, bodies falling by them). Run at phone and desktop sizes. |
+| `nz_helpers.js` | v53: the noose's clearance from the condemned man's skinned head and neck, frame by frame (`__nzRun`). |
 | `course_solver.js` | Used by `mk_s134.py`: `__courses(seeds, opt)` lays each course with the game's own row code (recording what it places) and runs a breadth-first search over (lane from, lane to, how far through the change, how far through the jump) frame by frame at 60 fps |
 | `chase_helpers.js` | Shared by `mk_s131.py`, `mk_s132.py`, `mk_s133.py` and `screens.py`: the clock stepper, setting up a shootout, shooting the bell, the last gunman, the run's autopilot (reads the next row, takes an open lane, jumps what it has to), aiming at a rider through the drift, touch and key events |
 | `screens.py` | The README screenshots |

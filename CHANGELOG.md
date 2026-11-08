@@ -2,6 +2,39 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v53
+- **Spare rounds by the board.** A box of cartridges leans against the front of the hangman board, glimmering (light
+  runs over the brass, sparks twinkle over it). In the town shootout a tap on it is one more reload, seven rounds, for
+  that shootout only (`12r_ammo.js`): a second speedloader shows by the cylinder and "+7 rounds" comes up. If the gun's
+  already dry and they're closing in, it puts you back in the fight. When your last load is in the gun, a tip points
+  it out. It's back for the next shootout.
+- **Solid buildings** (`12s_solid.js`). Every building and its porch, the church and the water tower's legs are solid:
+  - the loose horse's run went through the general store's porch and front: it goes round the corner now;
+  - the street's tumbleweeds blew through the buildings on both sides (they came in from behind them): they come in
+    only along a clear line, fetch up against a porch, roll along it, or are blown off it after a while;
+  - the physical tumbleweed bounces off walls;
+  - a gunman shot down falls against the buildings near him (only the two climbed roofs were solid before).
+  Measured: a long run of the town (the loose horse sent through ten times, the herd, the townsfolk, both kinds of
+  tumbleweed) and every way the horse can run: nothing inside.
+- **The gunmen hold their revolvers.** The grip sits in the palm, up through the curled fingers, the palm against its
+  side, the barrel along the forearm on the line he means; the other hand round the first (`alignHand`, 09, and
+  `gunFrame`, 12d). Before, the gun hung from the wrist with its grip back inside the forearm.
+- **The laser held as the revolver.** Same place, barrel straight down the line of sight, its bore on the revolver's
+  (in town and in the getaway). It was turned 15 degrees out to the right to show its side.
+- **The noose, made right.** Fitted to the condemned man's head and neck, measured vertex by vertex:
+  - the executioner carries the loop up behind his head and over it, held open and flat, brings it down round his head
+    along its middle, and only below the jaw turns it and draws it in (it used to come straight up through the face,
+    and close as it came down, through the chin);
+  - where it sits: low at the throat and the right of the neck, resting on the collar, high round the back to the knot
+    behind the left ear (it used to be 8 cm across at the height of the jaw, through the beard and chin);
+  - the knot's top goes with his head, and with the noose on his head turns with his neck and can't drop or tip far;
+  - the rope above the knot rides round two spheres fitted to his head (one 8.5 cm sphere before), and only its end is
+    free of them (34 cm was);
+  - the executioner's fists turn so what they hold lies in their grip: the rope just above the knot up through the
+    left, the loop through the curl of the right fingers. The reprieve takes it off the same way, backward.
+  Measured over putting it on, 12 s with it on and taking it off: the loop, knot and rope stay out of him (to within a
+  centimetre where they press), his hands to within two (pressed to his head).
+
 ## v52
 - **No empty panel once a round's over.** Under every end screen (GAME OVER, YOU SAVED HIM, YOU SURVIVED, the
   getaway's results) and with the sign put away to look round, the bottom panel is gone and the view fills the screen.

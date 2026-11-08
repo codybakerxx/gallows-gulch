@@ -32,7 +32,9 @@ on a desktop too.
 
 **The round.** A stranger stands condemned at the gallows, and the host calls your letters to the crowd. Each wrong
 letter costs a bullet from the revolver at the top left and walks the man a step closer to the noose. Solve the word
-and he goes free. On your last chance a clue appears at the top (except on Outlaw).
+and he goes free. On your last chance a clue appears at the top (except on Outlaw). The executioner lifts the noose
+up behind the man's head and down over it held open, and draws it snug below his jaw with the knot behind his left ear;
+it never cuts into him.
 
 **Looking round.** Drag on the picture to turn your head: all the way round, up and down. Horses graze and wander at
 the edge of town, some behind you. Each time the game cuts to a new view (a guess, the drop) you're turned back to it.
@@ -62,6 +64,9 @@ two on the rooftops, behind the false fronts of the sheriff's office and the gen
 - Your revolver holds **7 rounds**, and you get **one reload**: 14 rounds in all. The reload is automatic: when the
   cylinder empties it refills by itself, and you can't fire until it's done. The speedloader beside the cylinder shows
   whether your reload is still there.
+- **Spare rounds:** a box of cartridges leans against the front of the hangman board, glimmering. In the shootout, tap
+  it for one more reload (seven rounds), for that shootout only: a second speedloader shows by the cylinder. If you're
+  already dry and they're closing in, it puts you back in the fight. It's back by the board for the next shootout.
 - You have **5 hearts**. Hearts you lose show as empty outlines.
 - **Hold Aim** to rise up and drag to aim. **Fire** shoots. **Tap a piece of cover** to run to it.
   On a keyboard, hold **Shift** or **A** to rise and press **Space** or **Enter** to fire.
@@ -102,6 +107,7 @@ two on the rooftops, behind the false fronts of the sheriff's office and the gen
   What it does to a horse or a crow is best seen (a thick steak or a drumstick, steaming), and what that leaves on
   the ground burns to ash in the beam too. So do the men already down, where they lie. A tumbleweed in the beam
   catches fire, rolls on ablaze and burns away to ash; another blows in after a while.
+- The laser sits in your hand just where the revolver does, its beam straight down your line of sight.
 - Taking the laser leaves your revolver on the crate. Tap the revolver to swap back (the laser keeps its charge on
   the crate), and swap again whenever you like. Whichever you're holding when the street's cleared is the gun you
   take into the getaway.
@@ -276,6 +282,8 @@ src/                     the game: one HTML shell and 37 JavaScript modules, loa
   12o_ash.js             a man (or a rider, or meat on the ground) in the laser's beam burning to ash, and the heap left
   12p_look.js            looking round in the hangman part; the revolver on the barrel, shining
   12q_armed.js           the revolver from the barrel in your hand before any shootout; shoot a townsman and the shootout starts
+  12r_ammo.js            the spare rounds by the board: the box, its glimmer, taking it in the shootout
+  12s_solid.js           the buildings, the church and the water tower as solids: nothing walks, rolls or falls through them
   12g_chase.js           the getaway: posse, horses, the turn, the fight, the results
   12h_runner.js          the getaway's run: three lanes, swipes and jumps, the course, the desert along the trail
   12i_canyon.js          the canyon at the end and the filmed fall
@@ -289,6 +297,7 @@ tools/
   check_build.py         checks the bundled script parses and every file the code asks for is in dist/
   asset_report.py        measures every asset and writes ASSETS.md
   pack_arc09.py          packs the laser gun's source GLB for the game: quantized meshes, smaller textures (NumPy, Pillow)
+  cut_gallop.py          cuts the repository owner's galloping recording into the hoof hits in sfx/gallop.mp3 (NumPy, SciPy, FFmpeg)
 test/                    browser test harness (Playwright): see test/README.md
 docs/screenshots/        the pictures above
 ```

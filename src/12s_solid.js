@@ -10,7 +10,7 @@
 //     with men on their roofs, and the church and tower legs), given to a body that falls in town (12d shotHits, 12q).
 //   - The loose horse's runs go round the buildings (10 updateHorse: its waypoints), the street's tumbleweeds come in only where nothing
 //     stands in their way and fetch up against a porch, roll along it, or, held there, are blown off (07c), the physical one bounces off a
-//     wall (10 updateWeed), and the herd and the townsfolk keep clear of them (12n herdPlace, 09 walking).
+//     wall (10 updateWeed); the herd's and the townsfolk's ways already keep clear of them (measured, test mk_s147).
 const SOLID = { fps: [], boxes: [] };
 function buildSolids() {
   const F = SOLID.fps, rect = (name, x, z, yaw, hx, hz, oz = 0, h = 9) => { const c = Math.cos(yaw), s = Math.sin(yaw); F.push({ name, x: x + s * oz, z: z + c * oz, c, s, hx, hz, h }); };

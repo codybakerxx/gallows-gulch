@@ -909,7 +909,7 @@ function siegeLate(rdt) {
 function siegeLive() { return (SIEGE.on && (SIEGE.phase === "cut" || SIEGE.phase === "fight" || SIEGE.phase === "doomed" || SIEGE.phase === "cleared")) || chaseLive(); }
 // back to the start for a new round
 function resetSiege() {
-  const S = SIEGE; if (!S.sword) return; showTargets(false); resetLaser(); resetAsh(); breakReset(); /* (anyone burnt to ash whole again, the broken things whole: 12o, 12m) */ S.doomFirst = S.doomGap = null;
+  const S = SIEGE; if (!S.sword) return; showTargets(false); resetLaser(); resetAsh(); breakReset(); ammoReset(); /* (v53: the spare rounds back by the board) */ /* (anyone burnt to ash whole again, the broken things whole: 12o, 12m) */ S.doomFirst = S.doomGap = null;
   armedReset(); S.vm.lift = null; S.phase = null; S.fromRevolver = false; if (GUNPROP.gun) GUNPROP.gun.visible = true; S.sword.glint.visible = false; swordShine(0, false); S.sword.held = false; S.sword.group.visible = true; for (const C of S.covers) C.grp.visible = false; if (S.props) S.props.visible = false; S.sword.group.position.copy(S.sword.rest.p); S.sword.group.quaternion.copy(S.sword.rest.q);
   $("clearMsg").hidden = true; bellReset(); chaseReset(); // (and a getaway, if one was under way: 12g)
   // the blood, everywhere (v39: a horse or a crow shot from the barrel, before any shootout, bleeds too: 12q)
