@@ -166,6 +166,7 @@ function hud() {
 function updateBubble(dt) {
   const el = $("bubble"), B = STATE.bubble;
   if (!B) { el.hidden = true; return; } B.t -= dt; if (B.t <= 0) { STATE.bubble = null; el.hidden = true; return; }
+  if (RANGE.on || RANGE.going) { el.hidden = true; return; } // (out back at the gunsmith's range, the street's out of earshot: 12u)
   const who = B.who || HOST; // (the host, or a gunman calling out in the shootout: the bubble sits over whoever is talking)
   who.ch.bones.Head.getWorldPosition(A1); A1.y += B.who ? 0.75 : 0.32; A1.project(R.camera); // (a gunman's sits higher, clear of the red mark over him)
   if (A1.z > 1) { el.hidden = true; return; }

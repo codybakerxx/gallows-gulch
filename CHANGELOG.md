@@ -2,6 +2,33 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v54
+- **The gunsmith's range** (an Easter egg, `12u_range.js`). The door of the assay office, where GUNSMITH hangs, glimmers
+  in a round: warm light leaking round its edges and under it, a soft glow, sparks running along the frame, all of it
+  kept big enough on the screen to be picked out from down the street. Tap it and you're out the back at his range,
+  the lanes clear of scrub, a rack of his weapons beside you and a picker of nine:
+  - the **Colt Peacemaker**, the **Derringer**, the **Winchester '73** (the lever worked between shots), a **coach gun**
+    (nine pellets a barrel, each target scored once a shot), the **Sharps buffalo rifle** (one round, a brass scope:
+    **Scope** narrows the view to a dark round sight);
+  - a **bow** and **throwing knives**, which fly at what's under the sight and drop as they go (they stick where they
+    hit for a while), the **Gatling gun** (hold Fire: it spins up and fires nine a second), and **dynamite** (thrown,
+    it lands and goes off when its fuse is done, taking everything within four metres).
+  Each is its own model, held its own way in the first-person view (a pistol low on the right, a long gun up from the
+  foot of the screen to the sight, so on a phone it doesn't stand in front of what you're aiming at, the bow upright
+  on the left), with its own sign and count in the cylinder at the top left (`12t_arms.js`).
+- **Everything downrange moves**: bottles on a fence (1 point), three tin plates sliding along a rail and swinging when
+  hit (2), four bandit cut-outs popping up from the dirt and falling back when hit (3, 5 for a head shot), a jackrabbit
+  running a track (4), clays thrown across from a trap house (5) and a gong at the back (2). Free practice (the reloads
+  never run out), or a **timed round**: a minute, the targets faster, then the score and your best with that weapon,
+  kept on the device.
+- **Leave range** fades you back to the round where you left it, at the barrel, with the weapon in your hand: the
+  revolver's rules (shoot one of the townsfolk, the executioner or the host and the town draws on you; you fight them
+  with it). **Holster** and the round goes on; **Draw** (top left) takes it up again with what was left in it. It's
+  the weapon you fight any town shootout with, from the sword too: its own count, its own reloads, the spare rounds by
+  the board giving its own box (+14 rounds for the Winchester, +3 sticks of dynamite). It stays yours from round to
+  round. The barrel's revolver is still there with its own cylinder, and the getaway is still the revolver's.
+- The host's speech bubbles don't follow you out to the range.
+
 ## v53
 - **Spare rounds by the board.** A box of cartridges leans against the front of the hangman board, glimmering (light
   runs over the brass, sparks twinkle over it). In the town shootout a tap on it is one more reload, seven rounds, for

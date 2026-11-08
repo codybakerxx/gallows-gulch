@@ -43,11 +43,11 @@ function ammoTap(e) {
   ammoTake(); return true;
 }
 function ammoTake() {
-  const S = SIEGE; if (AMMO.taken) return; AMMO.taken = true; AMMO.box.visible = false; AMMO.extra += AMMO_CFG.reloads; S.reloads += AMMO_CFG.reloads; gunHud.key = null;
+  const S = SIEGE, d = armsDef(), n = d ? d.box : AMMO_CFG.reloads; if (AMMO.taken) return; AMMO.taken = true; AMMO.box.visible = false; AMMO.extra += n; S.reloads += n; gunHud.key = null; ARMS.hudKey = ""; // (v54: a weapon from the range gets its own: 12t box)
   Sound.ammoBox(AMMO.at); setTimeout(() => Sound.clip(siegePick("cock", 2), null, 0.7, 0, 0.05), 260);
   for (const b of AMMO.burst) { b.t = 0; b.s.visible = true; b.s.position.copy(AMMO.at); b.v.set(rnd(-1, 1), rnd(0.6, 1.6), rnd(-1, 1)).multiplyScalar(rnd(0.5, 1.1)); }
   for (const p of AMMO.sparks) { p.t = 1; p.s.visible = false; }
-  const m = $("hitMsg"); m.textContent = `+${SIEGE_ROUNDS * AMMO_CFG.reloads} rounds`; m.classList.add("ammo"); m.hidden = false; m.classList.remove("pop"); void m.offsetWidth; m.classList.add("pop"); S.hitT = 1.6;
+  const m = $("hitMsg"); m.textContent = d ? `+${d.mag * n} ${d.mag * n === 1 ? d.unit1 || d.unit.replace(/s$/, "") : d.unit}` : `+${SIEGE_ROUNDS * AMMO_CFG.reloads} rounds`; m.classList.add("ammo"); m.hidden = false; m.classList.remove("pop"); void m.offsetWidth; m.classList.add("pop"); S.hitT = 1.6;
   if (S.phase === "doomed") { S.phase = "fight"; $("doomMsg").hidden = true; S.nextShot = 1.8; S.doomFirst = S.doomGap = null; S.flanker = null; // (back in it: they hold off while it reloads)
     for (const E of S.enemies) { E.flank = null; if (E.alive && E.state === "pause" && E.t > 50) E.t = rnd(0.6, 1.4); }
     if (LASER.awake) { LASER.awake = false; Sound.laserWake(null, false); } }

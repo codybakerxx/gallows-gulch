@@ -59,6 +59,26 @@ or the executioner and the town turns on you: the shootout, right there, as the 
 and no rope to cut. The host can be shot too: he goes down where he stood, and the town draws on you just the same.
 The condemned man isn't a target. Put it back and the round goes on.
 
+**The gunsmith's range.** Up the street on the right, the door of the assay office (GUNSMITH hangs under its sign)
+glimmers while you're free in a round: warm light round its edges, sparks running along the frame. Tap it and you're
+out the back at his range, his weapons on a rack beside you. Pick one of nine (the bar along the top brings the
+picker back):
+- **Colt Peacemaker** (6 rounds), **Derringer** (2, wide), **Winchester '73** (14), **Coach Gun** (2 shells of nine
+  pellets each), **Sharps Buffalo Rifle** (1 heavy round, a **Scope** button to look down its brass scope);
+- a **bow** and **throwing knives** (they fly and drop: aim high far off), a **Gatling gun** (hold Fire and it cranks),
+  and **dynamite** (thrown, it lands, the fuse burns down and everything near it goes).
+
+Downrange everything moves: bottles on a fence (1 point), tin plates sliding along a rail (2), bandit cut-outs popping
+up from the dirt (3, a head shot 5), a jackrabbit running a track (4), clays thrown across from a trap house (5) and a
+gong far back (2). Practise as long as you like (the gunsmith has plenty), or start a **Timed round**: a minute, the
+targets faster, and your best with each weapon kept on the device.
+
+**Leave range** and you're back in the round where you left it, standing at the barrel with the weapon in your hand
+(the revolver's rules: shoot one of the townsfolk and the whole town draws on you, and you fight them with it).
+**Holster** it and the round goes on; **Draw** takes it up again with what's left in it. It's the weapon you fight
+any town shootout with, from the sword too, and the spare rounds by the board give its own box. It stays yours from
+round to round. The getaway is still the revolver's (or the laser's).
+
 **The shootout.** Now you're the stranger, behind cover, and nine gunmen are out for you: seven in the street and
 two on the rooftops, behind the false fronts of the sheriff's office and the general store.
 - Your revolver holds **7 rounds**, and you get **one reload**: 14 rounds in all. The reload is automatic: when the
@@ -284,6 +304,8 @@ src/                     the game: one HTML shell and 37 JavaScript modules, loa
   12q_armed.js           the revolver from the barrel in your hand before any shootout; shoot a townsman and the shootout starts
   12r_ammo.js            the spare rounds by the board: the box, its glimmer, taking it in the shootout
   12s_solid.js           the buildings, the church and the water tower as solids: nothing walks, rolls or falls through them
+  12t_arms.js            the gunsmith's nine weapons: their models, how each is held and fires, what it hits, Holster and Draw's load
+  12u_range.js           the gunsmith's door, his range out the back (its moving targets, scoring, the timed round), going and coming back
   12g_chase.js           the getaway: posse, horses, the turn, the fight, the results
   12h_runner.js          the getaway's run: three lanes, swipes and jumps, the course, the desert along the trail
   12i_canyon.js          the canyon at the end and the filmed fall

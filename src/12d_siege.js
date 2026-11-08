@@ -207,7 +207,7 @@ async function startSiege() {
   if (late && STATE.streakLost != null) { STATE.streak = STATE.streakLost; savePrefs(); } swordShine(0, false);
   bellReset(); // (the bell's mark is for this shootout only: 12f)
   const S = SIEGE; S.on = true; S.phase = "cut"; S.sword.glint.visible = false; S.t = 0; S.used = {}; showSiegeUI("cut"); for (const C of S.covers) C.grp.visible = true; S.props.visible = true; resetTargets(); showTargets(true); crowsGather(); resetLaser(); horseHurry(); breakReset(); // (all of it whole: 12m)
-  ammoReset(); S.bullets = SIEGE_ROUNDS; S.reloads = GUN.reloads; S.reloadT = 0; S.health = GUN.hearts; gunHud.key = null; S.hurt = 0; S.deadT = 0; S.cool = 0; S.recoil = 0; S.holding = S.keyAim = false; S.aimId = null; S.scanT = 0; S.upT = 0; S.vm.kick = 0;
+  ammoReset(); armsEquip(ARMS.own); ARMS.mode = "siege"; S.bullets = armsMag(); S.reloads = armsReloads(); S.reloadT = 0; /* (v54: the gunsmith's weapon, if you left the range with one) */ S.health = GUN.hearts; gunHud.key = null; S.hurt = 0; S.deadT = 0; S.cool = 0; S.recoil = 0; S.holding = S.keyAim = false; S.aimId = null; S.scanT = 0; S.upT = 0; S.vm.kick = 0;
   S.shots = 0; S.downT = 0; S.aims = 0; S.said.clear(); S.tauntT = 0; S.talkUntil = 0; S.wordsAt = S.lastAt = 0; S.doomT = S.doomI = 0; S.doomSaid = false; S.hitT = 0; S.flanker = null; S.flankSaid = false;
   $("doomMsg").hidden = $("hitMsg").hidden = true;
   stopBodyPlay(); STATE.locked = true; STATE.ts = 1; SLOW.t = 99; $("skip").hidden = true; showHintBox(false); $("sign").hidden = true;
@@ -444,6 +444,7 @@ function fireTap() {
   if (ARMED.on) { armedFire(); return; } // (the revolver from the barrel, before any shootout: 12q)
   const S = SIEGE; if (S.phase !== "fight" && S.phase !== "doomed" && S.phase !== "cleared") return;
   if (laserHeld()) { laserTrigger(true); return; } // (the laser in hand: Fire held is the beam, 12k)
+  if (ARMS.cur) { if (S.crouch || S.run || S.cv > 0.5) { nudgeAim(); return; } armsFire("siege"); return; } // (v54: the gunsmith's weapon, 12t)
   if (S.reloadT > 0) return; // (reloading: the cylinder's open)
   if (S.bullets <= 0) { if (S.cool <= 0) { Sound.clip("dry0", null, 0.9, 0, 0.05); S.cool = 0.3; } return; } // click: empty
   if (S.crouch || S.run || S.cv > 0.5) { nudgeAim(); return; } // still behind the cover: hold Aim to come up first
@@ -467,7 +468,7 @@ function fireTap() {
 }
 // the cylinder's empty and there's a reload left: it opens and refills by itself (you can't fire till it's done; you can still duck)
 function siegeReload() {
-  const S = SIEGE; if (S.reloadT > 0 || S.reloads <= 0) return; S.reloads--; S.reloadT = GUN.reload;
+  const S = SIEGE; if (S.reloadT > 0 || S.reloads <= 0) return; S.reloads--; S.reloadT = armsReload();
   Sound.cap(null); setTimeout(() => Sound.cap(null), 240); siegeHud();
 }
 // the last bullet's gone and some of them are still standing: they know it. One calls out, and then they take turns shooting, each shot
@@ -720,7 +721,7 @@ function updatePlayer(rdt, dt) {
   else if (S.run && S.run.turn) { const T0 = S.run.turn, k = Ease.inOut(smoothstep(0, 0.85, S.run.t)), d = ((S.yaw - T0.y + Math.PI) % TAU + TAU) % TAU - Math.PI; // (from where you were looking round to the street from the cover: 12p, 12q)
     yaw = T0.y + d * k; pitch = lerp(T0.p, pitch, k); }
   const dir = V3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
-  CAM.pos.copy(base); CAM.tgt.copy(base).add(dir); CAM.fov = 54; CAM.to = null; CAM.follow = null; CAM.name = "siege";
+  CAM.pos.copy(base); CAM.tgt.copy(base).add(dir); CAM.fov = armsFov(54); CAM.to = null; CAM.follow = null; CAM.name = "siege";
   $("xhair").hidden = (S.phase !== "fight" && S.phase !== "doomed" && S.phase !== "cleared") || S.cv > 0.25 || !!S.run;
 }
 
@@ -768,7 +769,7 @@ function buildSiegeUI() {
   $("kb").appendChild(pad);
   const aim = $("padAim"); aim.addEventListener("pointerdown", aimDown); aim.addEventListener("pointermove", aimMove); for (const ev of ["pointerup", "pointercancel", "lostpointercapture"]) aim.addEventListener(ev, aimUp);
   $("padFire").addEventListener("pointerdown", e => { e.preventDefault(); $("padFire").classList.add("on"); fireTap(); });
-  for (const ev of ["pointerup", "pointercancel", "pointerleave"]) $("padFire").addEventListener(ev, () => { $("padFire").classList.remove("on"); laserTrigger(false); });
+  for (const ev of ["pointerup", "pointercancel", "pointerleave"]) $("padFire").addEventListener(ev, () => { $("padFire").classList.remove("on"); laserTrigger(false); armsTrigger(false); });
   const st = $("stage");
   for (const [id, html] of [["xhair", '<svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><circle cx="20" cy="20" r="11" fill="none" stroke="#000" stroke-opacity=".55" stroke-width="3.2"/><circle cx="20" cy="20" r="11" fill="none" stroke="#f4ead8" stroke-width="1.6"/><circle cx="20" cy="20" r="1.8" fill="#e2483a"/></svg>'],
     ["hurt", ""], ["gore", ""], ["siegeTip", SIEGE_TIP], ["hitMsg", ""], ["doomMsg", "<b>Out of bullets</b><span>They know your gun is empty</span>"], ["warn", '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 7l8 9 8-9" fill="none" stroke="#000" stroke-opacity=".5" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 7l8 9 8-9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'],
@@ -785,6 +786,8 @@ function showSiegeUI(mode) {
   $("left").hidden = mode !== "off"; $("hud").classList.toggle("siege", mode !== "off"); // in the shootout the cylinder alone shows what's loaded: no number beside it
   $("hintBtn").style.display = mode === "off" ? "" : "none"; $("siegeTip").hidden = mode !== "fight"; $("padAim").classList.remove("on", "nudge"); // (the hint button: out of the bar altogether, so the count of gunmen left has room)
   if (mode === "fight") { $("siegeTip").textContent = SIEGE_TIP; SIEGE.tip = 5; const b = SIEGE.bullets, r = SIEGE.reloads; // (v39: from the barrel, with what's left in it)
+    const d = armsDef(), say = n => (NUM_WORDS[n] || String(n)).toLowerCase(); // (v54: a weapon from the gunsmith's range, its own count: 12t)
+    if (d) SIEGE.tipNext = SIEGE_TIP2 = `The ${d.short}: ${b ? `${say(b)} ${b === 1 ? d.unit1 || d.unit.replace(/s$/, "") : d.unit} ready` : "empty"}, ${r * d.mag ? `${r * d.mag} more` : "no more"} · ${siegeMen()} gunmen, two on the roofs`; else
     SIEGE.tipNext = SIEGE_TIP2 = `${b >= SIEGE_ROUNDS ? `${NUM_WORDS[SIEGE_ROUNDS]} in the gun` : b ? `${NUM_WORDS[b]} left in the gun` : "Nothing in the gun"}, ${r === 1 ? "one reload" : r ? `${r} reloads` : "no reload"} · ${siegeMen()} gunmen, two on the roofs`; $("kb").classList.add("up"); }
 }
 const NUM_WORDS = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve"];
@@ -820,7 +823,7 @@ function gunHud(loaded, reloads, reloadK, hp, total = GUN.reloads, n = GUN.round
 }
 const narrowHud = () => R.w < 460; // (a phone held upright: shorter words beside the gun and the hearts)
 function siegeHud() {
-  const S = SIEGE; if (laserHeld()) { laserHud(); heartsHud(S.health); } else gunHud(S.bullets, S.reloads, S.reloadT > 0 ? 1 - S.reloadT / GUN.reload : -1, S.health, GUN.reloads + AMMO.extra, SIEGE_ROUNDS);
+  const S = SIEGE; if (laserHeld()) { laserHud(); heartsHud(S.health); } else if (ARMS.cur) { armsHud(S); heartsHud(S.health); } else gunHud(S.bullets, S.reloads, S.reloadT > 0 ? 1 - S.reloadT / GUN.reload : -1, S.health, GUN.reloads + AMMO.extra, SIEGE_ROUNDS);
   const n2 = S.enemies.filter(E => E.alive).length; $("meta").textContent = !S.on ? $("meta").textContent : laserHeld() ? laserMeta(n2) : S.reloadT > 0 ? (narrowHud() ? "" : "Reloading…") : narrowHud() ? `${n2} left` : `${n2} gunm${n2 === 1 ? "a" : "e"}n left`;
 }
 
@@ -842,7 +845,7 @@ function updateSiege(rdt, dt) {
   if (S.hitT > 0) { S.hitT -= rdt; if (S.hitT <= 0) $("hitMsg").hidden = true; }
   for (const a of S.roofActors) if (a.root.visible) a.update(dt); // (the crowd and the executioner are updated with the town)
   updateEnemies(dt); updateBlood(dt); siegeBodies();
-  if (S.reloadT > 0) { S.reloadT -= dt; if (S.reloadT <= 0) { S.reloadT = 0; S.bullets = SIEGE_ROUNDS; Sound.clip(siegePick("cock", 2), null, 0.75, 0, 0.05); } siegeHud(); } // (the chambers fill one by one in the top bar)
+  if (S.reloadT > 0) { S.reloadT -= dt; if (S.reloadT <= 0) { S.reloadT = 0; S.bullets = armsMag(); Sound.clip(siegePick("cock", 2), null, 0.75, 0, 0.05); } siegeHud(); } // (the chambers fill one by one in the top bar)
   if (S.phase === "fight" || S.phase === "doomed" || S.phase === "dead" || S.phase === "cleared") updatePlayer(rdt, dt);
   // out of bullets: a word from one of them, then they take turns, one shot every 0.85 s, each a heart, till you're down
   if (S.phase === "doomed") { S.doomT += dt;
@@ -878,10 +881,11 @@ function siegeLate(rdt) {
     g.position.copy(grip); g.quaternion.setFromUnitVectors(_s2.set(0, 1, 0), dirC); g.visible = true; }
   // the revolver: lower right, along the line of sight; it kicks up and back when it fires, drops away when you duck
   const vm = S.vm.gun, show = S.on && (S.phase === "fight" || S.phase === "doomed" || S.phase === "cleared") && !S.run;
-  vm.visible = show && (S.cv < 0.85 || !!S.vm.lift);
-  if (vm.visible) { const k = S.vm.kick, down = Ease.inOut(clamp(S.cv, 0, 1)) * 0.22, rl = S.reloadT > 0 ? Math.sin(clamp(1 - S.reloadT / GUN.reload, 0, 1) * Math.PI) : 0; // (rl: down and tipped up for the reload)
+  vm.visible = show && (S.cv < 0.85 || !!S.vm.lift) && !ARMS.zoom;
+  if (vm.visible) { const k = S.vm.kick, down = Ease.inOut(clamp(S.cv, 0, 1)) * 0.22, rl = S.reloadT > 0 ? Math.sin(clamp(1 - S.reloadT / armsReload(), 0, 1) * Math.PI) : 0; // (rl: down and tipped up for the reload)
     vm.scale.setScalar(0.8); vm.position.copy(toW(Math.min(0.2, hw(0.62) * 0.46), -hh(0.62) * 0.56 - down - rl * 0.12 + k * 0.02, -0.62 + k * 0.04));
     vm.lookAt(toW(0, 0, -25)); vm.rotateX(-k * 0.5 + rl * 0.9); // the barrel lines up on the crosshair
+    if (ARMS.cur) { armsVmPose(vm, cam, k, down, rl); if (ARMS.zoom && S.cv > 0.5) armsScope(false); } // (v54: the gunsmith's weapon, held its own way)
     if (S.vm.lift) { const T0 = S.vm.lift; T0.t = Math.min(1, T0.t + rdt / 0.35); const e = Ease.inOut(T0.t); // (v39: up off the crate into your hand, the laser left there)
       vm.position.lerpVectors(T0.p, _s2.copy(vm.position), e); vm.quaternion.slerpQuaternions(T0.q, _s4q.copy(vm.quaternion), e); vm.scale.setScalar(lerp(1, 0.8, e)); if (T0.t >= 1) S.vm.lift = null; } }
   else if (!show) S.vm.lift = null;
@@ -909,7 +913,7 @@ function siegeLate(rdt) {
 function siegeLive() { return (SIEGE.on && (SIEGE.phase === "cut" || SIEGE.phase === "fight" || SIEGE.phase === "doomed" || SIEGE.phase === "cleared")) || chaseLive(); }
 // back to the start for a new round
 function resetSiege() {
-  const S = SIEGE; if (!S.sword) return; showTargets(false); resetLaser(); resetAsh(); breakReset(); ammoReset(); /* (v53: the spare rounds back by the board) */ /* (anyone burnt to ash whole again, the broken things whole: 12o, 12m) */ S.doomFirst = S.doomGap = null;
+  const S = SIEGE; if (!S.sword) return; showTargets(false); resetLaser(); resetAsh(); breakReset(); ammoReset(); armsReset(); /* (v54: the revolver back in the first-person gun's place; what's flying cleared) */ /* (v53: the spare rounds back by the board) */ /* (anyone burnt to ash whole again, the broken things whole: 12o, 12m) */ S.doomFirst = S.doomGap = null;
   armedReset(); S.vm.lift = null; S.phase = null; S.fromRevolver = false; if (GUNPROP.gun) GUNPROP.gun.visible = true; S.sword.glint.visible = false; swordShine(0, false); S.sword.held = false; S.sword.group.visible = true; for (const C of S.covers) C.grp.visible = false; if (S.props) S.props.visible = false; S.sword.group.position.copy(S.sword.rest.p); S.sword.group.quaternion.copy(S.sword.rest.q);
   $("clearMsg").hidden = true; bellReset(); chaseReset(); // (and a getaway, if one was under way: 12g)
   // the blood, everywhere (v39: a horse or a crow shot from the barrel, before any shootout, bleeds too: 12q)

@@ -235,6 +235,7 @@ function startGetaway() {
   if (CHASE.on || !LIFE.horse) return; buildChase(); BELL.pending = false;
   const S = SIEGE; S.phase = "chase"; S.threat = null; S.holding = S.keyAim = false; $("clearMsg").hidden = true; $("warn").hidden = true; $("threat").hidden = true; $("hurt").style.opacity = 0;
   CHASE.laser = laserHeld(); // (v39: the gun in your hand as the street's cleared is the one you ride out with)
+  armsReset(); // (v54: a gunsmith's weapon stays in town: the getaway's fought with the revolver)
   STATE.locked = true; Sound.rush(0); Sound.preloadClips(CHASE_CLIPS); Sound.warmGallop(); CHASE.on = true; chaseBegin(true);
 }
 function chaseBegin(first) {

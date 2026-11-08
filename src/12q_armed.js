@@ -18,7 +18,7 @@ const angTo = (a, b, k) => a + (((b - a + Math.PI) % TAU + TAU) % TAU - Math.PI)
 // ---- taking it up and putting it back ----
 function armedStart() {
   const A = ARMED, G = GUNPROP, S = SIEGE; if (A.on || S.on || CHASE.on || !G.gun) return;
-  if (A.round !== STATE.roundId) { A.round = STATE.roundId; A.bullets = SIEGE_ROUNDS; A.reloads = GUN.reloads; A.reloadT = 0; A.shots = 0; } // (a full gun each round; within one, what's fired stays fired)
+  if (A.round !== STATE.roundId) { A.round = STATE.roundId; A.shots = 0; } armsEquip(null); armsUnstash(null); // (a full gun each round; within one, what's fired stays fired: 12t)
   A.on = true; A.t = 0; A.cool = 0; A.back = null; LOOK.drag = null; LOOK.yaw = LOOK.pitch = 0; LOOK.ease = false;
   if (FREE.on) { const el = FREE.which; freeReset(); if (el) el.hidden = false; } // (a sign put away: it comes back with the gun put back)
   A.sign = !$("sign").hidden; A.hint = !$("hintBox").hidden; $("sign").hidden = true; $("skip").hidden = true; showHintBox(false); STATE.locked = true; // (no guessing with a gun in your hand)
@@ -29,19 +29,19 @@ function armedStart() {
   G.gun.visible = false; S.vm.kick = 0; S.recoil = 0; Sound.clip("cock0", A.lift.p, 1.0, 0, 0.1); // (in your hand: the hammer back)
   S.occ = null; showArmedUI(true); armedHud();
 }
-function armedPutBack() {
-  const A = ARMED; if (!A.on || A.back || A.lift) return; const F = A.from, S0 = shotSet()[F.name];
+function armedPutBack() { // (v54: or a weapon from the gunsmith's range holstered: the view goes back the same way, the weapon dropping out of it, 12t)
+  const A = ARMED; if (!A.on || A.back || A.lift || A.range) return; const F = A.from, S0 = shotSet()[F.name];
   const home = S0 && !F.follow ? { pos: V3(...S0[0]), tgt: V3(...S0[1]), fov: S0[2] } : { pos: F.pos.clone(), tgt: F.tgt.clone(), fov: F.fov }, d = _ar1.copy(home.tgt).sub(home.pos);
-  A.back = { t: 0, dur: 0.65, home, yaw: Math.atan2(d.x, d.z), pitch: Math.atan2(d.y, Math.hypot(d.x, d.z)), cpos: R.camera.position.clone(), yaw0: A.yaw, pitch0: A.pitch, fov0: CAM.fov };
-  $("pad").hidden = true; $("armBack").hidden = true; $("xhair").hidden = true; $("siegeTip").hidden = true; SIEGE.aimId = null; peek(false); Sound.clip("cock0", null, 0.6, 0, 0.05, 0.85);
+  A.back = { t: 0, dur: 0.65, home, yaw: Math.atan2(d.x, d.z), pitch: Math.atan2(d.y, Math.hypot(d.x, d.z)), cpos: R.camera.position.clone(), yaw0: A.yaw, pitch0: A.pitch, fov0: CAM.fov, holster: !!ARMS.cur };
+  $("pad").hidden = true; $("armBack").hidden = true; $("xhair").hidden = true; $("siegeTip").hidden = true; SIEGE.aimId = null; peek(false); ARMS.trig = false; armsScope(false); Sound.clip("cock0", null, 0.6, 0, 0.05, 0.85);
 }
 function armedDone() { // back on the barrel: the round goes on
-  const A = ARMED, B = A.back, F = A.from; A.on = false; A.back = A.lift = null; GUNPROP.gun.visible = true; SIEGE.vm.gun.visible = false;
+  const A = ARMED, B = A.back, F = A.from; armsStash(); if (ARMS.cur) armsEquip(null); A.on = false; A.back = A.lift = null; GUNPROP.gun.visible = true; SIEGE.vm.gun.visible = false;
   CAM.pos.copy(B.home.pos); CAM.tgt.copy(B.home.tgt); CAM.fov = B.home.fov; CAM.name = F.name; CAM.to = null; CAM.follow = F.follow || null; CAM.t = 1;
   showArmedUI(false); STATE.locked = false; STATE.ts = 1; if (A.sign) $("sign").hidden = false; if (A.hint) showHintBox(true);
 }
 // a new round, or the game restarted from the menu with it in your hand
-function armedReset() { const A = ARMED; A.round = -1; if (!A.on) return; A.on = false; A.lift = A.back = null; SIEGE.vm.gun.visible = false; $("xhair").hidden = true; showArmedUI(false); }
+function armedReset() { const A = ARMED; A.round = -1; if (RANGE.on || RANGE.going) { rangeOff(); $("rangeFade").hidden = true; } if (!A.on) return; A.on = false; A.lift = A.back = null; SIEGE.vm.gun.visible = false; $("xhair").hidden = true; showArmedUI(false); }
 
 // ---- the screen ----
 function buildArmedUI() {
@@ -51,10 +51,10 @@ function buildArmedUI() {
 function showArmedUI(on) {
   $("pad").hidden = !on; $("kb").classList.toggle("siege", on); $("left").hidden = on; $("hud").classList.toggle("siege", on); $("hintBtn").style.display = on ? "none" : "";
   $("reloads").hidden = !on; $("hp").hidden = true; $("armBack").hidden = !on; $("padAim").classList.remove("on", "nudge"); $("padFire").classList.remove("on"); $("xhair").hidden = !on;
-  const t = $("siegeTip"); if (on) { t.textContent = ARMED_TIP; t.hidden = false; ARMED.tip = 3.5; ARMED.tipNext = ARMED_TIP2; } else t.hidden = true;
+  const t = $("siegeTip"); if (on) { t.textContent = ARMED_TIP; t.hidden = false; ARMED.tip = 3.5; ARMED.tipNext = ARMED_TIP2; armBackLabel(!!ARMS.cur); } else t.hidden = true;
   if (!on) { gunHud.key = null; $("gun").title = "Guesses left"; $("gun").removeAttribute("aria-label"); hud(); }
 }
-function armedHud() { const A = ARMED; gunHud(A.bullets, A.reloads, A.reloadT > 0 ? 1 - A.reloadT / GUN.reload : -1, GUN.hearts, GUN.reloads, SIEGE_ROUNDS);
+function armedHud() { const A = ARMED; if (ARMS.cur) { armsHud(A); $("meta").textContent = A.range ? rangeMeta() : A.reloadT > 0 ? (narrowHud() ? "" : "Reloading…") : ARMS_DEF[ARMS.cur].short; return; } gunHud(A.bullets, A.reloads, A.reloadT > 0 ? 1 - A.reloadT / GUN.reload : -1, GUN.hearts, GUN.reloads, SIEGE_ROUNDS);
   $("meta").textContent = A.reloadT > 0 ? (narrowHud() ? "" : "Reloading…") : narrowHud() ? "Revolver" : "The revolver from the barrel"; }
 
 // ---- looking and shooting ----
@@ -62,7 +62,9 @@ function armedTurn(dx, dy) { const A = ARMED; if (!A.on || A.back) return; const
   A.yaw -= dx * k; A.pitch = clamp(A.pitch - dy * k, -1.35, 1.35); }
 const armedFemale = a => { const i = LIFE.crowd.indexOf(a), c = CROWD_SPECS[i]; return !!(c && c.spec.body && c.spec.body.skirt); };
 function armedFire() {
-  const A = ARMED, S = SIEGE; if (!A.on || A.lift || A.back || !$("menu").hidden || A.reloadT > 0) return;
+  const A = ARMED, S = SIEGE; if (!A.on || A.lift || A.back || !$("menu").hidden) return;
+  if (ARMS.cur) { armsFire(A.range ? "range" : "town"); return; } // (v54: a weapon from the gunsmith's range: 12t)
+  if (A.reloadT > 0) return;
   if (A.bullets <= 0) { if (A.cool <= 0) { Sound.clip("dry0", null, 0.9, 0, 0.05); A.cool = 0.3; } return; } // (click: empty)
   if (A.cool > 0) return;
   A.bullets--; A.shots++; A.cool = SIEGE_CFG.fireCool; S.recoil = 1; S.vm.kick = 1; Sound.clip(siegePick("shot", 3), null, 1.15, 0, 0.32, rnd(0.97, 1.03)); CAM.shake = Math.max(CAM.shake, 0.35);
@@ -90,7 +92,7 @@ function armedStartle() { const A = ARMED; if (A.startleT > T - 1.2) return; A.s
 // ---- one of them shot: the shootout, from here ----
 function armedShootout(victim, part, at, rd) {
   const A = ARMED, S = SIEGE; if (S.on) return;
-  A.on = false; A.lift = A.back = null; $("armBack").hidden = true;
+  A.on = false; A.lift = A.back = null; $("armBack").hidden = true; ARMS.mode = "siege"; ARMS.trig = false; armsScope(false); if (A.range) rangeOff(); // (v54: the gunsmith's weapon, if it's that in hand, is the shootout's)
   STATE.over = true; STATE.locked = true; STATE.ts = 1; SLOW.t = 99; stopBodyPlay(); swordShine(0, false); // (the round's thrown in: no hangman to finish)
   S.on = true; S.phase = "fight"; S.fromRevolver = !!STATE.lastWon; S.sword.glint.visible = false; S.t = 0; S.used = {}; for (const C of S.covers) C.grp.visible = true; S.props.visible = true;
   resetTargets(); showTargets(true); crowsGather(); resetLaser(); horseHurry(); // (what you shot to pieces from the barrel stays shot: no breakReset)
@@ -116,28 +118,32 @@ function armedShootout(victim, part, at, rd) {
 // before the camera's moved (12a updateCamera): where you're looking from, and the gun's state
 function updateArmed(rdt, dt) {
   const A = ARMED, S = SIEGE; if (!A.on) return; A.t += rdt; A.cool = Math.max(0, A.cool - rdt); S.recoil = Math.max(0, S.recoil - rdt * 4.5); S.vm.kick = Math.max(0, S.vm.kick - rdt * 6);
-  if (A.reloadT > 0) { A.reloadT -= rdt; if (A.reloadT <= 0) { A.reloadT = 0; A.bullets = SIEGE_ROUNDS; Sound.clip(siegePick("cock", 2), null, 0.75, 0, 0.05); } armedHud(); }
+  if (A.reloadT > 0) { A.reloadT -= rdt; if (A.reloadT <= 0) { A.reloadT = 0; A.bullets = armsMag(); Sound.clip(siegePick("cock", 2), null, 0.75, 0, 0.05); } armedHud(); }
   if (A.tip > 0 && (A.tip -= rdt) <= 0) { const t = $("siegeTip"); if (A.tipNext) { t.textContent = A.tipNext; A.tipNext = null; A.tip = 4; } else t.hidden = true; }
   if (!S.on) updateBlood(dt); // (a crow or a horse shot from the barrel bleeds, before any shootout)
   let pos, yaw, pitch, fov;
   if (A.back) { const B = A.back; B.t = Math.min(1, B.t + rdt / B.dur); const e = Ease.inOut(B.t);
     pos = _ar2.lerpVectors(B.cpos, B.home.pos, e); yaw = angTo(B.yaw0, B.yaw, e); pitch = lerp(B.pitch0, B.pitch, e); fov = lerp(B.fov0, B.home.fov, e); }
   else { const e = A.lift ? Ease.inOut(Math.min(1, A.t / A.lift.dur)) : 1, F = A.from;
-    pos = _ar2.lerpVectors(F.cpos, A.eye, e); pos.y += Math.sin(A.t * 1.3) * 0.004 * e; yaw = angTo(F.yaw, A.yaw, e); pitch = lerp(F.pitch, A.pitch, e) + S.recoil * 0.05; fov = lerp(F.fov, 54, e); }
+    pos = _ar2.lerpVectors(F.cpos, A.eye, e); pos.y += Math.sin(A.t * 1.3) * 0.004 * e; yaw = angTo(F.yaw, A.yaw, e); pitch = lerp(F.pitch, A.pitch, e) + S.recoil * 0.05; fov = lerp(F.fov, armsFov(54), e); }
   CAM.pos.copy(pos); CAM.tgt.copy(pos).add(_ar3.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch))); CAM.fov = fov; CAM.to = null; CAM.follow = null; CAM.name = "armed";
 }
 // after the camera's moved: the revolver in your hand (lifted off the barrel, and put back on it), the flash's light
 function armedLate(rdt) {
   const A = ARMED, S = SIEGE; if (!A.on) return; const vm = S.vm.gun, cam = R.camera; cam.updateMatrixWorld();
   const th = Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2), hw = d => d * th * cam.aspect, hh = d => d * th, toW = (x, y, z) => _ar1.set(x, y, z).applyMatrix4(cam.matrixWorld);
-  const k = S.vm.kick, rl = A.reloadT > 0 ? Math.sin(clamp(1 - A.reloadT / GUN.reload, 0, 1) * Math.PI) : 0;
+  const k = S.vm.kick, rl = A.reloadT > 0 ? Math.sin(clamp(1 - A.reloadT / armsReload(), 0, 1) * Math.PI) : 0;
   vm.scale.setScalar(0.8); vm.position.copy(toW(Math.min(0.2, hw(0.62) * 0.46), -hh(0.62) * 0.56 - rl * 0.12 + k * 0.02, -0.62 + k * 0.04)); vm.lookAt(toW(0, 0, -25)); vm.rotateX(-k * 0.5 + rl * 0.9);
-  if (A.lift || A.back) { let p, q, u; // (between the barrel's lid and your hand)
+  if (A.back && A.back.holster) ARMS.drawT = 1 - A.back.t; // (v54: a weapon from the range holstered: down out of view as you go)
+  if (ARMS.cur) armsVmPose(vm, cam, k, 0, rl); // (v54: held its own way)
+  if (A.back && A.back.holster) { if (A.back.t >= 1) { armedDone(); return; } }
+  else if (A.lift && !A.lift.p) { if (A.t >= A.lift.dur) A.lift = null; } // (v54: drawn: it comes up as the view goes to the barrel)
+  else if (A.lift || A.back) { let p, q, u; // (between the barrel's lid and your hand)
     if (A.lift) { p = A.lift.p; q = A.lift.q; u = Math.min(1, A.t / A.lift.dur); }
     else { if (!A.back.p) { A.back.p = GUNPROP.gun.getWorldPosition(V3()); A.back.q = GUNPROP.gun.getWorldQuaternion(new THREE.Quaternion()); } p = A.back.p; q = A.back.q; u = 1 - A.back.t; }
     const e = Ease.inOut(u); vm.position.lerpVectors(p, _ar2.copy(vm.position), e); vm.quaternion.slerpQuaternions(q, _arq.copy(vm.quaternion), e); vm.scale.setScalar(lerp(1, 0.8, e));
     if (A.lift && u >= 1) A.lift = null;
     if (A.back && A.back.t >= 1) { armedDone(); return; } }
-  vm.visible = true; $("xhair").hidden = !!(A.lift || A.back);
+  vm.visible = !ARMS.zoom; $("xhair").hidden = !!(A.lift || A.back) || ARMS.zoom;
   if (KEY_LIGHT) { S.flash = Math.max(0, S.flash - rdt / 0.07); if (S.flash > 0) { KEY_LIGHT.intensity = S.flash * 9; KEY_LIGHT.distance = 9; KEY_LIGHT.color.setRGB(1, 0.72, 0.42); KEY_LIGHT.position.copy(S.flashPos); } else { KEY_LIGHT.distance = 3.5; KEY_LIGHT.color.set(0xffd9b8); } }
 }
