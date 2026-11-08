@@ -605,7 +605,7 @@ function chaseLate(rdt) {
     vm.scale.setScalar(useL ? LASER_CFG.hold : 0.95); vm.position.copy(toW(Math.min(0.24, hw(0.62) * 0.5) + rnd(-j, j), -hh(0.62) * 0.56 - rl * 0.12 + cel * hh(0.62) * 0.9 + k * 0.02 + rnd(-j, j), -0.62 + k * 0.04));
     if (cel) { const pump = Math.sin(clamp(C.cine.t - 0.6, 0, 1.2) * 11) * 0.025 * (1 - clamp((C.cine.t - 0.6) / 1.2, 0, 1)); vm.position.copy(toW(hw(0.62) * 0.4, -hh(0.62) * 0.56 + cel * hh(0.62) * 0.75 + pump, -0.62)); }
     const tgt = fight ? cam.position.clone().addScaledVector(aimDir(_c2).normalize(), 25) : cel ? toW(hw(0.62) * 0.4 + 0.6 * cel, 6 * cel, -2.5) : toW(0, 0, -25); vm.lookAt(tgt); vm.rotateX(-k * 0.5 + rl * 0.9);
-    if (useL && !cel) { vm.rotateY(-0.26); vm.rotateZ(-0.1); } vm.updateMatrixWorld(true);
+    if (useL && !cel) vm.translateY(LASER_BORE * 0.95 / 0.8); vm.updateMatrixWorld(true); // (v53: the laser held as the revolver is, its bore on the revolver's line; it was turned out to the right)
     if (cel && !C.cine.fired && C.cine.t > 0.55) { C.cine.fired = true; S.vm.kick = 1; const mz = useL ? LASER_MUZZLE.clone().applyMatrix4(vm.matrixWorld) : vm.localToWorld(V3(0, 0.035, 0.22));
       if (useL) { C.cine.beam = 0.4; zapFx(mz, 0.35); } else { muzzleFlash(mz, 0.34); Sound.clip(siegePick("shot", 3), null, 1.0, 0, 0.45, 1.02); } } } // (one in the air)
   // the beam: held on what it's aimed at in the fight; a short one into the sky at the end

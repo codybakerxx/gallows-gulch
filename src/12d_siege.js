@@ -80,6 +80,11 @@ function splatTex() { // a pool of blood: an irregular blot with a few satellite
   for (let k = 0; k < 9; k++) { const a = Math.random() * TAU, r = 95 + Math.random() * 25; g.beginPath(); g.arc(128 + Math.cos(a) * r, 128 + Math.sin(a) * r, 3 + Math.random() * 7, 0, TAU); g.fill(); }
   const t = new THREE.CanvasTexture(c); return t;
 }
+// v53: where a revolver is held: the middle of its grip, and the line up the grip (it slants back 0.4 rad); and its turn for a barrel along dir
+const GUN_GRIP = { at: new THREE.Vector3(0, -0.026, -0.05), s: new THREE.Vector3(0, Math.cos(0.4), -Math.sin(0.4)) }; // (at: where the hand's grip point goes, a little ahead of the grip's middle so the fingers curl round its front)
+const _gf = new THREE.Matrix4(), _gfx = new THREE.Vector3(), _gfy = new THREE.Vector3(), _gfz = new THREE.Vector3();
+function gunFrame(dir, out) { _gfz.copy(dir).normalize(); _gfx.crossVectors(V_UP, _gfz); if (_gfx.lengthSq() < 1e-6) _gfx.set(1, 0, 0); _gfx.normalize(); _gfy.crossVectors(_gfz, _gfx);
+  return out.setFromRotationMatrix(_gf.makeBasis(_gfx, _gfy, _gfz)); }
 function revolver(detail) { // barrel along +z, grip down; the muzzle sits at (0, 0.035, 0.2)
   const g = new THREE.Group(), m = MAT.iron, w = MAT.woodDark;
   const add = (geo, mat, x, y, z, rx = 0) => { const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.rotation.x = rx; o.castShadow = true; g.add(o); return o; };
@@ -190,7 +195,7 @@ function swordHit(e) {
 function siegeTap(e) {
   if (SIEGE.phase === "window" || SIEGE.phase === "late") { if (swordHit(e)) { startSiege(); return true; } return false; } // (late: the GAME OVER sign is up, and he can still be cut down)
   if (!SIEGE.on) return false;
-  if (laserTap(e) || revTap(e)) { if (e.cancelable) e.preventDefault(); return true; } // (the laser on the crate, or the revolver left there in its place: 12k)
+  if (ammoTap(e) || laserTap(e) || revTap(e)) { if (e.cancelable) e.preventDefault(); return true; } // (v53: the spare rounds by the board, 12r) // (the laser on the crate, or the revolver left there in its place: 12k)
   if (SIEGE.phase === "fight" || (SIEGE.phase === "doomed" && laserAvail())) coverTap(e);
   if (e.cancelable) e.preventDefault(); return true;
 }
@@ -202,7 +207,7 @@ async function startSiege() {
   if (late && STATE.streakLost != null) { STATE.streak = STATE.streakLost; savePrefs(); } swordShine(0, false);
   bellReset(); // (the bell's mark is for this shootout only: 12f)
   const S = SIEGE; S.on = true; S.phase = "cut"; S.sword.glint.visible = false; S.t = 0; S.used = {}; showSiegeUI("cut"); for (const C of S.covers) C.grp.visible = true; S.props.visible = true; resetTargets(); showTargets(true); crowsGather(); resetLaser(); horseHurry(); breakReset(); // (all of it whole: 12m)
-  S.bullets = SIEGE_ROUNDS; S.reloads = GUN.reloads; S.reloadT = 0; S.health = GUN.hearts; gunHud.key = null; S.hurt = 0; S.deadT = 0; S.cool = 0; S.recoil = 0; S.holding = S.keyAim = false; S.aimId = null; S.scanT = 0; S.upT = 0; S.vm.kick = 0;
+  ammoReset(); S.bullets = SIEGE_ROUNDS; S.reloads = GUN.reloads; S.reloadT = 0; S.health = GUN.hearts; gunHud.key = null; S.hurt = 0; S.deadT = 0; S.cool = 0; S.recoil = 0; S.holding = S.keyAim = false; S.aimId = null; S.scanT = 0; S.upT = 0; S.vm.kick = 0;
   S.shots = 0; S.downT = 0; S.aims = 0; S.said.clear(); S.tauntT = 0; S.talkUntil = 0; S.wordsAt = S.lastAt = 0; S.doomT = S.doomI = 0; S.doomSaid = false; S.hitT = 0; S.flanker = null; S.flankSaid = false;
   $("doomMsg").hidden = $("hitMsg").hidden = true;
   stopBodyPlay(); STATE.locked = true; STATE.ts = 1; SLOW.t = 99; $("skip").hidden = true; showHintBox(false); $("sign").hidden = true;
@@ -250,7 +255,7 @@ function armEnemies(keep) { // (keep: the one you shot from the barrel, 12q: one
   LIFE.crowd.forEach(a => { if (!fight.includes(a)) { a.root.visible = false; S.hiddenCrowd.push(a); } });
   const mk = (a, spots, female, vr) => { const gun = revolver(false); gun.visible = true; R.scene.add(gun);
     a.siege = true; a.lookPt = null; a.setGrip("R", 0.85); a.setGrip("L", 0.6); a.ik.R.fast = a.ik.L.fast = false; setDetail(a.ch, true); a.addRun();
-    const E = { a, spots, i: 0, state: "move", t: 0, aimW: 0, kick: 0, gun, female, alive: true, gunV: null, P: playerEye(V3()), gdir: V3(0, -0.8, 0.6).normalize(), poleR: V3(), poleL: V3(),
+    const E = { a, spots, i: 0, state: "move", t: 0, aimW: 0, kick: 0, gun, female, alive: true, gunV: null, P: playerEye(V3()), gdir: V3(0, -0.8, 0.6).normalize(), gq: new THREE.Quaternion(), poleR: V3(), poleL: V3(),
       vr, talkT: 0 }; // (vr: his voice, pitched a little up or down from the recording so no two men sound quite alike)
     a.pre = siegeStance(E); a.walkTo([[spots[0][0], spots[0][1]]], rnd(SIEGE_CFG.speed[0], SIEGE_CFG.speed[1])); return E; };
   for (let i = 0; i < 6; i++) { const a = fight[i], c = CROWD_SPECS[LIFE.crowd.indexOf(a)]; S.enemies.push(mk(a, SIEGE_SPOTS[i], !!(c.spec.body && c.spec.body.skirt), [1.0, 1, 1.06, 1, 0.96, 0.92][i])); }
@@ -283,8 +288,7 @@ function updateEnemies(dt) {
     const up = E.state === "aim" || E.state === "recover"; E.aimW += ((up ? 1 : 0) - E.aimW) * Math.min(1, dt * (up ? 7 : 4)); E.kick = Math.max(0, E.kick - dt * 6);
     E.P.copy(P); a.lookPt = (a.lookPt || V3()).copy(P);
     // the gun in his right hand, along the line his stance gives it (siegeStance)
-    const hand = a.ch.bones.RightHand.getWorldPosition(_s1), dir = E.gdir;
-    E.gun.position.copy(hand).addScaledVector(dir, 0.035).add(_s2.set(0, 0.01, 0)); E.gun.lookAt(_s2.copy(E.gun.position).add(dir));
+    gunFrame(E.gdir, E.gun.quaternion); E.gun.position.copy(GUN_GRIP.at).applyQuaternion(E.gun.quaternion).negate().add(gripPt(a, "R", _s1)); // (v53: its grip in his palm)
   }
   if (S.phase !== "fight") return;
   // one gun at a time, from a man with a clear line to where your head comes up: most often one on your screen, but a man you can't see
@@ -324,7 +328,7 @@ function taunt(key, E, force) {
 // "Any last words?": the executioner's to ask if he's still standing
 function tauntWords() { const X = tauntSpeaker("exec"); if (X) return taunt("wordsX", X, true); return taunt("words", tauntSpeaker("man"), true); }
 // ---- how a gunman holds himself, laid over the idle, walk and run clips before his head turns and his arms are solved ----
-const _c = Array.from({ length: 10 }, () => new THREE.Vector3()), _cq = [new THREE.Quaternion(), new THREE.Quaternion(), new THREE.Quaternion()];
+const _c = Array.from({ length: 12 }, () => new THREE.Vector3()), _cq = [new THREE.Quaternion(), new THREE.Quaternion(), new THREE.Quaternion()];
 function sinkHips(a, sink) { // knees bent: the hips come down, the feet stay where the clip planted them and keep their angle
   const B = a.ch.bones, fw = _c[0].set(Math.sin(a.yaw), 0, Math.cos(a.yaw));
   const fL = B.LeftFoot.getWorldPosition(_c[1]), fR = B.RightFoot.getWorldPosition(_c[2]), qL = B.LeftFoot.getWorldQuaternion(_cq[0]), qR = B.RightFoot.getWorldQuaternion(_cq[1]);
@@ -351,10 +355,16 @@ function siegeStance(E) {
     const ga = _c[4].copy(mid).addScaledVector(to, 0.5).addScaledVector(rt, 0.02); ga.y += 0.05;
     g.lerp(ga, aim); g.y += 0.07 * E.kick; g.addScaledVector(to, -0.05 * E.kick);
     E.gdir.copy(f).multiplyScalar(0.75); E.gdir.y -= 0.65; E.gdir.normalize().lerp(to, aim); E.gdir.y += 0.55 * E.kick; E.gdir.normalize();
-    const lh = _c[5].copy(g).addScaledVector(rt, -0.045).addScaledVector(E.gdir, -0.015); lh.y -= 0.035; // the left hand cups the right
+    // v53: g is where the revolver's grip sits, in his right palm: his hand turned round it (the grip up through his curled fingers, his
+    // palm against its right side, the barrel on along his forearm) and the arm reaching so it lands there; the gun is hung from the hand
+    // the same way (updateEnemies). It used to be hung from his wrist, its grip back inside his forearm, his hand as the clip left it
+    gunFrame(E.gdir, E.gq); const H = a.hold || (a.hold = { R: { s: V3(), n: V3(), w: 1 }, L: { s: V3(), n: V3(), w: 1 } });
+    H.R.s.copy(GUN_GRIP.s).applyQuaternion(E.gq); H.R.n.set(1, 0, 0).applyQuaternion(E.gq); // (the gun's +x is his left: the right palm faces it)
+    H.L.s.copy(H.R.s); H.L.n.copy(H.R.n).negate(); // the left hand round the right, its palm against the right hand's fingers on the gun's left side
+    const lh = _c[5].copy(g).addScaledVector(H.R.n, 0.034).addScaledVector(H.R.s, -0.012);
     E.poleR.copy(rs).addScaledVector(rt, 0.6).addScaledVector(f, -0.3); E.poleR.y -= 0.9;
     E.poleL.copy(ls).addScaledVector(rt, -0.6).addScaledVector(f, -0.3); E.poleL.y -= 0.9;
-    a.setIK("R", g, 1, E.poleR); a.setIK("L", lh, 1, E.poleL);
+    a.setIK("R", handWrist(a, "R", g, H.R.s, H.R.n, _c[10]), 1, E.poleR); a.setIK("L", handWrist(a, "L", lh, H.L.s, H.L.n, _c[11]), 1, E.poleL);
   };
 }
 // where your head is when you come up from this cover
@@ -396,7 +406,7 @@ function playerHit(E, force) { // force: your gun's empty and he's round your co
   Sound.clip(siegePick("hurt", 3), null, 1.0, 0.03, 0.1, rnd(0.96, 1.04)); siegeHud(); screenBlood(S.health <= 2 ? 3 : 2);
   if (S.health <= 0) { siegeDie(); return; }
   // say it plainly: a banner under the top bar with what's left (the heart itself breaks in the bar, heartsHud)
-  const m = $("hitMsg"); m.textContent = `Hit! ${S.health} heart${S.health === 1 ? "" : "s"} left`; m.hidden = false; m.classList.remove("pop"); void m.offsetWidth; m.classList.add("pop"); S.hitT = 1.8;
+  const m = $("hitMsg"); m.classList.remove("ammo"); m.textContent = `Hit! ${S.health} heart${S.health === 1 ? "" : "s"} left`; m.hidden = false; m.classList.remove("pop"); void m.offsetWidth; m.classList.add("pop"); S.hitT = 1.8;
   if (S.health === 1 && S.phase === "fight") S.wordsAt = S.t + 0.9; // one heart left: they smell it (updateSiege)
 }
 
@@ -502,11 +512,11 @@ function addWound(a, part, at, rd) {
   for (const m of [a.ch.body.material.userData.U, a.ch.skin.userData.U]) { list.forEach((w, i) => m.wound.value[i].copy(w)); m.woundN.value = list.length; }
 }
 function shotHits(E, part, at, rd) {
-  const S = SIEGE, a = E.a; E.alive = false; E.state = "dead"; a.path = null; a.arrive = null; a.setIK("R", null, 0); a.setIK("L", null, 0); a.setGrip("R", 0); a.setGrip("L", 0); a.lookPt = null; a.pre = null;
+  const S = SIEGE, a = E.a; E.alive = false; E.state = "dead"; a.path = null; a.hold = null; a.arrive = null; a.setIK("R", null, 0); a.setIK("L", null, 0); a.setGrip("R", 0); a.setGrip("L", 0); a.lookPt = null; a.pre = null;
   const head = part[3] === "head" || part[3] === "neck";
   addWound(a, part, at, rd); bloodBurst(at, rd, head); addBleed(a.ch.bones[part[4]], at, part[3]); if (head) knockHat(E, rd);
   if (E.roof && a.yOff) { a.yOff = 0; a.pos.y = floorAt(a.pos.x, a.pos.z); a.root.position.copy(a.pos); } // (shot crossing the ridge: up out of the roof before he falls)
-  a.root.updateMatrixWorld(true); const H = a.hang = new Ragdoll(a, null, 0); H.dead = true; if (E.roof) H.solids = E.roof.solids;
+  a.root.updateMatrixWorld(true); const H = a.hang = new Ragdoll(a, null, 0); H.dead = true; H.solids = (E.roof ? E.roof.solids : []).concat(solidBoxesNear(a.root.position)); // (v53: every building near him is solid, not just the roof he was on)
   H.onHit = (p, sp) => Sound.thud(p, clamp(sp / 6, 0.2, 0.8)); H.onRest = () => bloodPool(a, head); E.poolT = 0.9; E.headShot = head; a.pooled = false;
   // where it struck decides how he goes down
   const n = part[3], d = rd.clone().setY(Math.max(-0.2, rd.y)).normalize(), I = H.I;
@@ -810,7 +820,7 @@ function gunHud(loaded, reloads, reloadK, hp, total = GUN.reloads, n = GUN.round
 }
 const narrowHud = () => R.w < 460; // (a phone held upright: shorter words beside the gun and the hearts)
 function siegeHud() {
-  const S = SIEGE; if (laserHeld()) { laserHud(); heartsHud(S.health); } else gunHud(S.bullets, S.reloads, S.reloadT > 0 ? 1 - S.reloadT / GUN.reload : -1, S.health, GUN.reloads, SIEGE_ROUNDS);
+  const S = SIEGE; if (laserHeld()) { laserHud(); heartsHud(S.health); } else gunHud(S.bullets, S.reloads, S.reloadT > 0 ? 1 - S.reloadT / GUN.reload : -1, S.health, GUN.reloads + AMMO.extra, SIEGE_ROUNDS);
   const n2 = S.enemies.filter(E => E.alive).length; $("meta").textContent = !S.on ? $("meta").textContent : laserHeld() ? laserMeta(n2) : S.reloadT > 0 ? (narrowHud() ? "" : "Reloading…") : narrowHud() ? `${n2} left` : `${n2} gunm${n2 === 1 ? "a" : "e"}n left`;
 }
 
@@ -908,7 +918,7 @@ function resetSiege() {
   G.splat.used = G.splat.next = 0; G.splat.im.count = 0; for (const m of G.walls) m.visible = false; G.wallNext = 0; G.bleed = []; $("gore").innerHTML = "";
   for (const m of G.mist) { m.t = 1; m.s.visible = false; } for (const b of G.bursts) { b.t = 1; b.s.visible = false; } for (const f of S.flashes) { f.t = 1; f.s.visible = false; }
   if (!S.on) return; S.on = false;
-  for (const E of S.enemies) { const a = E.a; a.hang = null; a.siege = false; a.pre = null; a.setIK("R", null, 0); a.setIK("L", null, 0); a.setGrip("R", 0); a.setGrip("L", 0); a.act.idle.timeScale = 1; R.scene.remove(E.gun);
+  for (const E of S.enemies) { const a = E.a; a.hang = null; a.siege = false; a.hold = null; a.pre = null; a.setIK("R", null, 0); a.setIK("L", null, 0); a.setGrip("R", 0); a.setGrip("L", 0); a.act.idle.timeScale = 1; R.scene.remove(E.gun);
     a.talkAmt = 0; a.ch.skin.userData.U.jaw.value = 0; // (in case he was cut off mid-taunt)
     setDetail(a.ch, false); a.speed = 1.3;
     a.wounds = []; for (const m of [a.ch.body.material.userData.U, a.ch.skin.userData.U]) m.woundN.value = 0; }

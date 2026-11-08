@@ -116,20 +116,26 @@ function resetRope() { const r = GAL.rope, s = r.sim; s.load(r.rest); s.pins = [
 function releaseRopeCoil() { const r = GAL.rope; if (!r.sim.pinned(r.tie)) return; for (const q of r.ties) r.sim.free(q.i); r.twines.forEach(t => t.visible = false); }
 const _rc = new THREE.Vector3(), _rd = new THREE.Vector3(), _re = new THREE.Vector3(), _rq = new THREE.Quaternion(), _rm = new THREE.Matrix4(), _rq2 = new THREE.Quaternion();
 const KNOT_LEN = 0.12;
-// where the noose sits, fixed in the neck bone's frame (captured in the standing pose): ring under the jaw, tilted up toward the knot under his left ear
+// where the noose sits, fixed in the neck bone's frame (captured in the standing pose). v53: fitted to his mesh (the head and neck as he stands
+// on the trap, measured vertex by vertex) so the rope never cuts into him: the loop under his jaw, low at the throat and the right of his neck
+// where it rests on his shirt collar, high round the back of his neck to the knot behind his left ear; the knot lying back along his head.
+// (In v52 the loop was 8 cm across at the height of his jaw and ran through his beard and chin.) In his own frame, from the neck bone: x to
+// his side (the knot's), y up, z forward
+const NOOSE_FIT = { c: [-0.0039, 0.035, 0.0067], n: [-0.4373, 0.8708, 0.2246], R: 0.1061, attach: [0.084, 0.0867, -0.0226], top: [0.1148, 0.2012, -0.0409] };
+function manPt(actor, p, out = new THREE.Vector3()) { const q = actor.root.quaternion, o = actor.ch.bones.Neck.getWorldPosition(_rk);
+  return out.copy(o).addScaledVector(_rk2.set(1, 0, 0).applyQuaternion(q), p[0]).addScaledVector(V_UP, p[1]).addScaledVector(_rk2.set(0, 0, 1).applyQuaternion(q), p[2]); }
 function noosePose(actor) {
   const r = GAL.rope, B = actor.ch.bones, nb = B.Neck;
   if (!r.neckLocal) {
-    const n = nb.getWorldPosition(V3()), h = B.Head.getWorldPosition(V3()), q = actor.root.quaternion, up = V3(0, 1, 0), fw = V3(0, 0, 1).applyQuaternion(q), side = V3(1, 0, 0).applyQuaternion(q);
-    const c = n.clone().lerp(h, 0.5).addScaledVector(fw, 0.016).addScaledVector(up, 0.014), R = 0.08;
-    const ringN = up.clone().addScaledVector(side, -0.3).addScaledVector(fw, 0.1).normalize(); // knot side and back sit higher than the throat
-    const ringQ = new THREE.Quaternion().setFromUnitVectors(V3(0, 0, 1), ringN);
-    const attach = c.clone().addScaledVector(side, R + 0.012).addScaledVector(up, R * 0.38 + 0.01), top = attach.clone().addScaledVector(up, KNOT_LEN).addScaledVector(side, 0.012);
+    const q = actor.root.quaternion, NF = NOOSE_FIT, c = manPt(actor, NF.c), attach = manPt(actor, NF.attach), top = manPt(actor, NF.top), R = NF.R;
+    const ringN = V3(...NF.n).applyQuaternion(q).normalize(), ringQ = new THREE.Quaternion().setFromUnitVectors(V3(0, 0, 1), ringN);
+    B.Head.updateWorldMatrix(true, false); const topH = top.clone().applyMatrix4(_rm.copy(B.Head.matrixWorld).invert()); // (v53: the knot's top lies against his head and goes with it as he turns it)
     nb.updateWorldMatrix(true, false); const inv = _rm.copy(nb.matrixWorld).invert(), nq = nb.getWorldQuaternion(new THREE.Quaternion());
-    r.neckLocal = { c: c.applyMatrix4(inv), attach: attach.applyMatrix4(inv), top: top.applyMatrix4(inv), q: nq.invert().multiply(ringQ), R };
+    r.neckLocal = { c: c.applyMatrix4(inv), attach: attach.applyMatrix4(inv), top: top.applyMatrix4(inv), topH, q: nq.invert().multiply(ringQ), R };
   }
   const L = r.neckLocal; nb.updateWorldMatrix(true, false); const M = nb.matrixWorld, nq = nb.getWorldQuaternion(_rq2);
-  return { c: _rc.copy(L.c).applyMatrix4(M), attach: _rd.copy(L.attach).applyMatrix4(M), top: _re.copy(L.top).applyMatrix4(M), q: _rq.copy(nq).multiply(L.q), R: L.R };
+  const top = actor.hang ? _re.copy(L.top).applyMatrix4(M) : (B.Head.updateWorldMatrix(true, false), _re.copy(L.topH).applyMatrix4(B.Head.matrixWorld));
+  return { c: _rc.copy(L.c).applyMatrix4(M), attach: _rd.copy(L.attach).applyMatrix4(M), top, q: _rq.copy(nq).multiply(L.q), R: L.R };
 }
 const _rk = new THREE.Vector3(), _rk2 = new THREE.Vector3();
 // a noose pose: ring centre c, orientation q (ring in its local XY plane), radius R; the knot runs from attach (on the ring) up to top

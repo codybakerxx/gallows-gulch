@@ -37,7 +37,7 @@ function updateHorse(dt) {
   if (H.meat) { horseMeatStep(H, dt); return; } if (H.dead) { horseFallStep(H, dt); return; } // (shot: 12l)
   if (!H.run) { H.wait -= dt; if (H.wait > 0) return;
     const fight = SIEGE.on && SIEGE.phase !== "chase"; // (in the shootout it gallops right across the street just past the gallows, where it can be seen and hit from the cover, then off up the street)
-    const pts = (fight ? [streetPt(4, 14), streetPt(5.5, 7), streetPt(5.5, -7), streetPt(16, -2.5), streetPt(70, -1 + Math.random() * 2)] : [streetPt(-3, 24), streetPt(14, 2.5 + Math.random()), streetPt(110, -1 + Math.random() * 2)]).map(q => V3(q[0], 0, q[1]));
+    const pts = (fight ? [streetPt(4, 14), streetPt(5.5, 7), streetPt(5.5, -7), streetPt(16, -2.5), streetPt(70, -1 + Math.random() * 2)] : [streetPt(-3, 24), streetPt(4.5, 7.5), streetPt(14, 2.5 + Math.random()), streetPt(110, -1 + Math.random() * 2)] /* (v53: round the general store's corner: it ran straight through its porch and front) */).map(q => V3(q[0], 0, q[1]));
     H.run = { pts, seg: 0, d: 0, v: 5 }; H.grp.visible = true; H.yaw = Math.atan2(pts[1].x - pts[0].x, pts[1].z - pts[0].z); if (!H.tack) horseTack(H, { saddle: false }); horseTackShow(H, true); }
   const Rn = H.run; let a = Rn.pts[Rn.seg], b = Rn.pts[Rn.seg + 1], len = a.distanceTo(b);
   Rn.v = Math.min(7.5, Rn.v + dt * 3); Rn.d += Rn.v * dt;
@@ -120,6 +120,7 @@ function updateWeed(dt) {
         const kEff = 1 / m + rr * rr / I, jt = Math.min(sl / kEff, mu * jn), t = slip.multiplyScalar(-jt / sl);
         W.v.addScaledVector(t, 1 / m); W.w.add(_w1.crossVectors(rc, t).multiplyScalar(1 / I)); }
     }
+    { const n = solidPush(W.p, W.r * 0.9); if (n) { const vn = W.v.x * n.x + W.v.z * n.z; if (vn < 0) { W.v.x -= n.x * vn * 1.35; W.v.z -= n.z * vn * 1.35; Sound.rustle(W.m.position, Math.min(0.6, -vn * 0.3)); } } } // (v53: off a wall or a porch, not through it)
     // integrate orientation
     const wl = W.w.length(); if (wl > 1e-5) { _wq.setFromAxisAngle(_w1.copy(W.w).divideScalar(wl), wl * h); W.q.premultiply(_wq).normalize(); }
   }

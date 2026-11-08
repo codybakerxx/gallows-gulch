@@ -144,18 +144,27 @@ function buildTumbleweeds() {
   const white = new THREE.Color(1, 1, 1); for (let i = 0; i < n; i++) im.setColorAt(i, white); /* (v42: a weed that burns blackens through its colour) */
 }
 // start one upwind of the street (or anywhere along it, at first)
-function tumbleSpawn(w, anywhere) { const r = w.r, al = lerp(16, 62, r()), sd = anywhere ? lerp(-14, 14, r()) : -16 - r() * 8, wd = WIND.v.clone().setY(0).normalize();
-  const [x, z] = streetPt(al, 0); w.p = V3(x, 0, z).addScaledVector(wd, anywhere ? sd : sd); w.v = 0; w.life = 0; w.hop = 0; w.vy = 0; w.y = 0; return w; }
+// v53: never inside a building: from upwind it comes in only along a line nothing stands on (out of an alley, or past the end of a row);
+// where there's none, it comes up just in front of the porches on that side, fading in. (In v52 it started behind the buildings and blew
+// straight through them)
+function tumbleSpawn(w, anywhere) { const r = w.r, al = lerp(16, 62, r()), wd = WIND.v.clone().setY(0).normalize(), [x, z] = streetPt(al, 0), solid = SOLID.fps.length > 0;
+  let sd = anywhere ? lerp(-14, 14, r()) : -16 - r() * 8;
+  if (solid && anywhere) { for (let k = 0; k < 12 && solidHit(x + wd.x * sd, z + wd.z * sd, w.rad); k++) sd = lerp(-8, 8, r()); }
+  else if (solid) { let s = sd; while (s < 0 && (solidHit(x + wd.x * s, z + wd.z * s, w.rad) || !solidClear(x + wd.x * s, z + wd.z * s, x, z, w.rad))) s += 0.5; sd = Math.min(s, -1); }
+  w.p = V3(x, 0, z).addScaledVector(wd, sd); w.v = 0; w.life = 0; w.hop = 0; w.vy = 0; w.y = 0; w.held = 0; w.fade = anywhere && !solid ? 1 : 0; return w; }
 function updateTumbleweeds(dt) {
   const D = DRESS.weeds; if (!D || !D.im.visible) return; const wind = WIND.v, ws = Math.hypot(wind.x, wind.z) || 1, dir = _v1.set(wind.x / ws, 0, wind.z / ws);
   let tint = false, glowing = false; D.weeds.forEach((w, i) => { const gl = w.fire ? w.glow || 0 : 0; if (D.glowA.getX(i) !== gl) { D.glowA.setX(i, gl); glowing = true; }
     if (w.gone > 0) { w.gone -= dt; D.m4.makeScale(0, 0, 0); D.im.setMatrixAt(i, D.m4); if (w.gone <= 0) { w.gone = 0; tumbleSpawn(w); D.im.setColorAt(i, D.col.setRGB(1, 1, 1)); tint = true; } return; } /* (v42: burned to ash; another blows in later) */
     const target = (0.9 + 0.5 * Math.sin(w.ph + w.life * 0.7)) * Math.min(3.2, ws * 1.4) * (1 + WIND.gust * 0.8); w.v += (target - w.v) * Math.min(1, dt * 1.5); w.life += dt;
     const step = w.v * dt; w.p.addScaledVector(dir, step); if (w.kick) { w.p.addScaledVector(w.kick, dt); w.kick.multiplyScalar(Math.max(0, 1 - 2.2 * dt)); } /* (a shot knocked it on: 12j) */ w.p.addScaledVector(V3(-dir.z, 0, dir.x), Math.sin(w.life * 0.9 + w.ph) * 0.15 * dt); // (a little drift across the wind)
+    // (v53: against a wall or a porch it stops there, or rolls along it if the wind has it; held there a while, a gust takes it off: it fades)
+    if (SOLID.fps.length) { const hit = solidPush(w.p, w.rad); w.held = hit ? w.held + dt : Math.max(0, w.held - dt * 0.5); if (hit) w.v *= 0.9; }
+    w.fade = w.held > 2.6 ? Math.max(0, w.fade - dt / 0.6) : Math.min(1, w.fade + dt / 0.6); if (w.held > 2.6 && w.fade <= 0) { tumbleSpawn(w); return; }
     w.vy -= 9.8 * dt; w.y += w.vy * dt; if (w.y <= 0) { w.y = 0; w.vy = w.v > 0.8 && w.r() < dt * (0.5 + 0.35 * w.v) ? 1.0 + w.r() * 1.6 : 0; } // (it hops now and then on a stone)
     D.ax.set(dir.z, 0, -dir.x); D.dq.setFromAxisAngle(D.ax, step / w.rad); w.q.premultiply(D.dq); // (rolling: turned by the distance over its radius)
     const gy = groundVis(w.p.x, w.p.z); w.c = (w.c || V3()).set(w.p.x, gy + w.rad * 0.9 + w.y, w.p.z); let k = 1; if (w.fire) { k = weedFireStep(w, dt, D.col); D.im.setColorAt(i, D.col); tint = true; } /* (v42: alight: 12o) */
-    D.s.setScalar(w.rad / 0.38 * Math.max(0.001, k)); D.m4.compose(_v2.set(w.p.x, gy + w.rad * (0.9 * k) + w.y, w.p.z), w.q, D.s); D.im.setMatrixAt(i, D.m4);
+    D.s.setScalar(w.rad / 0.38 * Math.max(0.001, k * (w.fade ?? 1))); D.m4.compose(_v2.set(w.p.x, gy + w.rad * (0.9 * k) + w.y, w.p.z), w.q, D.s); D.im.setMatrixAt(i, D.m4);
     const dx = w.p.x - STREET.o[0], dz = w.p.z - STREET.o[1], sd = dx * STREET.r[0] + dz * STREET.r[1], al = dx * STREET.a[0] + dz * STREET.a[1];
     if (!w.fire && (Math.abs(sd) > 30 || al < 8 || al > 90)) tumbleSpawn(w); });
   D.im.instanceMatrix.needsUpdate = true; if (tint && D.im.instanceColor) D.im.instanceColor.needsUpdate = true; if (glowing) D.glowA.needsUpdate = true;

@@ -14,6 +14,7 @@ const LASER_CFG = { charge: 20, recharge: 7, kill: 0.08, envGap: 0.28, scorchGap
 const LASER = { ready: false, geo: null, mat: null, e0: 3, crate: null, rev: null, vm: null, state: "crate", lift: null, charge: LASER_CFG.charge, rechargeT: 0, hold: false, firing: false,
   envT: 0, bellT: 0, scorchT: 0, smokeT: 0, beam: null, glowA: null, glowB: null, sparks: null, scorch: null, muz: new THREE.Vector3(), end: new THREE.Vector3(), hudKey: "", awake: false, t: 0, lastSecs: -1 };
 const LASER_MUZZLE = new THREE.Vector3(0, 0, 0.246); // (the emitter's mouth, in the gun's own frame once it's turned barrel-forward)
+const LASER_BORE = 0.035 * 0.8; // (v53: how far up to hold it so its bore lies on the revolver's (0.035 above the revolver's origin, at its 0.8 scale in the hand))
 const _l1 = new THREE.Vector3(), _l2 = new THREE.Vector3(), _l3 = new THREE.Vector3(), _l4 = new THREE.Vector3(), _lq = new THREE.Quaternion();
 
 // ---- the model: one mesh, barrel along +z, the grip under the origin ----
@@ -180,7 +181,10 @@ function laserLate(rdt) {
   S.vm.gun.visible = false; if (!show) { L.vm.visible = false; L.beam.visible = false; L.glowA.visible = L.glowB.visible = false; return; }
   const cam = R.camera, th = Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2), hw = d => d * th * cam.aspect, hh = d => d * th, toW = (x, y, z) => _l1.set(x, y, z).applyMatrix4(cam.matrixWorld);
   const down = Ease.inOut(clamp(S.cv, 0, 1)) * 0.22, j = L.firing ? 0.004 : 0, vm = L.vm;
-  vm.position.copy(toW(Math.min(0.19, hw(0.62) * 0.44) + rnd(-j, j), -hh(0.62) * 0.55 - down + rnd(-j, j), -0.6)); vm.lookAt(toW(0, 0, -25)); vm.rotateY(-0.26); vm.rotateZ(-0.1); vm.scale.setScalar(LASER_CFG.hold); // (turned out a little, so you see its side)
+  // v53: held just as the revolver is (12d siegeLate): the same place low on the right, the barrel straight down the line of sight to the
+  // crosshair, its bore where the revolver's is (the laser's runs through its origin, the revolver's 3.5 cm above). It used to be turned
+  // 15 degrees out to show its side and tipped over, which had it pointing off to the right of where you aimed
+  vm.position.copy(toW(Math.min(0.2, hw(0.62) * 0.46) + rnd(-j, j), -hh(0.62) * 0.56 - down + rnd(-j, j), -0.62)); vm.lookAt(toW(0, 0, -25)); vm.translateY(LASER_BORE); vm.scale.setScalar(LASER_CFG.hold);
   vm.visible = S.cv < 0.85;
   if (L.state === "lift") { const T = L.lift; T.t = Math.min(1, T.t + rdt / 0.4); const e = Ease.inOut(T.t); // (off the crate and up into your hand)
     _lq.copy(T.q).slerp(vm.quaternion, e); vm.position.lerpVectors(T.p, _l2.copy(vm.position), e); vm.quaternion.copy(_lq); vm.scale.setScalar(lerp(1, LASER_CFG.hold, e)); vm.visible = true;

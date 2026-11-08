@@ -80,27 +80,37 @@ const STEP_K = { 1: 0, 2: 4, 3: 9, 4: 13 };
 function trapYaw() { return Math.atan2(LAY.board.x - LAY.trap.x, LAY.board.z - LAY.trap.z) - 0.25; }
 // the noose in the executioner's fists. mode "one": hanging from his left fist, which holds the knot; "two": opened between both fists
 // (left on the knot, right on the far side of the ring); "cinch": the ring closing round the neck as the knot is drawn up under the left ear
-const ROPE = { held: false, mode: null, blend: 0, snap: null, from: null, fromT: 1 };
+const ROPE = { held: false, mode: null, blend: 0, snap: null, from: null, fromT: 1, wantN: null, wantK: null };
 const _hp = { gL: V3(), gR: V3(), a: V3(), n: V3(), f: V3(), y: V3(), m: new THREE.Matrix4(), pose: newPose(), mix: newPose(), mix2: newPose() };
 function heldNoosePose() {
   const P = _hp.pose, gL = gripPt(EXEC, "L", _hp.gL), gR = gripPt(EXEC, "R", _hp.gR);
-  P.top.copy(gL).addScaledVector(V_UP, KNOT_LEN / 2); P.attach.copy(gL).addScaledVector(V_UP, -KNOT_LEN / 2); // the left fist closes round the knot
+  const kd = ROPE.wantK || V_UP; P.top.copy(gL).addScaledVector(kd, KNOT_LEN * (1 - KNOT_GRIP)); P.attach.copy(gL).addScaledVector(kd, -KNOT_LEN * KNOT_GRIP); // the left fist closes round the knot (v53: wantK, the way the knot lies as it comes to his ear)
   const a = _hp.a.subVectors(gR, P.attach), w = a.length() || 1e-6; a.divideScalar(w);
-  P.c.addVectors(P.attach, gR).multiplyScalar(0.5); P.R = clamp(w / 2, 0.07, 0.17);
+  P.c.addVectors(P.attach, gR).multiplyScalar(0.5); P.R = clamp(w / 2, 0.07, 0.2);
   // the ring's plane holds the line between the fists and lies as flat as it can (hanging, it faces him; opened, it can pass over a head)
-  const fw = _hp.f.set(Math.sin(EXEC.yaw), 0, Math.cos(EXEC.yaw)), n = _hp.n.copy(V_UP).addScaledVector(fw, 0.35).normalize(); n.addScaledVector(a, -n.dot(a)).normalize();
+  const fw = _hp.f.set(Math.sin(EXEC.yaw), 0, Math.cos(EXEC.yaw)), n = ROPE.wantN ? _hp.n.copy(ROPE.wantN) : _hp.n.copy(V_UP).addScaledVector(fw, 0.35).normalize(); n.addScaledVector(a, -n.dot(a)); // (v53: wantN, the plane the noose is carried in over his head)
+  if (n.lengthSq() < 1e-4) n.copy(V_UP).addScaledVector(fw, 0.35).addScaledVector(a, -a.dot(V_UP) - 0.35 * a.dot(fw)); if (n.lengthSq() < 1e-8) n.set(a.y, -a.x, 0); n.normalize(); // (never edge-on to the line between his fists)
   _hp.m.makeBasis(a, _hp.y.crossVectors(n, a), n); P.q.setFromRotationMatrix(_hp.m);
   return P;
 }
+// his head's own frame, from its bones: up through the crown, forward toward his eyes (it follows him however he turns his head)
+const _hf = { h: new THREE.Vector3(), t: new THREE.Vector3(), e: new THREE.Vector3(), u: new THREE.Vector3(), f: new THREE.Vector3() };
+function headFrame(actor) { const B = actor.ch.bones, F = _hf; B.Head.getWorldPosition(F.h); B.HeadTop_End.getWorldPosition(F.t); F.u.subVectors(F.t, F.h); const L = F.u.length(); F.u.divideScalar(L || 1);
+  const ey = actor.ch.eyes; if (ey && ey[0]) { ey[0].getWorldPosition(F.e); if (ey[1]) F.e.add(ey[1].getWorldPosition(A4)).multiplyScalar(0.5); F.f.subVectors(F.e, F.h); } else F.f.set(Math.sin(actor.yaw), 0, Math.cos(actor.yaw));
+  F.f.addScaledVector(F.u, -F.f.dot(F.u)).normalize(); F.L = L; return F; }
+function headSpheres(actor, c1, c2) { const F = headFrame(actor); c1.copy(F.h).addScaledVector(F.u, F.L * 0.552); c2.copy(F.h).addScaledVector(F.u, -F.L * 0.028).addScaledVector(F.f, 0.031); }
 function ropeMode(mode) { ROPE.from = copyPose(ROPE.from || newPose(), GAL.rope.drawn); ROPE.fromT = 0; ROPE.mode = mode; ROPE.held = !!mode; }
 function updateRopeState(t, dt) {
   const r = GAL.rope, sim = r.sim, n = sim.n, B = MAN.ch.bones, H = MAN.hang;
   // the condemned man's skull, neck and body push the rope aside (the last few links ride against him by the knot)
-  if (!sim.spheres.length) for (let i = 0; i < 4; i++) sim.spheres.push({ c: new THREE.Vector3(), r: [0.085, 0.055, 0.16, 0.15][i], skip: i < 2 ? 5 : 0 });
-  const S = sim.spheres; B.Head.getWorldPosition(S[0].c); S[0].c.y += 0.07; B.Neck.getWorldPosition(S[1].c); B.Spine2.getWorldPosition(S[2].c); B.Hips.getWorldPosition(S[3].c);
+  // (v53: the skull and the face and jaw as two spheres fitted to his head's mesh, which the one 8.5 cm sphere left the sides of; and only the
+  // pinned end and the link after it ride free by the knot, where five did: 34 cm of rope that could pass through his head)
+  if (!sim.spheres.length) for (let i = 0; i < 5; i++) sim.spheres.push({ c: new THREE.Vector3(), r: [0.12, 0.127, 0.055, 0.16, 0.15][i], skip: i < 3 ? 2 : 0 });
+  const S = sim.spheres; headSpheres(MAN, S[0].c, S[1].c); B.Neck.getWorldPosition(S[2].c); B.Spine2.getWorldPosition(S[3].c); B.Hips.getWorldPosition(S[4].c);
   let np = null, free = false;
+  { const on = r.onNeck && !H; MAN.lookDown = on ? -0.08 : undefined; MAN.lookYaw = on ? 0.6 : undefined; MAN.lookNeck = on ? 0.85 : undefined; MAN.lookUp = on ? 0.22 : undefined; } // (v53: the noose holds his chin up and his head to his neck: a look down, or a turn of the head on the neck, pressed his jaw or skull through it)
   if (r.onNeck || H) { np = noosePose(MAN); sim.pin(n - 1, np.top, H || ROPE.fromT < 1 ? 0 : 0.05); sim.scale = H && H.taut ? 1 + (Math.max(0, H.stretch) + 0.02) / sim.L : 1; }
-  else if (ROPE.held && ROPE.mode === "one") { gripPt(EXEC, "L", A5).addScaledVector(V_UP, KNOT_LEN / 2); sim.pin(n - 1, A5, 0); }
+  else if (ROPE.held && ROPE.mode === "one") { gripPt(EXEC, "L", A5).addScaledVector(V_UP, KNOT_LEN * (1 - KNOT_GRIP)); sim.pin(n - 1, A5, 0); }
   else if (ROPE.held) { np = heldNoosePose(); if (ROPE.mode === "cinch") np = mixPose(_hp.mix, ROPE.snap, noosePose(MAN), Ease.inOut(ROPE.blend)); sim.pin(n - 1, np.top, 0); }
   else { sim.free(n - 1); free = true; }
   // a change of hands (or letting go) eases over instead of jumping
@@ -142,7 +152,7 @@ async function manTo(idx) {
 // ---- panic: glances, breathing, fear on the face ----
 function setPanic(p) { MAN.panic = Math.max(MAN.panic || 0, p); MAN.lookT = 0; }
 function updatePanic(dt) {
-  if (!MAN || !MAN.panic || MAN.hang) return;
+  if (!MAN || !MAN.panic || MAN.hang || MAN.stillHead) return; // (stillHead: the noose going over his head, v53)
   MAN.lookT = (MAN.lookT || 0) - dt;
   if (MAN.lookT <= 0) { MAN.lookT = 0.5 + Math.random() * (1.4 - MAN.panic * 0.7);
     const h = MAN.ch.bones.Head.getWorldPosition(new THREE.Vector3()), r = Math.random();
@@ -150,43 +160,80 @@ function updatePanic(dt) {
 }
 // the executioner steps in behind the prisoner, takes the knot in his left fist and the far side of the loop in his right, opens it,
 // lifts it up over the man's head, lowers it round his neck, and draws the knot up snug under the left ear
-function execHand(side, G) { EXEC.setIK(side, wristFor(EXEC, side, G, V3()), 1); }
+// v53: the loop goes up behind the man's head and over it held flat and open (30 cm across), comes down round his head along its middle
+// (fitted to his mesh: the loop clears his skull, nose and chin by at least a centimetre), and only below his jaw is turned and drawn in
+// to sit on his neck (NOOSE_FIT, 07). In v52 it was drawn straight from his shoulder to over his head (through his face) and drawn in as it
+// came down (through his chin). And the executioner's fists turn so what they hold lies in their grip (alignHand, 09): the knot up through
+// his left fist, the loop through the curl of his right fingers. The man holds his head still while the noose comes down over it
+function execHand(side, G) { const h = EXEC.hold && EXEC.hold[side]; EXEC.setIK(side, h && h.w > 0.5 ? handWrist(EXEC, side, G, h.s, h.n, V3()) : wristFor(EXEC, side, G, V3()), 1); } // (v53: turned to what it holds, the wrist that puts the grip exactly on G)
+// the open loop's middle on its way down round his head, in his own frame from the neck bone (x his side, y up, z forward): fitted to his head
+const NOOSE_DOWN = [[0.40, -0.006, 0.012], [0.28, -0.006, 0.014], [0.22, -0.008, 0.017], [0.18, -0.008, 0.018], [0.15, -0.008, 0.027], [0.12, -0.004, 0.034], [0.09, -0.012, 0.033], [0.06, -0.004, 0.027]];
+function nooseDownAt(y) { const D = NOOSE_DOWN; if (y >= D[0][0]) return [D[0][1], D[0][2]]; for (let i = 1; i < D.length; i++) if (y >= D[i][0]) { const a = D[i - 1], b = D[i], t = (y - b[0]) / (a[0] - b[0]); return [lerp(b[1], a[1], t), lerp(b[2], a[2], t)]; } return [D[D.length - 1][1], D[D.length - 1][2]]; }
+const KNOT_GRIP = 1.15; // (v53: his left fist holds the rope just above the knot, not round the knot's middle: clear of the man's head when it's on him)
+const NOOSE_OPEN = 0.185; // (the loop's radius held open: his head is 12.4 cm from its middle at the widest; then the rope, and the fingers curled round it)
+// the fists' targets for a loop of middle C (world), radius R, in the plane with normal n, the knot at direction u from the middle
+function nooseHands(C, R, n, u) { const uu = V3().copy(u).addScaledVector(n, -u.dot(n)).normalize();
+  execHand("L", C.clone().addScaledVector(uu, R).addScaledVector(ROPE.wantK || V_UP, KNOT_LEN * KNOT_GRIP)); execHand("R", C.clone().addScaledVector(uu, -R)); }
+// where in his fists the rope runs: the knot (bottom to top) in the left, the loop's tangent at the right fist
+// (the palm toward it from his shoulder: a reach, not a twist)
+function nooseGrips() { const d = GAL.rope.drawn, B = EXEC.ch.bones, H = EXEC.hold || (EXEC.hold = { L: { s: V3(), n: V3(), w: 0 }, R: { s: V3(), n: V3(), w: 0 } });
+  H.L.s.subVectors(d.top, d.attach); if (H.L.s.lengthSq() < 1e-8) H.L.s.copy(V_UP);
+  const gL = gripPt(EXEC, "L", V3()); H.L.n.subVectors(gL, B.LeftArm.getWorldPosition(V3())).setY(0);
+  const n = V3(0, 0, 1).applyQuaternion(d.q), gR = gripPt(EXEC, "R", V3()); H.R.s.crossVectors(n, V3().subVectors(gR, d.c)); if (H.R.s.lengthSq() < 1e-8) H.R.s.set(1, 0, 0);
+  H.R.n.subVectors(gR, B.RightArm.getWorldPosition(V3())).setY(0); return H; }
 async function execNoose() {
   const B = MAN.ch.bones, f = () => V3(Math.sin(MAN.yaw), 0, Math.cos(MAN.yaw)), lf = () => V3(Math.cos(MAN.yaw), 0, -Math.sin(MAN.yaw));
-  const spot = MAN.pos.clone().addScaledVector(f(), -0.38).addScaledVector(lf(), 0.2), sim = GAL.rope.sim;
-  const knot = () => sim.P(sim.n - 1, V3()).addScaledVector(V_UP, -KNOT_LEN / 2); // the knot's middle, wherever the swaying rope has it
+  const spot = MAN.pos.clone().addScaledVector(f(), -0.36).addScaledVector(lf(), 0.12) /* (v53: closer in behind him, to reach round both sides of his head) */, sim = GAL.rope.sim;
+  const knot = () => sim.P(sim.n - 1, V3()).addScaledVector(V_UP, -KNOT_LEN * (1 - KNOT_GRIP)); // where on the knot his fist closes, wherever the swaying rope has it
+  const mp = p => manPt(MAN, p), side = () => V3(1, 0, 0).applyQuaternion(MAN.root.quaternion); // (a point in his frame; the knot's side)
   EXEC.setIK("R", null, 0); EXEC.setIK("L", null, 0); EXEC.lookPt = knot(); follow("noose", nooseShot, 1.2);
+  MAN.stillHead = true; MAN.lookPt = null; // (his head still and square while the executioner comes: where the noose's place on his neck is taken from)
   await EXEC.walkTo([[spot.x, spot.z]], 0.9); EXEC.face(MAN.yaw); await wait(0.25);
+  GAL.rope.neckLocal = null; noosePose(MAN); MAN.stillHead = false;
+  const H = nooseGrips(); H.L.w = H.R.w = 0;
   // 1) his left hand goes to the knot (following it as it sways) and closes on it
-  EXEC.ik.L.fast = true; await tween(0.6, p => { EXEC.lookPt = knot(); execHand("L", knot()); });
-  for (let i = 0; i < 12 && gripPt(EXEC, "L", V3()).distanceTo(knot()) > 0.02; i++) await tween(0.05, () => execHand("L", knot()));
+  EXEC.ik.L.fast = true; await tween(0.6, p => { EXEC.lookPt = knot(); execHand("L", knot()); nooseGrips().L.w = Ease.inOut(p); });
+  for (let i = 0; i < 12 && gripPt(EXEC, "L", V3()).distanceTo(knot()) > 0.02; i++) await tween(0.05, () => { execHand("L", knot()); nooseGrips(); });
   EXEC.setGrip("L", 1); ropeMode("one"); Sound.ropeCreak(knot(), 0.5); MAN.gesture("shake");
   // 2) he draws the noose in beside the man's left shoulder; the loop swings below his fist
   const eF = () => V3(Math.sin(EXEC.yaw), 0, Math.cos(EXEC.yaw)), eL = () => V3(Math.cos(EXEC.yaw), 0, -Math.sin(EXEC.yaw));
-  const k0 = gripPt(EXEC, "L", V3()), side = () => EXEC.ch.bones.LeftArm.getWorldPosition(V3()).addScaledVector(eF(), 0.32).addScaledVector(eL(), 0.02).add(V3(0, 0.06, 0));
-  await tween(0.45, p => execHand("L", k0.clone().lerp(side(), Ease.inOut(p))));
+  const k0 = gripPt(EXEC, "L", V3()), shoulder = () => EXEC.ch.bones.LeftArm.getWorldPosition(V3()).addScaledVector(eF(), 0.32).addScaledVector(eL(), 0.02).add(V3(0, 0.06, 0));
+  await tween(0.45, p => { execHand("L", k0.clone().lerp(shoulder(), Ease.inOut(p))); nooseGrips(); });
   // 3) his right hand takes the bottom of the loop
   const ringLow = () => { const d = GAL.rope.drawn; return d.c.clone().sub(d.attach).normalize().multiplyScalar(d.R).add(d.c); };
-  EXEC.ik.R.fast = true; EXEC.lookPt = ringLow(); await tween(0.5, p => { execHand("L", side()); execHand("R", ringLow()); });
-  for (let i = 0; i < 10 && gripPt(EXEC, "R", V3()).distanceTo(ringLow()) > 0.025; i++) await tween(0.05, () => { execHand("L", side()); execHand("R", ringLow()); });
+  EXEC.ik.R.fast = true; EXEC.lookPt = ringLow(); await tween(0.5, p => { execHand("L", shoulder()); execHand("R", ringLow()); nooseGrips().R.w = Ease.inOut(p); });
+  for (let i = 0; i < 10 && gripPt(EXEC, "R", V3()).distanceTo(ringLow()) > 0.025; i++) await tween(0.05, () => { execHand("L", shoulder()); execHand("R", ringLow()); nooseGrips(); });
   EXEC.setGrip("R", 1); ropeMode("two"); await wait(0.15);
-  // 4) opens it and lifts it up and over his head
-  const top = () => B.HeadTop_End.getWorldPosition(V3()), Rw = 0.15, gL0 = gripPt(EXEC, "L", V3()), gR0 = gripPt(EXEC, "R", V3());
-  const over = s => top().add(V3(0, 0.1, 0)).addScaledVector(lf(), s * Rw).addScaledVector(f(), -0.02);
-  EXEC.lookPt = top(); MAN.lookPt = top().add(V3(0, 0.5, 0)).addScaledVector(f(), 0.4); setPanic(0.45);
-  await tween(0.8, p => { const e = Ease.inOut(p), lift = V3(0, 0.1 * Math.sin(Math.PI * e), 0); execHand("L", gL0.clone().lerp(over(1), e).add(lift)); execHand("R", gR0.clone().lerp(over(-1), e).add(lift)); });
-  // 5) down round his head to his neck, the loop drawing in as it goes
-  const neckC = () => noosePose(MAN).c.clone();
-  await tween(0.85, p => { const e = Ease.inOut(p), c = top().add(V3(0, 0.1, 0)).addScaledVector(f(), -0.02).lerp(neckC(), e), w = lerp(Rw, 0.095, e);
-    execHand("L", c.clone().addScaledVector(lf(), w).addScaledVector(V_UP, KNOT_LEN / 2 * e)); execHand("R", c.clone().addScaledVector(lf(), -w)); });
-  // 6) the right hand lets go; the left draws the knot round under his left ear and snugs it
-  ROPE.snap = copyPose(ROPE.snap || newPose(), GAL.rope.drawn); ROPE.mode = "cinch"; ROPE.blend = 0; EXEC.setGrip("R", 0); EXEC.setIK("R", null, 0); EXEC.ik.R.fast = false;
-  Sound.squeak(neckC(), 0.35); MAN.lookPt = null;
-  const knotMid = () => { const np = noosePose(MAN); return np.attach.clone().lerp(np.top, 0.5); };
-  await tween(0.5, p => { ROPE.blend = p; const np = noosePose(MAN), a = ROPE.snap.attach.clone().lerp(np.attach, Ease.inOut(p)), tp = ROPE.snap.top.clone().lerp(np.top, Ease.inOut(p)); execHand("L", a.lerp(tp, 0.5)); });
+  // 4) he opens it and carries it up behind the man's head, flat, then forward over it: through points in the man's frame, the loop's
+  // middle and radius [x, y, z, R]; the man looks up at it, then holds still (no glances) for it coming down
+  const top = () => B.HeadTop_End.getWorldPosition(V3());
+  EXEC.lookPt = top(); MAN.stillHead = true; MAN.lookPt = top().add(V3(0, 0.5, 0)).addScaledVector(f(), 0.4); setPanic(0.45);
+  const d0 = GAL.rope.drawn, nk = B.Neck.getWorldPosition(V3()), qi = MAN.root.quaternion.clone().invert(), c0 = d0.c.clone().sub(nk).applyQuaternion(qi);
+  const path = [[c0.x, c0.y, c0.z, d0.R], [0.0, 0.22, -0.29, 0.09], [-0.006, 0.325, -0.24, NOOSE_OPEN], [-0.006, 0.325, 0.012, NOOSE_OPEN]], durs = [0.5, 0.4, 0.4];
+  ROPE.wantN = V3(0, 1, 0);
+  for (let k = 0; k < 3; k++) { const a = path[k], b = path[k + 1]; if (k === 2) MAN.lookPt = null; // (his head comes back square before it goes over)
+    await tween(durs[k], p => { const e = Ease.inOut(p), q = a.map((v, i) => lerp(v, b[i], e)), C = mp(q);
+      if (k === 0) ROPE.wantN.copy(V_UP).lerp(V3(0, 0, 1).applyQuaternion(GAL.rope.drawn.q), 1 - e).normalize();
+      nooseHands(C, q[3], V_UP, side()); nooseGrips(); EXEC.lookPt = C; }); }
+  ROPE.wantN.copy(V_UP);
+  // 5) down round his head along its middle, held open; below his jaw it turns and closes to where it sits on his neck
+  const yEnd = 0.06;
+  await tween(1.0, p => { const y = lerp(0.325, yEnd, Ease.inOut(p)), [x, z] = nooseDownAt(y), C = mp([x, y, z]); nooseHands(C, NOOSE_OPEN, V_UP, side()); nooseGrips(); EXEC.lookPt = C; });
+  const np0 = noosePose(MAN), [xe, ze] = nooseDownAt(yEnd), cA = mp([xe, yEnd, ze]), nF = V3(0, 0, 1).applyQuaternion(np0.q), aF = np0.attach.clone().sub(np0.c).normalize();
+  await tween(0.55, p => { const e = Ease.inOut(p), np = noosePose(MAN), nNow = V3(0, 0, 1).applyQuaternion(np.q), n = V_UP.clone().lerp(nNow, e).normalize(), C = cA.clone().lerp(np.c, e), R = lerp(NOOSE_OPEN, np.R, e);
+    ROPE.wantN.copy(n); (ROPE.wantK || (ROPE.wantK = V3())).copy(V_UP).lerp(np.top.clone().sub(np.attach).normalize(), e).normalize();
+    const u = side().lerp(np.attach.clone().sub(np.c).normalize(), e); nooseHands(C, R, n, u); nooseGrips(); EXEC.lookPt = C; });
+  // 6) the right hand lets go; the left draws the knot up behind his left ear and snugs it
+  ROPE.snap = copyPose(ROPE.snap || newPose(), GAL.rope.drawn); ROPE.mode = "cinch"; ROPE.blend = 0; ROPE.wantN = ROPE.wantK = null; EXEC.setGrip("R", 0); EXEC.setIK("R", null, 0); EXEC.ik.R.fast = false; EXEC.hold.R.w = 0;
+  const neckC = () => noosePose(MAN).c.clone(); Sound.squeak(neckC(), 0.35);
+  // (v53: he draws it snug by the rope just above the knot, which stands off his head there: a fist round the knot itself would be in his skull)
+  const knotMid = () => { const np = noosePose(MAN); return np.top.clone().addScaledVector(np.top.clone().sub(np.attach).normalize(), 0.05); };
+  await tween(0.5, p => { ROPE.blend = p; const e = Ease.inOut(p), np = noosePose(MAN), a = ROPE.snap.attach.clone().lerp(np.attach, e), tp = ROPE.snap.top.clone().lerp(np.top, e), kd = tp.clone().sub(a).normalize();
+    execHand("L", a.clone().lerp(tp, KNOT_GRIP).lerp(tp.clone().addScaledVector(kd, 0.05), e));
+    EXEC.hold.L.s.subVectors(tp, ROPE.snap.attach.clone().lerp(np.attach, Ease.inOut(p))); EXEC.hold.L.n.subVectors(EXEC.ch.bones.LeftArm.getWorldPosition(V3()), gripPt(EXEC, "L", V3())).setY(0); }); // (drawing it toward him: his palm turned to him)
   GAL.rope.onNeck = true; ROPE.held = false; ROPE.mode = null; Sound.ropeCreak(neckC(), 0.9); Sound.breath(B.Head.getWorldPosition(V3()), 1);
-  await tween(0.3, p => execHand("L", knotMid().addScaledVector(V_UP, 0.035 * Math.sin(p * Math.PI)))); // a tug upward to seat it
-  EXEC.setGrip("L", 0); EXEC.setIK("L", null, 0); EXEC.ik.L.fast = false; setPanic(0.6);
+  await tween(0.3, p => { execHand("L", knotMid().addScaledVector(V_UP, 0.035 * Math.sin(p * Math.PI))); const np = noosePose(MAN); EXEC.hold.L.s.subVectors(np.top, np.attach); EXEC.hold.L.n.subVectors(EXEC.ch.bones.LeftArm.getWorldPosition(V3()), gripPt(EXEC, "L", V3())).setY(0); }); // a tug upward to seat it
+  EXEC.setGrip("L", 0); EXEC.setIK("L", null, 0); EXEC.ik.L.fast = false; EXEC.hold.L.w = 0; MAN.stillHead = false; setPanic(0.6);
   follow("face", faceShot, 0.8); await wait(1.6);
   EXEC.walkTo([[LAY.exec.x, LAY.exec.z]], 0.9).then(() => { EXEC.face(Math.PI / 2); EXEC.lookPt = MAN.ch.bones.Head.getWorldPosition(V3()); });
 }

@@ -424,6 +424,9 @@ const Sound = (() => {
     // v51: a hit from the repository owner's recording (gallopHits), never the same one twice running, a little faster or slower each time;
     // each beat of the stride its own weight (the leading foreleg hardest). Until the recording's decoded (or if it can't be had), v50's
     // made one: a dull clop, the weight landing, a scatter of dirt (gallopMade)
+    // v53: a box of cartridges snatched up: the rounds clinking against each other and the box, a few short bright ticks and a dull knock
+    ammoBox(pos) { if (!ctx) return; const t = now(), d = at(pos, 0.12, 3); noise(t, 0.05, 0.3, "lowpass", 600, 0.8, d);
+      for (let i = 0; i < 6; i++) { const ti = t + 0.02 + i * rnd(0.025, 0.05), f = rnd(2600, 4200); noise(ti, 0.012, 0.16, "bandpass", f, 6, d); modes(ti, [[f * 0.5, 0.05, 0.05], [f * 0.83, 0.035, 0.035]], d); } },
     gallop(pos, k = 1, beat = 3) { if (!ctx) return; const own = !pos, t = now() + Math.random() * 0.006, g = k * [0.8, 0.94, 0.86, 1][beat & 3] * (0.88 + Math.random() * 0.24);
       const B = galBank.v; if (!B) { gallopHits(); galBank.synth++; gallopMade(pos, own, t, g); return; }
       let i = (Math.random() * B.hits.length) | 0; if (i === galBank.last) i = (i + 1 + ((Math.random() * (B.hits.length - 1)) | 0)) % B.hits.length; galBank.last = i; galBank.n++;

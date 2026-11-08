@@ -46,20 +46,30 @@ async function win() {
   await wait(0.3); showSign(true);
 }
 // a reprieve: the executioner takes the noose back off the same way it went on, opens it, lifts it clear over the head and lets it swing
+// (v53: the way it went on, backward: opened and turned flat below his jaw, up round his head along its middle held open, and clear over
+// the top, his fists turned to what they hold, his head still; it was lifted straight up from his neck in v52, through his chin and face)
 async function execNooseOff() {
   const B = MAN.ch.bones, f = () => V3(Math.sin(MAN.yaw), 0, Math.cos(MAN.yaw)), lf = () => V3(Math.cos(MAN.yaw), 0, -Math.sin(MAN.yaw));
-  const spot = MAN.pos.clone().addScaledVector(f(), -0.38).addScaledVector(lf(), 0.2); follow("noose", nooseShot, 1.0);
+  const spot = MAN.pos.clone().addScaledVector(f(), -0.36).addScaledVector(lf(), 0.12) /* (v53: closer in behind him, to reach round both sides of his head) */; follow("noose", nooseShot, 1.0);
+  const mp = p => manPt(MAN, p), side = () => V3(1, 0, 0).applyQuaternion(MAN.root.quaternion);
+  MAN.stillHead = true; MAN.lookPt = null;
   await EXEC.walkTo([[spot.x, spot.z]], 1.0); EXEC.face(MAN.yaw);
-  const knotMid = () => { const P = noosePose(MAN); return P.attach.clone().lerp(P.top, 0.5); }, far = () => { const P = noosePose(MAN); return P.c.clone().sub(P.attach).normalize().multiplyScalar(P.R).add(P.c); };
+  const knotMid = () => { const P = noosePose(MAN); return P.top.clone().addScaledVector(P.top.clone().sub(P.attach).normalize(), 0.05); }, far = /* (by the rope just above the knot, clear of his head: v53) */ () => { const P = noosePose(MAN); return P.c.clone().sub(P.attach).normalize().multiplyScalar(P.R).add(P.c); };
   EXEC.ik.L.fast = EXEC.ik.R.fast = true; EXEC.lookPt = knotMid();
-  await tween(0.55, p => { execHand("L", knotMid()); execHand("R", far()); });
+  const H = EXEC.hold = { L: { s: V3(), n: V3(), w: 0 }, R: { s: V3(), n: V3(), w: 0 } };
+  const grips = () => { const P = noosePose(MAN), n = V3(0, 0, 1).applyQuaternion(P.q); H.L.s.subVectors(P.top, P.attach); H.R.s.crossVectors(n, far().sub(P.c));
+    H.L.n.subVectors(EXEC.ch.bones.LeftArm.getWorldPosition(V3()), knotMid()).setY(0); H.R.n.subVectors(far(), EXEC.ch.bones.RightArm.getWorldPosition(V3())).setY(0); };
+  await tween(0.55, p => { execHand("L", knotMid()); execHand("R", far()); grips(); H.L.w = H.R.w = Ease.inOut(p); });
   EXEC.setGrip("L", 1); EXEC.setGrip("R", 1); await wait(0.12);
-  GAL.rope.onNeck = false; ropeMode("two"); Sound.ropeCreak(knotMid(), 0.6);
-  const top = () => B.HeadTop_End.getWorldPosition(V3()), c0 = noosePose(MAN).c.clone(), gL0 = gripPt(EXEC, "L", V3()), gR0 = gripPt(EXEC, "R", V3());
-  await tween(0.4, p => { const e = Ease.inOut(p), c = c0.clone(), w = lerp(0.1, 0.15, e); execHand("L", gL0.clone().lerp(c.clone().addScaledVector(lf(), w), e)); execHand("R", gR0.clone().lerp(c.clone().addScaledVector(lf(), -w), e)); });
-  const g1L = gripPt(EXEC, "L", V3()), g1R = gripPt(EXEC, "R", V3()); EXEC.lookPt = top();
-  await tween(0.7, p => { const e = Ease.inOut(p), o = top().add(V3(0, 0.14, 0)).addScaledVector(f(), -0.02); execHand("L", g1L.clone().lerp(o.clone().addScaledVector(lf(), 0.15), e)); execHand("R", g1R.clone().lerp(o.clone().addScaledVector(lf(), -0.15), e)); });
-  ropeMode(null); EXEC.setGrip("L", 0); EXEC.setGrip("R", 0); EXEC.setIK("L", null, 0); EXEC.setIK("R", null, 0); EXEC.ik.L.fast = EXEC.ik.R.fast = false;
+  // opened and turned flat below his jaw, then up round his head along its middle, then clear over it
+  const np0 = noosePose(MAN), c0 = np0.c.clone(), n0 = V3(0, 0, 1).applyQuaternion(np0.q), u0 = np0.attach.clone().sub(np0.c).normalize(), R0 = np0.R, yEnd = 0.06, [xe, ze] = nooseDownAt(yEnd), cA = mp([xe, yEnd, ze]);
+  ROPE.wantN = n0.clone(); GAL.rope.onNeck = false; ropeMode("two"); Sound.ropeCreak(knotMid(), 0.6);
+  const k0 = np0.top.clone().sub(np0.attach).normalize(); ROPE.wantK = k0.clone();
+  await tween(0.5, p => { const e = Ease.inOut(p), n = n0.clone().lerp(V_UP, e).normalize(); ROPE.wantN.copy(n); ROPE.wantK.copy(k0).lerp(V_UP, e).normalize(); nooseHands(c0.clone().lerp(cA, e), lerp(R0, NOOSE_OPEN, e), n, u0.clone().lerp(side(), e)); nooseGrips(); });
+  ROPE.wantN.copy(V_UP); EXEC.lookPt = B.HeadTop_End.getWorldPosition(V3());
+  await tween(0.8, p => { const y = lerp(yEnd, 0.325, Ease.inOut(p)), [x, z] = nooseDownAt(y), C = mp([x, y, z]); nooseHands(C, NOOSE_OPEN, V_UP, side()); nooseGrips(); EXEC.lookPt = C; });
+  await tween(0.4, p => { const e = Ease.inOut(p), C = mp([-0.006, 0.325, lerp(0.012, -0.24, e)]); nooseHands(C, NOOSE_OPEN, V_UP, side()); nooseGrips(); });
+  ropeMode(null); ROPE.wantN = ROPE.wantK = null; EXEC.hold = null; EXEC.setGrip("L", 0); EXEC.setGrip("R", 0); EXEC.setIK("L", null, 0); EXEC.setIK("R", null, 0); EXEC.ik.L.fast = EXEC.ik.R.fast = false; MAN.stillHead = false;
   Sound.breath(B.Head.getWorldPosition(V3()), 0.5);
   EXEC.walkTo([[LAY.exec.x, LAY.exec.z]], 1.0).then(() => EXEC.face(Math.PI / 2)); await wait(0.4);
 }
@@ -117,7 +127,7 @@ function resetScene() {
   MAN.hang = null; MAN.pathIdx = 0; MAN.tremble = 0; MAN.sweating = false; MAN.setSad(0); MAN.ch.skin.userData.U.sweat.value = 0; MAN.bound = true;
   MAN.ik.L.goal = MAN.ik.R.goal = 0; MAN.lookPt = null; MAN.act.idle.timeScale = 1; MAN.place(MAN_PATH[0][0], MAN_PATH[0][1], Math.PI);
   MAN.panic = 0; MAN.lookT = 0; const U = MAN.ch.skin.userData.U; U.fear.value = 0; U.jaw.value = 0;
-  EXEC.gripping = false; EXEC.setIK("R", null, 0); EXEC.setIK("L", null, 0); EXEC.ik.L.fast = EXEC.ik.R.fast = false; if (EXEC.grip) Object.assign(EXEC.grip, { L: 0, R: 0, tL: 0, tR: 0 }); EXEC.place(LAY.exec.x, LAY.exec.z, Math.PI / 2); EXEC.lookPt = V3(LAY.trap.x, 3.9, LAY.trap.z);
+  EXEC.gripping = false; EXEC.setIK("R", null, 0); EXEC.setIK("L", null, 0); EXEC.ik.L.fast = EXEC.ik.R.fast = false; EXEC.hold = null; MAN.stillHead = false; ROPE.wantN = ROPE.wantK = null; /* (v53) */ if (EXEC.grip) Object.assign(EXEC.grip, { L: 0, R: 0, tL: 0, tR: 0 }); EXEC.place(LAY.exec.x, LAY.exec.z, Math.PI / 2); EXEC.lookPt = V3(LAY.trap.x, 3.9, LAY.trap.z);
   const [hx, hz] = hostIdle(); HOST.place(hx, hz, Math.atan2(CAM.pos.x - hx, CAM.pos.z - hz)); HOST.setIK("R", null, 0); HOST.ch.marker.visible = false; HOST.lookPt = null; HOST.act.idle.timeScale = 1;
   if (HOST.ch.hat) { HOST.ch.hat.rotation.x = -0.15; HOST.ch.hat.position.y = 2.86; }
 }

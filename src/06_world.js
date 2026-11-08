@@ -364,19 +364,19 @@ function buildTown() {
   B.forEach(([along, side, w, h, d, name, opt], bi) => { const [x, z] = streetPt(along, side * (11.5 + d / 2)), ry = side < 0 ? yawL : yawR; const grp = building(x, z, ry, w, h, d, name, opt);
     if (bi % 3 !== 1) buildingAd(grp, x, z, ry, w, h, d, bi); // (a faded painted advertisement on the side wall that faces up the street: 07c)
     if (opt && opt.roofGun) WORLD.roofs.push(roofInfo(x, z, ry, w, h, d, name, opt));
-    (WORLD.blds = WORLD.blds || []).push({ name, along, x, z, y0: groundHeight(x, z), c: Math.cos(ry), s: Math.sin(ry), w, h, d, pd: 2.4, roofGun: !!(opt && opt.roofGun), rail: !(opt && opt.rail === false) }); }); // (where each stands: the crows perch on them, 10c)
+    (WORLD.blds = WORLD.blds || []).push({ name, along, x, z, y0: groundHeight(x, z), c: Math.cos(ry), s: Math.sin(ry), w, h, d, pd: 2.4, roofGun: !!(opt && opt.roofGun), rail: !(opt && opt.rail === false), opt: opt || {} }); }); // (where each stands: the crows perch on them, 10c)
   // church with steeple
   const ch = new THREE.Group(), cb = woodBox(8, 6, 14, MAT.wood); cb.position.y = 3; ch.add(cb);
   const roofG = new THREE.CylinderGeometry(0.01, 6.2, 3.5, 4, 1); roofG.rotateY(Math.PI / 4); const roof = new THREE.Mesh(roofG, MAT.woodDark); roof.scale.set(0.95, 1, 1.7); roof.position.y = 7.7; roof.castShadow = true; ch.add(roof);
   const tw = woodBox(2.6, 5, 2.6, MAT.wood); tw.position.set(0, 8.5, 6.5); ch.add(tw);
   const sp = new THREE.Mesh(new THREE.ConeGeometry(1.9, 6, 4), MAT.woodDark); sp.rotation.y = Math.PI / 4; sp.position.set(0, 14, 6.5); ch.add(sp);
   const cr = woodBox(0.15, 1.4, 0.15, MAT.iron); cr.position.set(0, 17.6, 6.5); ch.add(cr); const cr2 = woodBox(0.8, 0.15, 0.15, MAT.iron); cr2.position.set(0, 17.8, 6.5); ch.add(cr2);
-  { const [cx, cz] = streetPt(78, -9); ch.position.set(cx, groundHeight(cx, cz), cz); ch.rotation.y = yawR + 0.4; } WORLD.town.add(ch); WORLD.church = { position: ch.position.clone() };
+  { const [cx, cz] = streetPt(78, -9); ch.position.set(cx, groundHeight(cx, cz), cz); ch.rotation.y = yawR + 0.4; } WORLD.town.add(ch); WORLD.church = { position: ch.position.clone(), yaw: ch.rotation.y };
   // water tower
   const wt = new THREE.Group(), tank = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 3.2, 20), MAT.woodDark); tank.position.y = 7.5; wt.add(tank);
   const tr = new THREE.Mesh(new THREE.ConeGeometry(2.7, 1.4, 20), MAT.wood); tr.position.y = 9.8; wt.add(tr);
   for (const [lx, lz] of [[-1.8, -1.8], [1.8, -1.8], [-1.8, 1.8], [1.8, 1.8]]) { const l = woodBox(0.25, 6, 0.25, MAT.wood); l.position.set(lx, 3, lz); wt.add(l); }
-  { const [wx, wz] = streetPt(52, 20); wt.position.set(wx, groundHeight(wx, wz), wz); } WORLD.town.add(wt);
+  { const [wx, wz] = streetPt(52, 20); wt.position.set(wx, groundHeight(wx, wz), wz); } WORLD.town.add(wt); WORLD.tower = wt.position.clone();
   WORLD.farPerches = [0, 2.1, 4.2].map(a => wt.position.clone().add(V3(Math.cos(a) * 2.35, 9.12, Math.sin(a) * 2.35))); // (the rim of the tank: somewhere for a crow to go)
   wt.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   // telegraph line heading out of town
