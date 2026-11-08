@@ -38,7 +38,7 @@ function lookUp(e) {
   const D = LOOK.drag; if (!D || e.pointerId !== D.id) return false; LOOK.drag = null; if (D.moved || e.type === "pointercancel") return true;
   if (D.mode === "siege") { if (SIEGE.on) siegeTap(e); } // (a tap in the shootout: the laser, or cover to run to)
   else if (D.mode === "armed") { /* (a tap with the revolver in hand: nothing; Fire shoots) */ }
-  else if (STATE.locked) STATE.ts = 6; // (a tap while the host is busy hurries him along)
+  else if (hostBusy()) STATE.ts = 6; // (a tap while the host is busy hurries him along)
   return true;
 }
 

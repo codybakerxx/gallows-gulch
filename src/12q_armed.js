@@ -17,7 +17,7 @@ const angTo = (a, b, k) => a + (((b - a + Math.PI) % TAU + TAU) % TAU - Math.PI)
 
 // ---- taking it up and putting it back ----
 function armedStart() {
-  const A = ARMED, G = GUNPROP, S = SIEGE; if (A.on || S.on || CHASE.on || !G.gun) return;
+  const A = ARMED, G = GUNPROP, S = SIEGE; if (A.on || S.on || CHASE.on || !G.gun) return; STATE.ts = 1;
   if (A.round !== STATE.roundId) { A.round = STATE.roundId; A.shots = 0; } armsEquip(null); armsUnstash(null); // (a full gun each round; within one, what's fired stays fired: 12t)
   A.on = true; A.t = 0; A.cool = 0; A.back = null; LOOK.drag = null; LOOK.yaw = LOOK.pitch = 0; LOOK.ease = false;
   if (FREE.on) { const el = FREE.which; freeReset(); if (el) el.hidden = false; } // (a sign put away: it comes back with the gun put back)
@@ -86,6 +86,10 @@ function armedFire() {
   armedHud();
 }
 // a gunshot in the square: they all jump and look round
+// v55: the round's locked while the host's busy (a guess being answered) and a tap or Space hurries him along (STATE.ts 6); it's locked
+// too with a gun in your hand, at the range and on the way there, and a tap then (a second tap on the gunsmith's door while the view faded,
+// say) set the whole town running at six times speed for as long as you held the gun
+const hostBusy = () => STATE.locked && !ARMED.on && !RANGE.on && !RANGE.going && !SIEGE.on && !CHASE.on;
 function armedStartle() { const A = ARMED; if (A.startleT > T - 1.2) return; A.startleT = T;
   LIFE.crowd.forEach((a, i) => { if (a.root.visible) setTimeout(() => { if (!SIEGE.on) a.gesture("shake"); }, 80 + i * 60); }); HOST.gesture("shake"); setPanic(0.6); }
 
@@ -117,7 +121,7 @@ function armedShootout(victim, part, at, rd) {
 // ---- each frame ----
 // before the camera's moved (12a updateCamera): where you're looking from, and the gun's state
 function updateArmed(rdt, dt) {
-  const A = ARMED, S = SIEGE; if (!A.on) return; A.t += rdt; A.cool = Math.max(0, A.cool - rdt); S.recoil = Math.max(0, S.recoil - rdt * 4.5); S.vm.kick = Math.max(0, S.vm.kick - rdt * 6);
+  const A = ARMED, S = SIEGE; if (!A.on) return; if (STATE.ts > 1) STATE.ts = 1; /* (v55: never hurried with a gun in your hand: hostBusy) */ A.t += rdt; A.cool = Math.max(0, A.cool - rdt); S.recoil = Math.max(0, S.recoil - rdt * 4.5); S.vm.kick = Math.max(0, S.vm.kick - rdt * 6);
   if (A.reloadT > 0) { A.reloadT -= rdt; if (A.reloadT <= 0) { A.reloadT = 0; A.bullets = armsMag(); Sound.clip(siegePick("cock", 2), null, 0.75, 0, 0.05); } armedHud(); }
   if (A.tip > 0 && (A.tip -= rdt) <= 0) { const t = $("siegeTip"); if (A.tipNext) { t.textContent = A.tipNext; A.tipNext = null; A.tip = 4; } else t.hidden = true; }
   if (!S.on) updateBlood(dt); // (a crow or a horse shot from the barrel bleeds, before any shootout)
@@ -146,4 +150,5 @@ function armedLate(rdt) {
     if (A.back && A.back.t >= 1) { armedDone(); return; } }
   vm.visible = !ARMS.zoom; $("xhair").hidden = !!(A.lift || A.back) || ARMS.zoom;
   if (KEY_LIGHT) { S.flash = Math.max(0, S.flash - rdt / 0.07); if (S.flash > 0) { KEY_LIGHT.intensity = S.flash * 9; KEY_LIGHT.distance = 9; KEY_LIGHT.color.setRGB(1, 0.72, 0.42); KEY_LIGHT.position.copy(S.flashPos); } else { KEY_LIGHT.distance = 3.5; KEY_LIGHT.color.set(0xffd9b8); } }
+  armsBeamLate(rdt); // (v55: the laser at the range, 12t)
 }

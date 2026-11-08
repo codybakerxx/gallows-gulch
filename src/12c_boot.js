@@ -48,7 +48,7 @@ function wireUI() {
     if (ARMED.on && $("menu").hidden) { if (e.key === " " || e.key === "Enter") { e.preventDefault(); if (!e.repeat) armedFire(); } return; } // (the revolver from the barrel: 12q)
     if (SIEGE.on && $("menu").hidden) { if (e.key === " " || e.key === "Enter") { e.preventDefault(); if (!e.repeat) fireTap(); } else if (e.key === "Shift" || e.key === "a" || e.key === "A") SIEGE.keyAim = true; return; } // (hold Shift or A to come up)
     if (/^[a-zA-Z]$/.test(e.key) && $("menu").hidden && $("sign").hidden) { e.preventDefault(); guess(e.key.toUpperCase()); }
-    else if (e.key === " " && STATE.locked) STATE.ts = 6;
+    else if (e.key === " " && hostBusy()) STATE.ts = 6;
   });
   document.addEventListener("keyup", e => { if (CHASE.on) { chaseKey(e, false); return; } if (e.key === "Shift" || e.key === "a" || e.key === "A") SIEGE.keyAim = false; if (e.key === " " || e.key === "Enter") { laserTrigger(false); armsTrigger(false); } });
   window.addEventListener("blur", () => { SIEGE.keyAim = false; CHASE.swipe = null; CHASE.drag = null; laserTrigger(false); armsTrigger(false); });

@@ -1,6 +1,7 @@
 // ---------- THE GUNSMITH'S WEAPONS (v54) ----------
 // Picked at the range behind the gunsmith (12u). Nine: a Colt Peacemaker, a Derringer, a Winchester '73, a coach gun, a scoped Sharps
-// buffalo rifle, a bow, throwing knives, a Gatling gun and dynamite. The one you leave the range with is yours: it's in your hand back in
+// buffalo rifle, a bow, throwing knives, a Gatling gun and dynamite (and, v55, the laser, which stays at the range: armsBeamLate).
+// The one you leave the range with is yours: it's in your hand back in
 // the round (the Aim | Fire pad, as with the revolver from the barrel, 12q: shoot one of the townsfolk and the town draws on you) and it's
 // the gun you fight the town shootout with (12d), from there or from the sword. The getaway is still the revolver (or the laser).
 //   - ARMS.cur: the weapon in your hand (null: the barrel's revolver, and the code that was there before, untouched). ARMS.own: the one
@@ -13,7 +14,7 @@
 const ARMS_LIST = ["colt", "derringer", "winchester", "shotgun", "sharps", "bow", "knives", "gatling", "dynamite"];
 const ARMS_DEF = {
   colt: { name: "Colt Peacemaker", short: "Colt", blurb: "Six in the cylinder: the gun that won the West", kind: "shot", mag: 6, reloads: 2, reload: 1.6, cool: 0.28, spread: 0.0015, box: 1, unit: "rounds", sound: "pistol", hold: "pistol", muz: [0, 0.035, 0.21] },
-  derringer: { name: "Derringer", short: "Derringer", blurb: "Two barrels in your palm: close up, it's enough", kind: "shot", mag: 2, reloads: 6, reload: 0.9, cool: 0.22, spread: 0.01, box: 3, unit: "rounds", sound: "small", hold: "pistol", muz: [0, 0.04, 0.075], view: 1.5, turn: -0.45 },
+  derringer: { name: "Derringer", short: "Derringer", blurb: "Two barrels in your palm: close up, it's enough", kind: "shot", mag: 2, reloads: 6, reload: 0.9, cool: 0.22, spread: 0.01, box: 3, unit: "rounds", sound: "small", hold: "pistol", muz: [0, 0.043, 0.088], view: 1.3 },
   winchester: { name: "Winchester '73", short: "Winchester", blurb: "Fourteen in the tube; work the lever between shots", kind: "shot", mag: 14, reloads: 1, reload: 2.8, cool: 0.5, spread: 0.0008, box: 1, unit: "rounds", sound: "rifle", hold: "rifle", muz: [0, 0.035, 0.72] },
   shotgun: { name: "Coach Gun", short: "Shotgun", blurb: "Both barrels of buckshot: close, and wide", kind: "shot", mag: 2, reloads: 6, reload: 1.3, cool: 0.3, pellets: 9, spread: 0.045, range: 38, box: 3, unit: "shells", sound: "shotgun", hold: "rifle", muz: [0, 0.035, 0.56] },
   sharps: { name: "Sharps Buffalo Rifle", short: "Sharps", blurb: "One heavy round at a time, and a long brass scope", kind: "shot", mag: 1, reloads: 11, reload: 1.2, cool: 0.2, spread: 0, zoom: 3.2, box: 5, unit: "rounds", sound: "big", hold: "rifle", muz: [0, 0.035, 0.82] },
@@ -21,8 +22,10 @@ const ARMS_DEF = {
   knives: { name: "Throwing Knives", short: "Knives", blurb: "End over end: lob them at the far ones", kind: "knife", mag: 1, reloads: 11, reload: 0.35, cool: 0.1, speed: 24, grav: 9.8, box: 6, unit: "knives", unit1: "knife", hold: "knife", muz: [0, 0, 0.17] },
   gatling: { name: "Gatling Gun", short: "Gatling", blurb: "Hold Fire and it cranks: a storm of lead, none of it careful", kind: "shot", auto: true, rate: 9, mag: 50, reloads: 1, reload: 3.2, cool: 0, spread: 0.018, box: 1, unit: "rounds", sound: "gatling", hold: "gatling", muz: [0, 0.04, 0.64] },
   dynamite: { name: "Dynamite", short: "Dynamite", blurb: "Light it, throw it, and it does the rest", kind: "bomb", mag: 1, reloads: 5, reload: 0.7, cool: 0.2, speed: 14, grav: 9.8, fuse: 1.7, radius: 3.8, box: 3, unit: "sticks", hold: "stick", muz: [0, 0.1, 0.02] },
+  // v55: the laser from the shootout's crate, on the gunsmith's bench too: a beam while Fire's held that burns what it touches. The range's only
+  laser: { name: "ARC-09 Laser", short: "laser", blurb: "Hold Fire: the beam burns whatever it touches", kind: "beam", mag: 1, reloads: 0, reload: 0, cool: 0, box: 0, unit: "charge", hold: "pistol", muz: [0, 0.035, 0.246], rangeOnly: true },
 };
-const ARMS = { cur: null, own: null, models: {}, revKids: null, trig: false, autoT: 0, spin: 0, proj: [], stuck: [], drawT: 1, zoom: false, mode: "town", hudKey: "", ammo: {} };
+const ARMS = { cur: null, own: null, models: {}, revKids: null, trig: false, autoT: 0, spin: 0, proj: [], stuck: [], drawT: 1, zoom: false, mode: "town", hudKey: "", ammo: {}, beam: false, beamT: 0 };
 const _am3 = new THREE.Vector3(), _am4 = new THREE.Vector3(), _am5 = new THREE.Vector3(), _amq = new THREE.Quaternion();
 const armsDef = () => ARMS.cur ? ARMS_DEF[ARMS.cur] : null;
 function armsMag() { const d = armsDef(); return d ? d.mag : SIEGE_ROUNDS; }
@@ -31,17 +34,20 @@ function armsReload() { const d = armsDef(); return d ? d.reload : GUN.reload; }
 
 // ---- the models: barrel (or blade, or arrow) along +z, your hand at the origin ----
 function armsMats() { if (ARMS.mat) return ARMS.mat; const M = ARMS.mat = {
-  iron: MAT.iron, wood: MAT.woodDark, brass: MAT.brass, ivory: new THREE.MeshStandardMaterial({ color: 0xe6dcc4, roughness: 0.45 }),
+  iron: MAT.iron, wood: MAT.woodDark, brass: MAT.brass, ivory: new THREE.MeshStandardMaterial({ color: 0xd6c8a6, roughness: 0.5 }),
   steel: new THREE.MeshStandardMaterial({ color: 0xb8bcc0, metalness: 1, roughness: 0.22 }), blued: new THREE.MeshStandardMaterial({ color: 0x23272e, metalness: 0.9, roughness: 0.32 }),
-  leather: new THREE.MeshStandardMaterial({ color: 0x4a2c18, roughness: 0.8 }), red: new THREE.MeshStandardMaterial({ color: 0xa8241a, roughness: 0.7 }), paper: new THREE.MeshStandardMaterial({ color: 0xd8c8a0, roughness: 0.9 }),
+  leather: new THREE.MeshStandardMaterial({ color: 0x4a2c18, roughness: 0.8 }), black: new THREE.MeshStandardMaterial({ color: 0x050403, roughness: 0.9 }), rosewood: new THREE.MeshStandardMaterial({ color: 0x4a2216, roughness: 0.45 }), red: new THREE.MeshStandardMaterial({ color: 0xa8241a, roughness: 0.7 }), paper: new THREE.MeshStandardMaterial({ color: 0xd8c8a0, roughness: 0.9 }),
   feather: new THREE.MeshStandardMaterial({ color: 0xe8e0d0, roughness: 0.9, side: THREE.DoubleSide }), string: new THREE.MeshStandardMaterial({ color: 0xd8d0b8, roughness: 0.9 }), fuse: new THREE.MeshStandardMaterial({ color: 0x3a2e22, roughness: 1 }) }; return M; }
 function armsPart(g, geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); m.castShadow = true; g.add(m); return m; }
 const CYL = (r, l, n = 10, r2 = r) => new THREE.CylinderGeometry(r2, r, l, n).rotateX(Math.PI / 2); // (along z)
 function armsBuild(id) {
   const M = armsMats(), g = new THREE.Group(), P = (geo, mat, x, y, z, rx, ry, rz) => armsPart(g, geo, mat, x, y, z, rx, ry, rz), B = (w, h, d) => new THREE.BoxGeometry(w, h, d);
   if (id === "colt") { const r = revolver(true); r.children[0].material = r.children[1].material = r.children[2].material = M.blued; g.add(r); } // (the barrel's revolver, blued)
-  else if (id === "derringer") { for (const y of [0.046, 0.031]) P(CYL(0.0062, 0.075, 10), M.steel, 0, y, 0.035); P(B(0.022, 0.034, 0.05), M.steel, 0, 0.035, -0.012); P(B(0.018, 0.052, 0.022), M.ivory, 0, -0.002, -0.042, -0.65);
-    P(B(0.005, 0.014, 0.006), M.steel, 0, 0.058, -0.03, -0.5); P(new THREE.TorusGeometry(0.009, 0.0018, 4, 10, Math.PI), M.steel, 0, 0.012, -0.012, 0, Math.PI / 2, Math.PI); }
+  else if (id === "derringer") { // (v55: a Remington over-under, nickel, rosewood bird's-head grips; held straight down the line as the Colt is, its upper bore on the revolver's)
+    for (const y of [0.043, 0.027]) { P(CYL(0.0074, 0.084, 12), M.steel, 0, y, 0.046); P(CYL(0.0042, 0.003, 10), M.black, 0, y, 0.0885); }
+    P(B(0.007, 0.005, 0.084), M.steel, 0, 0.052, 0.046); P(B(0.021, 0.04, 0.046), M.steel, 0, 0.03, -0.018); P(B(0.006, 0.018, 0.009), M.steel, 0, 0.055, -0.04, -0.55);
+    P(B(0.005, 0.013, 0.005), M.steel, 0, 0.004, -0.008, 0.25); P(B(0.019, 0.056, 0.026), M.rosewood, 0, -0.008, -0.05, -0.62); P(CYL(0.0105, 0.019, 10), M.rosewood, 0, -0.03, -0.068, 0, Math.PI / 2, 0); }
+  else if (id === "laser") { if (LASER.geo) { const mat = LASER.mat.clone(); mat.emissiveIntensity = LASER.e0 * 0.6; const m = new THREE.Mesh(LASER.geo, mat); m.position.y = 0.035; m.castShadow = true; g.add(m); g.userData.laserMat = mat; } } // (12k's model; up so its bore is on the revolver's line)
   else if (id === "winchester") { P(B(0.03, 0.062, 0.16), M.brass, 0, 0.02, 0.02); P(CYL(0.0095, 0.62, 10), M.blued, 0, 0.037, 0.4); P(CYL(0.0075, 0.52, 10), M.blued, 0, 0.017, 0.36);
     P(B(0.034, 0.03, 0.22), M.wood, 0, 0.016, 0.2); P(B(0.034, 0.072, 0.34), M.wood, 0, -0.022, -0.23, 0.13); P(B(0.036, 0.08, 0.014), M.blued, 0, -0.045, -0.4, 0.13);
     P(new THREE.TorusGeometry(0.026, 0.0045, 5, 14), M.blued, 0, -0.035, 0.01, 0, Math.PI / 2, 0); P(B(0.006, 0.02, 0.012), M.blued, 0, 0.06, -0.04, -0.4); P(B(0.004, 0.012, 0.006), M.brass, 0, 0.05, 0.7); ARMS.lever = g.children[6]; }
@@ -79,7 +85,7 @@ function armsEquip(id) {
   for (const c of vm.children.slice()) vm.remove(c);
   if (id) { const m = ARMS.models[id] || (ARMS.models[id] = armsBuild(id)); vm.add(m); if (m.userData.string) { m.updateMatrixWorld(true); armsBowString(m, 1); } }
   else for (const c of ARMS.revKids) vm.add(c);
-  ARMS.cur = id || null; ARMS.trig = false; ARMS.zoom = false; ARMS.hudKey = ""; gunHud.key = null; armsScope(false); SIEGE.occ = null;
+  ARMS.cur = id || null; ARMS.trig = false; ARMS.zoom = false; ARMS.hudKey = ""; gunHud.key = null; armsScope(false); SIEGE.occ = null; armsBeamOff();
 }
 // the revolver back in its place; whatever's flying or stuck in things cleared
 function armsReset() { if (ARMS.revKids && ARMS.cur) armsEquip(null); ARMS.cur = null; ARMS.trig = false; armsScope(false);
@@ -104,7 +110,6 @@ function armsVmPose(vm, cam, k, down, rl) {
   vm.scale.setScalar(sc * (d.view || 1)); const x = sx >= 0 ? Math.min(cap, hw(z) * sx) : Math.max(cap, hw(z) * sx);
   vm.position.copy(toW(x, hh(z) * sy - dip + k * 0.02, -z + k * (H === "rifle" ? 0.05 : 0.04)));
   vm.lookAt(toW(0, 0, -25)); vm.rotateX(-k * (H === "rifle" ? 0.25 : H === "gatling" ? 0.08 : 0.5) + rl * 0.9);
-  if (d.turn) vm.rotateY(d.turn); // (the Derringer turned a little, so it's seen as a gun, not the back of one)
   if (H === "bow") vm.rotateZ(-0.2); else if (H === "knife") { vm.rotateX(-0.95); vm.rotateZ(0.5); } else if (H === "stick") { vm.rotateX(-0.9); vm.rotateZ(-0.4); }
   if (m && m.userData.spin) m.userData.spin.rotation.z = ARMS.spin;
   if (m && m.userData.string) { const a = m.userData.arrow; a.visible = armsReady(); armsBowString(m, a.visible ? 1 - Math.max(0, ARMS.snap) : 0); }
@@ -118,7 +123,8 @@ function armsAmmo() { return ARMS.mode === "siege" ? SIEGE : ARMED; }
 // ---- firing ----
 // Fire pressed (and, for the Gatling, held: armsTrigger)
 function armsFire(mode) {
-  const d = armsDef(); if (!d) return; if (mode === "range" && (RANGE.pickOpen || !$("rangeRes").hidden)) return; ARMS.mode = mode; // (not with the picker or the score up)
+  const d = armsDef(); if (!d) return; if (mode === "range" && !rangeCanFire()) return; ARMS.mode = mode; // (not with a panel up, or in a challenge's count-in: 12u)
+  if (d.kind === "beam") { if (mode === "range") ARMS.trig = true; return; } // (held: 12t armsBeamLate)
   if (d.auto) { ARMS.trig = true; if (ARMS.autoT <= 0) armsShoot(mode); return; }
   armsShoot(mode);
 }
@@ -230,15 +236,37 @@ function updateArms(rdt) {
 function armsScope(on) { ARMS.zoom = !!on && ARMS.cur === "sharps"; const sc = $("scope"); if (sc) sc.hidden = !ARMS.zoom; const b = $("scopeBtn"); if (b) b.classList.toggle("on", ARMS.zoom); }
 function armsFov(fov) { const d = armsDef(); return ARMS.zoom && d && d.zoom ? fov / d.zoom : fov; }
 
+// ---- the laser at the range (v55): while Fire's held, the beam from its mouth to whatever's under the sight, heating it till it burns
+// (12u rangeHeat). Its look is the shootout's laser's (12k: the beam, the glow at each end, the blue sparks, the hum, the blue light);
+// drawn after the camera's moved (12q armedLate), after 12k's laserLate has put the shootout's beam away for the frame
+function armsBeamLate(rdt) {
+  const L = LASER, vm = SIEGE.vm.gun, m = vm.children[0], mat = m && m.userData.laserMat; if (ARMS.cur !== "laser" || !L.beam) return;
+  const on = ARMS.trig && ARMED.on && ARMED.range && !ARMED.lift && !ARMED.back && rangeCanFire() && $("menu").hidden;
+  if (on !== ARMS.beam) { ARMS.beam = on; Sound.laser(on); if (on) ARMED.shots = (ARMED.shots || 0) + 1; }
+  ARMS.beamT += rdt; if (mat) mat.emissiveIntensity = LASER.e0 * (on ? 1.2 + 0.2 * Math.sin(ARMS.beamT * 47) : 0.6);
+  if (L.sparks) updatePoints(L.sparks, rdt, true, 0.8); // (12k moves them only while its own laser's in hand)
+  if (!on) return;
+  R.camera.updateMatrixWorld(); vm.updateMatrixWorld(true); const ro = R.camera.position.clone(), rd = V3(0, 0, -1).applyQuaternion(R.camera.quaternion).normalize();
+  const h = rangeHit(ro, rd, 80), at = h ? h.at : ro.clone().addScaledVector(rd, 80); RANGE.beamOn = rdt;
+  if (h && h.g) rangeHeat(h.g, rdt, at, rd); else if (h && (ARMS.smokeT = (ARMS.smokeT || 0) - rdt) <= 0) { ARMS.smokeT = 0.12; puff(at.clone().addScaledVector(rd, -0.05), 3, 0.25, 0.14, 1.2, 0.35, 0x8a8682); }
+  if (L.sparks) for (let i = 0; i < 3; i++) emit(L.sparks, at, _am3.copy(rd).multiplyScalar(-rnd(0.6, 2.2)).add(_am4.set(rnd(-1.4, 1.4), rnd(-0.3, 1.8), rnd(-1.4, 1.4))), rnd(0.12, 0.35));
+  const muz = vm.localToWorld(_am5.set(...ARMS_DEF.laser.muz)), fl = 0.85 + 0.15 * Math.sin(ARMS.beamT * 61);
+  setBeam(muz, at, fl); L.glowA.position.copy(muz); L.glowA.scale.setScalar(0.07 * fl); L.glowA.visible = true;
+  L.glowB.position.copy(at).addScaledVector(rd, -0.04); L.glowB.scale.setScalar((0.32 + 0.12 * Math.sin(ARMS.beamT * 37)) * Math.max(1, ro.distanceTo(at) * 0.04)); L.glowB.visible = true;
+  if (KEY_LIGHT) { KEY_LIGHT.color.setRGB(0.35, 0.6, 1); KEY_LIGHT.distance = 7; KEY_LIGHT.intensity = 3.2 + Math.sin(ARMS.beamT * 53) * 0.6; KEY_LIGHT.position.copy(muz); }
+  CAM.shake = Math.max(CAM.shake, reduceMotion() ? 0 : 0.04);
+}
+function armsBeamOff() { ARMS.trig = false; if (ARMS.beam) { ARMS.beam = false; Sound.laser(false); } const L = LASER; if (L.beam && !laserHeld()) { L.beam.visible = false; L.glowA.visible = L.glowB.visible = false; } }
+
 // ---- the cylinder at the top left: the weapon's own sign and what's in it ----
 const ARMS_GLYPH = { colt: "M-26 -6h40v8h-24l-6 18h-10l4-18z", derringer: "M-14 -6h26v7h-14l-4 13h-8l3-13z", winchester: "M-34 -4h68v5h-46l-8 9h-14v-5h10z", shotgun: "M-34 -7h68v4h-68zM-34 -1h68v4h-48l-8 8h-12z",
-  sharps: "M-34 -2h68v5h-48l-8 8h-12zM-16 -12h34v5h-34z", bow: "M-6 -32Q22 0 -6 32M-6 -32L-6 32M-14 0h40", knives: "M-28 3h22v-6h-22zM-6 -4l34 4-34 4z", gatling: "M-30 -10h52v20h-52zM22 -6h12M22 0h12M22 6h12", dynamite: "M-24 -8h40v16h-40zM16 0q8-10 16-4" };
+  sharps: "M-34 -2h68v5h-48l-8 8h-12zM-16 -12h34v5h-34z", bow: "M-6 -32Q22 0 -6 32M-6 -32L-6 32M-14 0h40", knives: "M-28 3h22v-6h-22zM-6 -4l34 4-34 4z", gatling: "M-30 -10h52v20h-52zM22 -6h12M22 0h12M22 6h12", dynamite: "M-24 -8h40v16h-40zM16 0q8-10 16-4", laser: "M5 -25L-13 4h12l-4 21 18-31h-12z" };
 function armsHud(o) {
   const d = armsDef(); if (!d || !o) return; const key = `${ARMS.cur}|${o.bullets}|${o.reloads}|${o.reloadT > 0}|${ARMED.range}`; if (ARMS.hudKey === key) return; ARMS.hudKey = key;
-  const thin = ARMS.cur === "bow" ? `fill="none" stroke="#e8d8b0" stroke-width="5" stroke-linecap="round"` : `fill="#e8d8b0"`;
-  $("cyl").innerHTML = `<circle r="46" fill="#3a3430" stroke="#14110f" stroke-width="3"/><circle r="40" fill="none" stroke="#5b524a" stroke-width="1.5"/><g transform="translate(0 -12) scale(0.8)"><path d="${ARMS_GLYPH[ARMS.cur]}" ${thin}/></g>`
-    + `<text y="30" text-anchor="middle" font-size="26" font-weight="700" fill="${o.bullets ? "#d8a246" : "#8a4a3a"}" font-family="system-ui,sans-serif">${o.reloadT > 0 ? "…" : o.bullets}</text>`;
-  const rb = $("reloads"); rb.style.display = ""; rb.style.visibility = ""; rb.classList.remove("many", "used"); const spare = ARMED.range && ARMED.on ? "∞" : `+${o.reloads * d.mag}`;
+  const beam = d.kind === "beam", thin = ARMS.cur === "bow" ? `fill="none" stroke="#e8d8b0" stroke-width="5" stroke-linecap="round"` : `fill="${beam ? "#cfefff" : "#e8d8b0"}"`;
+  $("cyl").innerHTML = `<circle r="46" fill="${beam ? "#1b222c" : "#3a3430"}" stroke="#14110f" stroke-width="3"/><circle r="40" fill="none" stroke="${beam ? "#2c3747" : "#5b524a"}" stroke-width="1.5"/><g transform="translate(0 -12) scale(0.8)"><path d="${ARMS_GLYPH[ARMS.cur]}" ${thin}/></g>`
+    + `<text y="30" text-anchor="middle" font-size="26" font-weight="700" fill="${beam ? "#5ec8ff" : o.bullets ? "#d8a246" : "#8a4a3a"}" font-family="system-ui,sans-serif">${beam ? "∞" : o.reloadT > 0 ? "…" : o.bullets}</text>`;
+  const rb = $("reloads"); rb.style.display = beam ? "none" : ""; rb.style.visibility = ""; rb.classList.remove("many", "used"); const spare = ARMED.range && ARMED.on ? "∞" : `+${o.reloads * d.mag}`;
   rb.innerHTML = `<span class="armsSpare">${spare}</span>`; $("gun").classList.toggle("reloading", o.reloadT > 0);
-  $("gun").title = `${d.name}: ${o.bullets} loaded, ${ARMED.range && ARMED.on ? "plenty more" : `${o.reloads * d.mag} more ${d.unit}`}`; $("gun").setAttribute("aria-label", $("gun").title);
+  $("gun").title = beam ? `${d.name}: hold Fire for the beam` : `${d.name}: ${o.bullets} loaded, ${ARMED.range && ARMED.on ? "plenty more" : `${o.reloads * d.mag} more ${d.unit}`}`; $("gun").setAttribute("aria-label", $("gun").title);
 }

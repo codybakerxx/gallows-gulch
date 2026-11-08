@@ -31,7 +31,8 @@ function prepLaser(gltf) {
   { const C = SIEGE.covers[1], [cx, cz] = COVERS[1].at, dir = C.side.clone().multiplyScalar(-0.75).addScaledVector(C.away, -0.55).normalize();
     crate.position.set(cx, 0.8 + 0.027, cz).addScaledVector(C.side, -0.5).addScaledVector(C.away, 0.18); crate.rotation.set(0, Math.atan2(dir.x, dir.z), Math.PI / 2, "YXZ"); crate.updateMatrixWorld(true); }
   // the revolver, left on the crate where the laser lay while you have the laser (v39)
-  const rev = LASER.rev = revolver(true); rev.traverse(o => { if (o.isMesh) { o.castShadow = true; o.userData.dyn = true; } }); rev.visible = false; R.scene.add(rev);
+  const rev = LASER.rev = new THREE.Group(), revGun = LASER.revGun = revolver(true); rev.add(revGun); LASER.revShows = "rev"; // (v55: or the weapon from the gunsmith's range you set down: laserCrateGun)
+  rev.traverse(o => { if (o.isMesh) { o.castShadow = true; o.userData.dyn = true; } }); rev.visible = false; R.scene.add(rev);
   rev.position.copy(crate.position).add(V3(0, -0.002, 0)); rev.quaternion.copy(crate.quaternion); rev.updateMatrixWorld(true);
   // in your hand
   const vm = LASER.vm = new THREE.Group(), vmMesh = new THREE.Mesh(geo, mat); vmMesh.frustumCulled = false; vm.add(vmMesh); vm.visible = false; R.scene.add(vm);
@@ -92,9 +93,18 @@ function laserTap(e) {
   if (S.cover !== 1) { const C = S.covers[1]; S.run = { from: CAM.pos.clone(), to: C.stand.clone(), t: 0, dur: Math.max(0.5, CAM.pos.distanceTo(C.stand) / SIEGE_CFG.runSpeed), to_i: 1, pick: true }; S.crouch = true; return true; }
   laserTake(); return true;
 }
+// v55: what's left on the crate when you take the laser is what you were holding: the revolver, or the weapon from the gunsmith's range
+// (its own model, lying on its side as the laser lay; it used to be the revolver whatever you had), and that's what a tap gives you back
+function laserCrateGun() {
+  const L = LASER, want = ARMS.cur || "rev"; if (L.revShows === want) return; L.revShows = want; for (const c of L.rev.children.slice()) L.rev.remove(c);
+  if (want === "rev") { L.rev.add(L.revGun); return; }
+  const m = (ARMS.crate || (ARMS.crate = {}))[want] || (ARMS.crate[want] = armsBuild(want)); m.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = true; } });
+  m.scale.setScalar(want === "gatling" ? 0.75 : 1); m.position.set(0, 0, want === "winchester" || want === "sharps" || want === "shotgun" ? -0.12 : 0); L.rev.add(m);
+  if (m.userData.string) { m.updateMatrixWorld(true); armsBowString(m, 0); m.userData.arrow.visible = false; } if (m.userData.stick) m.visible = true;
+}
 // taking it up: it rises off the crate into your hand, lights up, and the fight's back on
 function laserTake() {
-  const L = LASER, S = SIEGE; if (L.state !== "crate") return; L.state = "lift"; L.lift = { t: 0, p: L.crate.position.clone(), q: L.crate.quaternion.clone() }; L.crate.visible = false; L.hudKey = "";
+  const L = LASER, S = SIEGE; if (L.state !== "crate") return; laserCrateGun(); L.state = "lift"; L.lift = { t: 0, p: L.crate.position.clone(), q: L.crate.quaternion.clone() }; L.crate.visible = false; L.hudKey = "";
   Sound.laserWake(null, false); Sound.laserPick(); S.vm.gun.visible = false;
   S.flanker = null; if (S.phase === "doomed") { S.phase = "fight"; $("doomMsg").hidden = true; S.nextShot = 1.6; S.doomFirst = S.doomGap = null;
     for (const E of S.enemies) if (E.alive && E.state === "pause" && E.t > 50) E.t = rnd(0.3, 1.2); }
@@ -116,7 +126,8 @@ function revTake() {
   Sound.laser(false); L.beam.visible = false; L.glowA.visible = L.glowB.visible = false; L.vm.visible = false; L.mat.emissiveIntensity = L.e0 * 0.3;
   S.vm.lift = { t: 0, p: L.rev.position.clone(), q: L.rev.quaternion.clone() }; L.rev.visible = false; Sound.clip("cock0", null, 0.9, 0, 0.05); // (off the crate and into your hand: 12d siegeLate)
   gunHud.key = null; const rb = $("reloads"); if (rb) rb.style.display = ""; $("gun").classList.remove("reloading"); siegeHud();
-  const t = $("siegeTip"); t.textContent = S.bullets + S.reloads > 0 ? "The revolver again · the laser waits on the crate" : "The revolver's empty · the laser's on the crate"; t.hidden = false; S.tip = 2.6;
+  const The = `The ${ARMS.cur ? ARMS_DEF[ARMS.cur].short : "revolver"}`; // (v55: whatever it is)
+  const t = $("siegeTip"); t.textContent = S.bullets + S.reloads > 0 ? `${The} again · the laser waits on the crate` : `${The}'s empty · the laser's on the crate`; t.hidden = false; S.tip = 2.6;
 }
 
 // ---- per frame ----
@@ -129,7 +140,7 @@ function updateLaser(rdt, dt) {
   if (L.awake && !(S.on && S.phase === "doomed" && L.state === "crate")) { L.awake = false; Sound.laserWake(null, false); }
   if (!L.awake) Sound.laserWake(null, false);
   if (!(L.rechargeT > 0 && (chase || (S.on && S.phase !== "chase")))) Sound.laserCharge(false);
-  if (!L.firing) Sound.laser(false);
+  if (!L.firing && !ARMS.beam) Sound.laser(false); // (v55: nor while the range's laser is firing, 12t)
   L.crate.visible = S.on && L.state === "crate" && S.phase !== "chase" && S.covers[1].grp.visible;
   L.rev.visible = S.on && laserHeld() && S.phase !== "chase" && S.covers[1].grp.visible && !S.vm.lift; // (the revolver where the laser lay: v39)
   if (L.rechargeT > 0) { L.rechargeT -= dt; L.charge = LASER_CFG.charge * clamp(1 - L.rechargeT / LASER_CFG.recharge, 0, 1); // (it charges on the crate too)

@@ -2,6 +2,31 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v55
+- **No more fast-forward with a gun in hand.** A tap while the round is held up (the host answering a guess) hurries
+  him along at six times speed. Holding a gun, at the range and on the way there hold the round up too, so a second
+  tap on the gunsmith's door while the view faded (or a tap with the gun just coming up) set the whole town running at
+  six times speed for as long as you held the gun. Those taps don't hurry anything now, and the speed is always normal
+  with a gun in hand.
+- **The Derringer held straight.** It was turned a quarter-turn out so its side showed, which had it pointing off to
+  the right of the sight. It's held down the line now, the same as the Colt and the barrel's revolver, and remodelled:
+  a nickel over-under with rosewood bird's-head grips (the old one was a white block from behind).
+- **Your own weapon on the laser's crate.** In the shootout, taking the laser leaves on the crate whatever you were
+  holding (the Winchester, the bow, the Gatling...), not always the revolver, and a tap on it gives that back.
+- **The range reworked:**
+  - **Practice:** nothing moves. Six bottles, five tin targets (two more), six bandit cut-outs (two more), the
+    jackrabbit standing, three clays standing on the trap house roof, the gong. What you shoot stays down (a bottle or
+    a clay broken, a tin target flipped up on its hanger, a cut-out fallen flat) until **Reset** stands them all back up.
+  - **Challenges** (in place of the timed minute of points): Bottles, Tin targets (sliding along the rail), Bandits
+    (popping up and dropping back: each has to be shot while he's up) and Everything (with the jackrabbit running and
+    the clays thrown one at a time till each is hit). A count of three (no shooting in it), then the clock to the last
+    target; the time, how many shots it took, and your best with that weapon, kept on the device. **Stop** gives up.
+  - **The laser** is the tenth weapon there: hold Fire and the beam heats what it's on. A cut-out catches where the beam
+    struck and burns away from there, in flames, smoke and ash; a bottle slumps into a glowing lump; a tin target goes
+    red-hot and flips; the gong glows; a clay bursts into flame. It stays with the gunsmith: leave with it in hand and
+    you're back in the round with the last of his guns you held (or the Colt).
+  - The bar along the top: Leave, Weapons, Challenges (Stop during one), Reset.
+
 ## v54
 - **The gunsmith's range** (an Easter egg, `12u_range.js`). The door of the assay office, where GUNSMITH hangs, glimmers
   in a round: warm light leaking round its edges and under it, a soft glow, sparks running along the frame, all of it

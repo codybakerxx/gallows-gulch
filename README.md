@@ -61,17 +61,23 @@ The condemned man isn't a target. Put it back and the round goes on.
 
 **The gunsmith's range.** Up the street on the right, the door of the assay office (GUNSMITH hangs under its sign)
 glimmers while you're free in a round: warm light round its edges, sparks running along the frame. Tap it and you're
-out the back at his range, his weapons on a rack beside you. Pick one of nine (the bar along the top brings the
+out the back at his range, his weapons on a rack beside you. Pick one of ten (**Weapons** along the top brings the
 picker back):
 - **Colt Peacemaker** (6 rounds), **Derringer** (2, wide), **Winchester '73** (14), **Coach Gun** (2 shells of nine
   pellets each), **Sharps Buffalo Rifle** (1 heavy round, a **Scope** button to look down its brass scope);
 - a **bow** and **throwing knives** (they fly and drop: aim high far off), a **Gatling gun** (hold Fire and it cranks),
-  and **dynamite** (thrown, it lands, the fuse burns down and everything near it goes).
+  **dynamite** (thrown, it lands, the fuse burns down and everything near it goes);
+- and the **laser** from the shootout's crate: hold Fire and the beam burns what it touches (a cut-out catches fire
+  and burns away, a bottle melts, a tin target or the gong goes red-hot). It stays at the range.
 
-Downrange everything moves: bottles on a fence (1 point), tin plates sliding along a rail (2), bandit cut-outs popping
-up from the dirt (3, a head shot 5), a jackrabbit running a track (4), clays thrown across from a trap house (5) and a
-gong far back (2). Practise as long as you like (the gunsmith has plenty), or start a **Timed round**: a minute, the
-targets faster, and your best with each weapon kept on the device.
+**Practice:** nothing moves. Six bottles on a fence, five tin targets on a rail, six bandit cut-outs, a jackrabbit,
+three clays on the trap house roof and a gong at the back. What you shoot stays down (broken, flipped up, fallen
+flat) until **Reset** stands everything back up.
+
+**Challenges:** against the clock, with the targets moving: **Bottles**, **Tin targets** (sliding along the rail),
+**Bandits** (popping up and dropping back: get each one while he's up) or **Everything** (the jackrabbit running its
+track, the clays thrown one at a time, the gong too). A count of three, then the clock runs until the last one's down.
+Your best time with each weapon is kept on the device.
 
 **Leave range** and you're back in the round where you left it, standing at the barrel with the weapon in your hand
 (the revolver's rules: shoot one of the townsfolk and the whole town draws on you, and you fight them with it).
@@ -305,7 +311,7 @@ src/                     the game: one HTML shell and 37 JavaScript modules, loa
   12r_ammo.js            the spare rounds by the board: the box, its glimmer, taking it in the shootout
   12s_solid.js           the buildings, the church and the water tower as solids: nothing walks, rolls or falls through them
   12t_arms.js            the gunsmith's nine weapons: their models, how each is held and fires, what it hits, Holster and Draw's load
-  12u_range.js           the gunsmith's door, his range out the back (its moving targets, scoring, the timed round), going and coming back
+  12u_range.js           the gunsmith's door, his range out the back (practice, Reset, the challenges, the laser's burning), going and coming back
   12g_chase.js           the getaway: posse, horses, the turn, the fight, the results
   12h_runner.js          the getaway's run: three lanes, swipes and jumps, the course, the desert along the trail
   12i_canyon.js          the canyon at the end and the filmed fall
