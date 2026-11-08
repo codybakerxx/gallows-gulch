@@ -28,6 +28,8 @@ The version numbers are the published versions of the game (first published as a
   the board giving its own box (+14 rounds for the Winchester, +3 sticks of dynamite). It stays yours from round to
   round. The barrel's revolver is still there with its own cylinder, and the getaway is still the revolver's.
 - The host's speech bubbles don't follow you out to the range.
+- A posse rider burning in the saddle is carried where his horse is this frame, not where it was last drawn (he could
+  trail it by a step; a test that steps frames without drawing could find him metres behind it).
 
 ## v53
 - **Spare rounds by the board.** A box of cartridges leans against the front of the hangman board, glimmering (light

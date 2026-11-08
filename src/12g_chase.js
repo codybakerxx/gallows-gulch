@@ -388,7 +388,7 @@ function updateRiders(dt) {
     if (R0.free && R0.free.down) { const F = R0.free; F.t += dt; chaseHorseFallStep(R0, dt); if (a.hang) a.update(dt); continue; } // (his horse was shot: it's down too, 12l)
     if (R0.free) { // fallen: the horse runs on without him, drifting off and slowing; he lies where he came down
       const F = R0.free; F.t += dt; F.v = Math.max(0, F.v - dt * 1.4); F.s += F.v * dt; F.l += F.side * dt * 1.1; placeHorse(H, F.s, F.l, F.side * 1.1, F.v, dt, 0);
-      if (R0.ashRel && a.root.visible) { _cm.multiplyMatrices(H.grp.matrixWorld, R0.ashRel); _cm.decompose(a.root.position, a.root.quaternion, a.root.scale); a.root.updateMatrixWorld(true); } /* (burning in the saddle: carried on with it, 12o) */ if (F.t > 6 || F.s < C.s - 90 || (C.cine && F.s > C.cine.sEdge - 6)) { H.grp.visible = false; horseTackShow(H, false); } // (and it shies away from the edge: never runs out over the canyon)
+      if (R0.ashRel && a.root.visible) { H.grp.updateWorldMatrix(true, false); _cm.multiplyMatrices(H.grp.matrixWorld, R0.ashRel); /* (v54: the horse where it is this frame, not where it was last drawn) */ _cm.decompose(a.root.position, a.root.quaternion, a.root.scale); a.root.updateMatrixWorld(true); } /* (burning in the saddle: carried on with it, 12o) */ if (F.t > 6 || F.s < C.s - 90 || (C.cine && F.s > C.cine.sEdge - 6)) { H.grp.visible = false; horseTackShow(H, false); } // (and it shies away from the edge: never runs out over the canyon)
       if (a.hang) { a.update(dt); } continue; }
     if (!R0.alive || R0.posed) { if (R0.posed) { a.pos.copy(H.grp.position); a.yaw = H.yaw; a.update(dt); } continue; }
     R0.t += dt; R0.cool -= dt; R0.wob += dt;
@@ -542,7 +542,7 @@ function chaseAsh(R0, at, rd) {
   const C = CHASE; if (!R0.alive) return;
   if (C.attacker === R0) { endAttack(R0); if (C.lasso.fly && C.lasso.fly.R0 === R0) C.lasso.fly = null; }
   R0.alive = false; R0.state = "dead"; C.stats.downed++; C.stats.hits++; const a = R0.a, H = R0.H; R0.gun.visible = false; if (H.tack.reins) H.tack.reins.visible = false;
-  a.root.updateMatrixWorld(true); R0.ashRel = new THREE.Matrix4().copy(H.grp.matrixWorld).invert().multiply(a.root.matrixWorld);
+  a.root.updateMatrixWorld(true); H.grp.updateWorldMatrix(true, false); R0.ashRel = new THREE.Matrix4().copy(H.grp.matrixWorld).invert().multiply(a.root.matrixWorld);
   ashBurn(R0, at, rd, { ride: true, floor: groundVis });
   R0.free = { t: 0, s: C.s - R0.d, l: R0.l, v: C.speed, side: R0.l >= 0 ? 1 : -1, body: false };
   const left = C.riders.filter(r => r.alive).length; if (left) chaseMsg(`<b>${["One", "Two", "Three", "Four", "Five"][C.stats.downed - 1] || C.stats.downed} down</b>`, 1.1, "down");
