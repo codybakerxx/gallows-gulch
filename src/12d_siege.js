@@ -135,7 +135,8 @@ function buildSiege() {
   buildEnemyCover(ENEMY_COVER);
   SIEGE.roofActors = ROOF_MEN.map((m, i) => { const a = new Actor(Object.assign({ boots: 0x2e2016, gloves: 0x6a5038, lod: true }, m.spec), "roof" + i); a.root.visible = false; return a; });
   // the player's revolver, the guns the townsfolk carry, flashes and blood
-  const vm = revolver(true); vm.visible = false; vm.traverse(o => { o.castShadow = false; o.frustumCulled = false; }); R.scene.add(vm);
+  const vm = new THREE.Group(); vm.add(revHolder({ cocked: true, hand: true, each: q => { q.castShadow = false; q.frustumCulled = false; } })); vm.visible = false; // (v56: the detailed revolver once it's in, 12v)
+  vm.traverse(o => { o.castShadow = false; o.frustumCulled = false; }); R.scene.add(vm);
   const fl = new THREE.Sprite(new THREE.SpriteMaterial({ fog: false, map: flashTex(), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 }));
   fl.visible = false; fl.renderOrder = 6; R.scene.add(fl);
   SIEGE.vm = { gun: vm, flash: fl, kick: 0 };
@@ -449,7 +450,7 @@ function fireTap() {
   if (S.bullets <= 0) { if (S.cool <= 0) { Sound.clip("dry0", null, 0.9, 0, 0.05); S.cool = 0.3; } return; } // click: empty
   if (S.crouch || S.run || S.cv > 0.5) { nudgeAim(); return; } // still behind the cover: hold Aim to come up first
   if (S.cool > 0) return;
-  S.bullets--; S.shots++; S.cool = SIEGE_CFG.fireCool; S.recoil = 1; S.vm.kick = 1; siegeHud();
+  S.bullets--; S.shots++; S.cool = SIEGE_CFG.fireCool; S.recoil = 1; S.vm.kick = 1; revShot(); siegeHud();
   Sound.clip(siegePick("shot", 3), null, 1.15, 0, 0.32, rnd(0.97, 1.03)); CAM.shake = Math.max(CAM.shake, 0.35);
   R.camera.updateMatrixWorld(); const ro = R.camera.position.clone(), rd = V3(0, 0, -1).applyQuaternion(R.camera.quaternion).normalize();
   muzzleFlash(S.vm.gun.localToWorld(V3(0, 0.035, 0.22)), 0.32);
@@ -884,7 +885,7 @@ function siegeLate(rdt) {
   vm.visible = show && (S.cv < 0.85 || !!S.vm.lift) && !ARMS.zoom;
   if (vm.visible) { const k = S.vm.kick, down = Ease.inOut(clamp(S.cv, 0, 1)) * 0.22, rl = S.reloadT > 0 ? Math.sin(clamp(1 - S.reloadT / armsReload(), 0, 1) * Math.PI) : 0; // (rl: down and tipped up for the reload)
     vm.scale.setScalar(0.8); vm.position.copy(toW(Math.min(0.2, hw(0.62) * 0.46), -hh(0.62) * 0.56 - down - rl * 0.12 + k * 0.02, -0.62 + k * 0.04));
-    vm.lookAt(toW(0, 0, -25)); vm.rotateX(-k * 0.5 + rl * 0.9); // the barrel lines up on the crosshair
+    vm.lookAt(toW(0, 0, -25)); vm.rotateX(-k * 0.5 + rl * 0.9); revCant(vm); // the barrel lines up on the crosshair (v56: tilted a little in the wrist: 12v revCant)
     if (ARMS.cur) { armsVmPose(vm, cam, k, down, rl); if (ARMS.zoom && S.cv > 0.5) armsScope(false); } // (v54: the gunsmith's weapon, held its own way)
     if (S.vm.lift) { const T0 = S.vm.lift; T0.t = Math.min(1, T0.t + rdt / 0.35); const e = Ease.inOut(T0.t); // (v39: up off the crate into your hand, the laser left there)
       vm.position.lerpVectors(T0.p, _s2.copy(vm.position), e); vm.quaternion.slerpQuaternions(T0.q, _s4q.copy(vm.quaternion), e); vm.scale.setScalar(lerp(1, 0.8, e)); if (T0.t >= 1) S.vm.lift = null; } }

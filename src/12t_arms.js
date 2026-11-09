@@ -42,7 +42,7 @@ function armsPart(g, geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) { const m = new 
 const CYL = (r, l, n = 10, r2 = r) => new THREE.CylinderGeometry(r2, r, l, n).rotateX(Math.PI / 2); // (along z)
 function armsBuild(id) {
   const M = armsMats(), g = new THREE.Group(), P = (geo, mat, x, y, z, rx, ry, rz) => armsPart(g, geo, mat, x, y, z, rx, ry, rz), B = (w, h, d) => new THREE.BoxGeometry(w, h, d);
-  if (id === "colt") { const r = revolver(true); r.children[0].material = r.children[1].material = r.children[2].material = M.blued; g.add(r); } // (the barrel's revolver, blued)
+  if (id === "colt") g.add(revHolder({ cocked: true, blued: true })); // (the barrel's revolver: v56 the detailed one, 12v; the simple one blued until it's in)
   else if (id === "derringer") { // (v55: a Remington over-under, nickel, rosewood bird's-head grips; held straight down the line as the Colt is, its upper bore on the revolver's)
     for (const y of [0.043, 0.027]) { P(CYL(0.0074, 0.084, 12), M.steel, 0, y, 0.046); P(CYL(0.0042, 0.003, 10), M.black, 0, y, 0.0885); }
     P(B(0.007, 0.005, 0.084), M.steel, 0, 0.052, 0.046); P(B(0.021, 0.04, 0.046), M.steel, 0, 0.03, -0.018); P(B(0.006, 0.018, 0.009), M.steel, 0, 0.055, -0.04, -0.55);
@@ -110,6 +110,7 @@ function armsVmPose(vm, cam, k, down, rl) {
   vm.scale.setScalar(sc * (d.view || 1)); const x = sx >= 0 ? Math.min(cap, hw(z) * sx) : Math.max(cap, hw(z) * sx);
   vm.position.copy(toW(x, hh(z) * sy - dip + k * 0.02, -z + k * (H === "rifle" ? 0.05 : 0.04)));
   vm.lookAt(toW(0, 0, -25)); vm.rotateX(-k * (H === "rifle" ? 0.25 : H === "gatling" ? 0.08 : 0.5) + rl * 0.9);
+  if (ARMS.cur === "colt") revCant(vm); // (v56: the detailed revolver, tilted a little to show its side: 12v)
   if (H === "bow") vm.rotateZ(-0.2); else if (H === "knife") { vm.rotateX(-0.95); vm.rotateZ(0.5); } else if (H === "stick") { vm.rotateX(-0.9); vm.rotateZ(-0.4); }
   if (m && m.userData.spin) m.userData.spin.rotation.z = ARMS.spin;
   if (m && m.userData.string) { const a = m.userData.arrow; a.visible = armsReady(); armsBowString(m, a.visible ? 1 - Math.max(0, ARMS.snap) : 0); }
@@ -134,7 +135,7 @@ function armsShoot(mode) {
   if (o.reloadT > 0) return false;
   if (o.bullets <= 0) { if (o.cool <= 0) { Sound.clip("dry0", null, 0.9, 0, 0.05); o.cool = 0.3; } ARMS.trig = false; return false; }
   if (o.cool > 0) return false;
-  o.bullets--; o.shots = (o.shots || 0) + 1; o.cool = d.cool; ARMS.autoT = d.auto ? 1 / d.rate : 0; S.recoil = d.hold === "rifle" ? 1.25 : d.auto ? 0.35 : d.kind === "shot" ? 1 : 0.3; S.vm.kick = d.kind === "shot" ? 1 : 0.4;
+  o.bullets--; o.shots = (o.shots || 0) + 1; o.cool = d.cool; ARMS.autoT = d.auto ? 1 / d.rate : 0; S.recoil = d.hold === "rifle" ? 1.25 : d.auto ? 0.35 : d.kind === "shot" ? 1 : 0.3; S.vm.kick = d.kind === "shot" ? 1 : 0.4; if (ARMS.cur === "colt") revShot(); /* (v56: the hammer falls and is thumbed back, 12v) */
   R.camera.updateMatrixWorld(); const ro = R.camera.position.clone(), rd = V3(0, 0, -1).applyQuaternion(R.camera.quaternion).normalize(), vm = S.vm.gun; vm.updateMatrixWorld(true);
   const muz = vm.localToWorld(V3(...d.muz));
   armsSound(d, muz);

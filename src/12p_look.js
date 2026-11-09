@@ -47,13 +47,14 @@ function buildGunProp() {
   const G = GUNPROP, grp = G.grp = new THREE.Group(), { x, z } = G.at, y0 = groundVis(x, z); grp.position.set(x, y0, z); R.scene.add(grp);
   const b = barrelMesh(1.02); b.rotation.y = 0.7; grp.add(b); b.traverse(o => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; } });
   // its steel: the game's iron with a band of light that sweeps along it while it's there for the taking
-  const shine = G.shine = { k: { value: 0 }, pos: { value: -1 } }, m = G.mat = MAT.iron.clone();
+  const shine = G.shine = { k: { value: 0 }, pos: { value: -1 } }, gleam = (src, s = 1) => { const m = src.clone(); // (s: how strong: the detailed revolver's steel and brass are bright, and a band at full strength whites it out)
   m.onBeforeCompile = q => { q.uniforms.gShineK = shine.k; q.uniforms.gShinePos = shine.pos;
     q.vertexShader = q.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vGp;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvGp = (modelMatrix * vec4(position, 1.0)).xyz;");
     q.fragmentShader = q.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vGp; uniform float gShineK, gShinePos;")
-      .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\n{ float b = exp(-pow((dot(vGp, vec3(0.7071, 0.0, 0.7071)) - gShinePos) / 0.035, 2.0)); totalEmissiveRadiance += vec3(1.0, 0.92, 0.75) * (b * 3.0 + 0.12) * gShineK; }"); };
-  m.customProgramCacheKey = () => "gunPropShine";
-  const gun = G.gun = revolver(true); gun.traverse(o => { if (o.isMesh && o.material === MAT.iron) o.material = m; if (o.isMesh) { o.castShadow = true; o.userData.dyn = true; } });
+      .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>\n{ float b = exp(-pow((dot(vGp, vec3(0.7071, 0.0, 0.7071)) - gShinePos) / 0.035, 2.0)); totalEmissiveRadiance += vec3(1.0, 0.92, 0.75) * (b * ${(3 * s).toFixed(2)} + ${(0.12 * s).toFixed(3)}) * gShineK; }`); };
+  m.customProgramCacheKey = () => "gunPropShine" + s; return m; }, m = G.mat = gleam(MAT.iron), made = new Map();
+  // (v56: the detailed revolver once it's in, 12v, every part of it gleaming; the simple one's iron until then)
+  const gun = G.gun = revHolder({ mat: mt => mt === MAT.iron ? m : mt === MAT.woodDark ? mt : made.get(mt) || made.set(mt, gleam(mt, 0.3)).get(mt) });
   gun.position.set(0.02, 0.86 * 1.02 + 0.026, -0.03); gun.rotation.set(0, -0.9, Math.PI / 2); grp.add(gun); // (on its side on the lid)
   const glint = G.glint = new THREE.Sprite(new THREE.SpriteMaterial({ fog: false, map: starTex(), color: new THREE.Color(1.35, 1.28, 1.1), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 }));
   glint.renderOrder = 5; glint.visible = false; R.scene.add(glint);

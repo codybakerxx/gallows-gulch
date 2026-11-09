@@ -23,7 +23,7 @@ function prepLaser(gltf) {
   gltf.scene.traverse(o => { if (!o.isMesh) return; mat = mat || o.material; const src = o.geometry, g = new THREE.BufferGeometry();
     for (const nm of ["position", "normal", "uv"]) { const a = src.attributes[nm], n = a.count, it = a.itemSize, arr = new Float32Array(n * it); // (out of the packed integers into floats)
       for (let i = 0; i < n; i++) { arr[i * it] = a.getX(i); arr[i * it + 1] = a.getY(i); if (it > 2) arr[i * it + 2] = a.getZ(i); } g.setAttribute(nm, new THREE.BufferAttribute(arr, it)); }
-    g.setIndex(new THREE.BufferAttribute(new Uint32Array(src.index.array), 1)); g.applyMatrix4(o.matrixWorld); parts.push({ geo: g }); });
+    g.setIndex(new THREE.BufferAttribute(new Uint32Array(src.index.array), 1)); const nrm = g.attributes.normal.array.slice(); g.applyMatrix4(o.matrixWorld); g.attributes.normal.array.set(nrm); parts.push({ geo: g }); }); // (v56: the normals as they were: the packing's scale only places the points, 12k's gun lit as it was made)
   const geo = mergeGeos(parts); geo.clearGroups(); geo.setAttribute("uv2", geo.attributes.uv); geo.translate(-0.05, 0, 0); geo.rotateY(-Math.PI / 2); geo.computeBoundingSphere();
   mat.side = THREE.DoubleSide; LASER.e0 = mat.emissiveIntensity || 3; mat.emissiveIntensity = LASER.e0 * 0.3; /* (its lights faintly on: it can be taken up any time) */ LASER.geo = geo; LASER.mat = mat;
   // on the crate: on its side, the barrel toward the street and off to your left
@@ -31,7 +31,7 @@ function prepLaser(gltf) {
   { const C = SIEGE.covers[1], [cx, cz] = COVERS[1].at, dir = C.side.clone().multiplyScalar(-0.75).addScaledVector(C.away, -0.55).normalize();
     crate.position.set(cx, 0.8 + 0.027, cz).addScaledVector(C.side, -0.5).addScaledVector(C.away, 0.18); crate.rotation.set(0, Math.atan2(dir.x, dir.z), Math.PI / 2, "YXZ"); crate.updateMatrixWorld(true); }
   // the revolver, left on the crate where the laser lay while you have the laser (v39)
-  const rev = LASER.rev = new THREE.Group(), revGun = LASER.revGun = revolver(true); rev.add(revGun); LASER.revShows = "rev"; // (v55: or the weapon from the gunsmith's range you set down: laserCrateGun)
+  const rev = LASER.rev = new THREE.Group(), revGun = LASER.revGun = revHolder(); /* (v56: the detailed one, 12v) */ rev.add(revGun); LASER.revShows = "rev"; // (v55: or the weapon from the gunsmith's range you set down: laserCrateGun)
   rev.traverse(o => { if (o.isMesh) { o.castShadow = true; o.userData.dyn = true; } }); rev.visible = false; R.scene.add(rev);
   rev.position.copy(crate.position).add(V3(0, -0.002, 0)); rev.quaternion.copy(crate.quaternion); rev.updateMatrixWorld(true);
   // in your hand
@@ -170,7 +170,7 @@ function laserBeam(dt) {
     else if (k === "horse") horseLaser(hr.H, at, rd);
     else if (k === "meat") meatLaser(mt.M, at, rd, dt); // (a drumstick or a steak on the ground: to ash, 12o)
     else if (k === "body") bodyLaser(bd, at, rd, dt, goreFloor); // (v42: one of them already down: to ash where he lies, 12o)
-    else if (k === "tgt") { if (tg.weed) weedIgnite(tg.weed, at); /* (v42: a tumbleweed catches fire, 12o) */ else { const T = tg.T; if ((T.laserT || 0) <= L.t) { T.laserT = L.t + 0.3; targetShot(tg, at, rd); } } }
+    else if (k === "tgt") { if (tg.weed) weedIgnite(tg.weed, at); /* (v42: a tumbleweed catches fire, 12o) */ else { const T = tg.T; if (T.kind === "bottle") bottleLase(T, at, dt); /* (v56: it melts, as the range's do: 12j) */ else if ((T.laserT || 0) <= L.t) { T.laserT = L.t + 0.3; targetShot(tg, at, rd); } } }
     else if (k === "bell") { if (L.bellT <= 0) { L.bellT = 0.7; bellShot(at, rd); } }
     else { const n = env.face ? _l2.copy(env.face.normal).transformDirection(env.object.matrixWorld) : _l2.set(0, 1, 0); if (n.dot(rd) > 0) n.negate();
       const bk = brkFromHit(env); if (bk) brkHit(bk, dt * 4, at, rd, true); // (a thing that breaks burns through in under a second: 12m)

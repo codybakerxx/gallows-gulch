@@ -52,7 +52,9 @@ the edge of town, some behind you. Each time the game cuts to a new view (a gues
 up, to cut him down and fight for the round.
 
 **The revolver on the barrel.** Somewhere off to the side, out of the view the round ends on, a revolver lies on a
-barrel, catching the light. Look round, find it and tap it, any time the host isn't busy (from the very start of a
+barrel, catching the light: a single-action with a nickel frame, a blued cylinder with six rounds in it, brass trigger
+guard and backstrap, ebony grips and a case-hardened hammer. In your hand the hammer's back, tilted a little in the wrist
+so you see some of its side; at each shot it falls and is thumbed back, the cylinder turning a sixth. Look round, find it and tap it, any time the host isn't busy (from the very start of a
 round, or after you've saved him), and it's in your hand: the letters give way to an Aim and Fire pad and a **Put it
 back** button. Drag to look round and shoot what you like; the crowd jumps at every shot. Shoot one of the townsfolk
 or the executioner and the town turns on you: the shootout, right there, as the stranger, with no hangman to finish
@@ -60,8 +62,11 @@ and no rope to cut. The host can be shot too: he goes down where he stood, and t
 The condemned man isn't a target. Put it back and the round goes on.
 
 **The gunsmith's range.** Up the street on the right, the door of the assay office (GUNSMITH hangs under its sign)
-glimmers while you're free in a round: warm light round its edges, sparks running along the frame. Tap it and you're
-out the back at his range, his weapons on a rack beside you. Pick one of ten (**Weapons** along the top brings the
+glimmers while you're free in a round: warm light round its edges, sparks running along the frame. In front of it a
+board on a post hangs out over the street, **SHOOTING RANGE · OUT BACK**, light running along its paint and stars
+winking at its ends, so it can be seen from down the street. Until you've been there once, a little star twinkles now
+and then at the edge of the picture on the side where the door is, while it's off the screen. Tap the door or the
+board and you're out the back at his range, his weapons on a rack beside you. Pick one of ten (**Weapons** along the top brings the
 picker back):
 - **Colt Peacemaker** (6 rounds), **Derringer** (2, wide), **Winchester '73** (14), **Coach Gun** (2 shells of nine
   pellets each), **Sharps Buffalo Rifle** (1 heavy round, a **Scope** button to look down its brass scope);
@@ -132,7 +137,8 @@ two on the rooftops, behind the false fronts of the sheriff's office and the gen
   of firing (the blue ring where the cylinder was), then takes **7 seconds** to charge itself (the ring fills amber).
   What it does to a horse or a crow is best seen (a thick steak or a drumstick, steaming), and what that leaves on
   the ground burns to ash in the beam too. So do the men already down, where they lie. A tumbleweed in the beam
-  catches fire, rolls on ablaze and burns away to ash; another blows in after a while.
+  catches fire, rolls on ablaze and burns away to ash; another blows in after a while. A bottle in the beam glows
+  orange and slumps into a glowing lump of glass, as the gunsmith's do (a bullet still shatters it, lump or not).
 - The laser sits in your hand just where the revolver does, its beam straight down your line of sight.
 - Taking the laser leaves your revolver on the crate. Tap the revolver to swap back (the laser keeps its charge on
   the crate), and swap again whenever you like. Whichever you're holding when the street's cleared is the gun you
@@ -311,13 +317,14 @@ src/                     the game: one HTML shell and 37 JavaScript modules, loa
   12r_ammo.js            the spare rounds by the board: the box, its glimmer, taking it in the shootout
   12s_solid.js           the buildings, the church and the water tower as solids: nothing walks, rolls or falls through them
   12t_arms.js            the gunsmith's nine weapons: their models, how each is held and fires, what it hits, Holster and Draw's load
-  12u_range.js           the gunsmith's door, his range out the back (practice, Reset, the challenges, the laser's burning), going and coming back
+  12u_range.js           the gunsmith's door and board, his range out the back (practice, Reset, the challenges, the laser's burning), going and coming back
+  12v_revolver.js        your revolver: the detailed model put in its place (hand, barrel, crate, the Colt), the hammer and cylinder at each shot
   12g_chase.js           the getaway: posse, horses, the turn, the fight, the results
   12h_runner.js          the getaway's run: three lanes, swipes and jumps, the course, the desert along the trail
   12i_canyon.js          the canyon at the end and the filmed fall
   12c_boot.js            loading, menu, input, main loop
 assets/
-  models/                Xbot.glb, LeePerrySmith.glb, Horse.glb, Stork.glb, ARC09.glb (the laser gun)
+  models/                Xbot.glb, LeePerrySmith.glb, Horse.glb, Stork.glb, ARC09.glb (the laser gun), Revolver.glb (your revolver)
   textures/              the head scan's colour, normal and specular maps
   audio/                 soundtrack.mp3, silence.mp3, voice/ (43 host lines), sfx/ (74 effects, taunts, shouts and the crows)
 vendor/three-r147/       the nine three.js r147 files the game uses, for offline tests (MIT)
@@ -325,6 +332,7 @@ tools/
   check_build.py         checks the bundled script parses and every file the code asks for is in dist/
   asset_report.py        measures every asset and writes ASSETS.md
   pack_arc09.py          packs the laser gun's source GLB for the game: quantized meshes, smaller textures (NumPy, Pillow)
+  pack_revolver.py       packs the revolver's source GLB: still parts merged by material, the moving parts at their pivots, quantized, smaller textures
   cut_gallop.py          cuts the repository owner's galloping recording into the hoof hits in sfx/gallop.mp3 (NumPy, SciPy, FFmpeg)
 test/                    browser test harness (Playwright): see test/README.md
 docs/screenshots/        the pictures above
@@ -351,7 +359,7 @@ More detail:
 
 Built with [three.js](https://threejs.org). Head scan: Lee Perry-Smith by Infinite-Realities (CC BY 3.0).
 Motion capture: Mixamo. Voices and sound effects: ElevenLabs; the neck snap and the crows were recorded by the
-repository owner. The laser gun (ARC-09) was modelled by the repository owner with Claude. Music: "Eagle's Caw", made with Suno.
+repository owner. The laser gun (ARC-09) and the revolver were modelled by the repository owner with Claude. Music: "Eagle's Caw", made with Suno.
 Fonts: Sancreek, Zilla Slab and Permanent Marker, from Google Fonts. Full details and licences are in
 [CREDITS.md](CREDITS.md).
 

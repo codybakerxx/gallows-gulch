@@ -22,6 +22,7 @@ button:focus-visible,input:focus-visible+span,input[type=range]:focus-visible{ou
 #app{height:100%;display:flex;flex-direction:column;position:relative;overflow:hidden}
 #stage{flex:1 1 auto;position:relative;min-height:0;touch-action:none}
 #scene{position:absolute;inset:0;width:100%;height:100%;display:block}
+#rangeGlint{position:fixed;left:0;top:0;width:60px;height:60px;pointer-events:none;opacity:0;background-size:contain;background-repeat:no-repeat;mix-blend-mode:screen;z-index:2;will-change:transform,opacity}
 
 /* HUD */
 #hud{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:10px;padding-top:10px;

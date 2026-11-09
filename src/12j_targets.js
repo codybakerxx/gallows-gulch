@@ -1,11 +1,11 @@
 // ---------- THINGS TO SHOOT IN THE TOWN SHOOTOUT (v35) ----------
 // Bottles and tin cans stood on the shootout's crates, barrels and trough and on the post at the foot of the gallows stairs: a bottle
-// bursts into glass and whatever was in it, leaving its jagged bottom standing; a can jumps, spinning, bounces and can be shot again
+// bursts into glass and whatever was in it, leaving its jagged bottom standing (under the laser it glows and melts into a lump, v56); a can jumps, spinning, bounces and can be shot again
 // where it lies. The lanterns on the gallows shatter, swing hard and go dark. A shop window cracks round the hole, glass falling; a
 // barrel or the side of the trough spouts water from the hole for a few seconds, a shot into the trough throws up a splash; hay
 // bursts into straw; iron throws sparks and the bullet whines off it; wood splinters and keeps the hole; the street spits dirt; a
 // tumbleweed hit jumps and sheds twigs. It's all set back as it was for the next shootout (resetTargets).
-const TGT = { items: [], grp: null, debris: {}, holes: null, cracks: null, sparks: null, water: null, spouts: [], lamps: [], hats: 0 };
+const TGT = { t: 0, items: [], grp: null, debris: {}, holes: null, cracks: null, sparks: null, water: null, spouts: [], lamps: [], hats: 0 };
 const _t1 = new THREE.Vector3(), _t2 = new THREE.Vector3(), _t3 = new THREE.Vector3(), _tq = new THREE.Quaternion(), _tq2 = new THREE.Quaternion(), _tm = new THREE.Matrix4(), _te = new THREE.Euler(), _ts = new THREE.Vector3();
 
 // ---- textures ----
@@ -104,11 +104,12 @@ function buildTargets() {
   const bg = bottleGeo(), brk = brokenGeo(), cg = new THREE.CylinderGeometry(0.034, 0.034, 0.11, 16), tin = new THREE.MeshStandardMaterial({ color: 0x9a9690, metalness: 0.85, roughness: 0.38 });
   const label = new THREE.MeshStandardMaterial({ map: canTex(), metalness: 0.25, roughness: 0.6 }), cols = [0x2f5a1e, 0x6a3810, 0x8fa8a0, 0x2a4a3a];
   const add = (kind, x, y, z, ci = 0) => { let mesh, base = null;
-    if (kind === "bottle") { const m = new THREE.MeshStandardMaterial({ color: cols[ci % cols.length], roughness: 0.06, metalness: 0, transparent: true, opacity: 0.86, envMapIntensity: 1.8 });
+    const hot = {}; // (v56: a bottle's glass can glow hot under the laser and melt, as the range's do: 12u rangeHot)
+    if (kind === "bottle") { const m = rangeHot(new THREE.MeshStandardMaterial({ color: cols[ci % cols.length], roughness: 0.06, metalness: 0, transparent: true, opacity: 0.86, envMapIntensity: 1.8 }), hot);
       mesh = new THREE.Mesh(bg, m); base = new THREE.Mesh(brk, m); base.visible = false; base.position.set(x, y, z); base.castShadow = true; base.userData.dyn = true; grp.add(base); }
     else mesh = new THREE.Mesh(cg, [label, tin, tin]);
     mesh.position.set(x, y + (kind === "can" ? 0.055 : 0), z); mesh.rotation.y = Math.random() * TAU; mesh.castShadow = true; mesh.receiveShadow = true; mesh.userData.dyn = true; grp.add(mesh);
-    TGT.items.push({ kind, mesh, base, col: new THREE.Color(cols[ci % cols.length]), home: mesh.position.clone(), q0: mesh.quaternion.clone(), state: "stand", v: new THREE.Vector3(), w: new THREE.Vector3(), restT: 0 }); };
+    TGT.items.push({ kind, mesh, base, U: hot.U || null, heat: 0, lasedT: -9, melt: 0, cool: 0, col: new THREE.Color(cols[ci % cols.length]), home: mesh.position.clone(), q0: mesh.quaternion.clone(), state: "stand", v: new THREE.Vector3(), w: new THREE.Vector3(), restT: 0 }); };
   // on the cover set out for the townsfolk (12d ENEMY_COVER): the top crate, the two barrels, the ends of the trough
   for (const [kind, x, z, ry] of ENEMY_COVER) { const sx = Math.cos(ry), sz = -Math.sin(ry);
     if (kind === "crates") { const cx = x + sx * -0.3, cz = z + sz * -0.3, a = ry + 0.35; add("bottle", cx + Math.cos(a) * 0.1, 1.22, cz - Math.sin(a) * 0.1, 0); add("can", cx - Math.cos(a) * 0.12, 1.22, cz + Math.sin(a) * 0.12); }
@@ -130,7 +131,8 @@ function buildTargets() {
 // the props are set out with the shootout's cover, and put back as they were for the next one
 function showTargets(on) { if (TGT.grp) TGT.grp.visible = on; }
 function resetTargets() {
-  for (const T of TGT.items) { T.state = "stand"; T.mesh.visible = true; T.mesh.position.copy(T.home); T.mesh.quaternion.copy(T.q0); T.v.set(0, 0, 0); if (T.base) T.base.visible = false; }
+  for (const T of TGT.items) { T.state = "stand"; T.mesh.visible = true; T.mesh.position.copy(T.home); T.mesh.quaternion.copy(T.q0); T.mesh.scale.set(1, 1, 1); T.v.set(0, 0, 0); if (T.base) T.base.visible = false;
+    T.heat = 0; T.lasedT = -9; T.melt = 0; T.cool = 0; if (T.U) T.U.uHeat.value = 0; } // (v56: no bottle left melted or warm)
   for (const L of TGT.lamps) if (L.broken) { L.broken = false; if (L.glass) { L.glass.visible = true; L.glass.material.color.setHex(L.col); GAL.lanterns.push(L.glass.material); } if (L.light) GAL.lanterns.push(L.light); }
   for (const K of Object.values(TGT.debris)) { K.P.forEach((D, i) => { D.on = false; K.im.setMatrixAt(i, _tm.makeScale(0, 0, 0)); }); K.im.instanceMatrix.needsUpdate = true; K.im.visible = false; K.live = 0; }
   for (const Pp of [TGT.sparks, TGT.water, TGT.dirt]) if (Pp) { Pp.life.fill(0); Pp.pts.geometry.attributes.position.array.fill(-50); Pp.pts.geometry.attributes.position.needsUpdate = true; Pp.pts.visible = false; }
@@ -142,8 +144,8 @@ function resetTargets() {
 function targetRay(ro, rd) {
   let best = null; if (!TGT.grp || !TGT.grp.visible) return null;
   for (const T of TGT.items) { if (T.state === "broken" || !T.mesh.visible) continue; const far = T.mesh.position.distanceTo(ro), pad = clamp((far - 5) * 0.006, 0, 0.07);
-    const up = _t3.set(0, 1, 0).applyQuaternion(T.mesh.quaternion), h = T.kind === "bottle" ? 0.25 : 0.11, a = T.kind === "bottle" ? T.mesh.position.clone() : T.mesh.position.clone().addScaledVector(up, -0.055);
-    const b = a.clone().addScaledVector(up, h), t = rayCapsule(ro, rd, a, b, (T.kind === "bottle" ? 0.04 : 0.038) + pad); if (t > 0 && (!best || t < best.t)) best = { t, T }; }
+    const sc = T.mesh.scale, up = _t3.set(0, 1, 0).applyQuaternion(T.mesh.quaternion), h = T.kind === "bottle" ? 0.25 * sc.y : 0.11, a = T.kind === "bottle" ? T.mesh.position.clone() : T.mesh.position.clone().addScaledVector(up, -0.055);
+    const b = a.clone().addScaledVector(up, h), t = rayCapsule(ro, rd, a, b, (T.kind === "bottle" ? 0.04 * sc.x : 0.038) + pad); if (t > 0 && (!best || t < best.t)) best = { t, T }; } // (v56: a melted bottle is a squat lump)
   const W = DRESS.weeds; if (W && W.im.visible) W.weeds.forEach(w => { if (w.gone > 0) return; const c = _t1.set(w.p.x, groundVis(w.p.x, w.p.z) + w.rad * 0.9 + w.y, w.p.z), ox = ro.x - c.x, oy = ro.y - c.y, oz = ro.z - c.z, r = w.rad * 1.05; /* (v42b: the whole of it, a touch generous: it's a small thing for a thumb to hold the beam on) */
     const bb = ox * rd.x + oy * rd.y + oz * rd.z, hh = bb * bb - (ox * ox + oy * oy + oz * oz - r * r); if (hh < 0) return; const t = -bb - Math.sqrt(hh); if (t > 0 && (!best || t < best.t)) best = { t, weed: w }; });
   const LW = LIFE.weed; if (LW && LW.on && LW.m.visible && LW.p) { const c = LW.p, ox = ro.x - c.x, oy = ro.y - c.y, oz = ro.z - c.z, r = LW.r * 1.05; // (v47: and the one bouncing past the gallows, 10)
@@ -155,15 +157,31 @@ function targetShot(hit, at, rd) {
     else { w.vy = 2.2 + Math.random(); w.y += 0.02; w.kick = (w.kick || V3()).copy(rd).setY(0).multiplyScalar(3.5); } Sound.straw(at, 0.7);
     for (let i = 0; i < 10; i++) debris("straw", at, _t1.copy(rd).multiplyScalar(rnd(0.5, 2)).add(_t2.set(rnd(-1, 1), rnd(0.5, 2), rnd(-1, 1))), 0.6); return; }
   const T = hit.T;
-  if (T.kind === "bottle") { T.state = "broken"; T.mesh.visible = false; if (T.base) { T.base.position.copy(T.mesh.position); T.base.visible = Math.random() < 0.8; }
-    Sound.clip(siegePick("glass", 3), at, 1.0, 0, 0.25, rnd(0.95, 1.08), 4);
-    const top = T.mesh.position.clone().add(_t3.set(0, 0.12, 0));
-    for (let i = 0; i < 22; i++) debris("glass", top.clone().add(_t1.set(rnd(-0.03, 0.03), rnd(-0.08, 0.1), rnd(-0.03, 0.03))), _t2.copy(rd).multiplyScalar(rnd(0.8, 3.5)).add(_t1.set(rnd(-1.4, 1.4), rnd(0.3, 2.6), rnd(-1.4, 1.4))), rnd(0.02, 0.045), T.col);
-    for (let i = 0; i < 26; i++) emit(TGT.water, top, _t2.copy(rd).multiplyScalar(rnd(0.6, 2.4)).add(_t1.set(rnd(-0.9, 0.9), rnd(0.2, 1.8), rnd(-0.9, 0.9))), rnd(0.8, 1.4), rnd(0.55, 0.8));
-    return; }
+  if (T.kind === "bottle") { const whole = T.state === "stand"; T.state = "broken"; T.mesh.visible = false; if (T.base) { T.base.position.copy(T.mesh.position); T.base.visible = whole && Math.random() < 0.8; }
+    Sound.clip(siegePick("glass", 3), at, 1.0, 0, 0.25, rnd(0.95, 1.08), 4); // (v56: a melted lump shatters too, but into fewer bits, and with nothing left in it to spill)
+    const top = T.mesh.position.clone().add(_t3.set(0, whole ? 0.12 : 0.04, 0));
+    for (let i = 0; i < (whole ? 22 : 12); i++) debris("glass", top.clone().add(_t1.set(rnd(-0.03, 0.03), rnd(-0.08, 0.1) * (whole ? 1 : 0.3), rnd(-0.03, 0.03))), _t2.copy(rd).multiplyScalar(rnd(0.8, 3.5)).add(_t1.set(rnd(-1.4, 1.4), rnd(0.3, 2.6), rnd(-1.4, 1.4))), rnd(0.02, 0.045), T.col);
+    if (whole) for (let i = 0; i < 26; i++) emit(TGT.water, top, _t2.copy(rd).multiplyScalar(rnd(0.6, 2.4)).add(_t1.set(rnd(-0.9, 0.9), rnd(0.2, 1.8), rnd(-0.9, 0.9))), rnd(0.8, 1.4), rnd(0.55, 0.8));
+    T.heat = T.cool = 0; if (T.U) T.U.uHeat.value = 0; return; }
   // a can: it jumps off, spinning (and again, wherever it is, every time it's hit)
   T.state = "fly"; T.v.copy(rd).multiplyScalar(rnd(2.6, 4.2)).add(_t1.set(rnd(-0.6, 0.6), rnd(2.2, 3.4), rnd(-0.6, 0.6))); T.w.set(rnd(-16, 16), rnd(-10, 10), rnd(-16, 16));
   Sound.clip(siegePick("tin", 3), at, 0.95, 0, 0.2, rnd(0.95, 1.1), 4); for (let i = 0; i < 6; i++) emit(TGT.sparks, at, _t2.set(rnd(-1.5, 1.5), rnd(0, 2), rnd(-1.5, 1.5)), rnd(0.12, 0.3));
+}
+// v56: the laser on a bottle (12k laserBeam), as at the range (12u rangeHeat): the glass heats where the beam is and glows; held on it a
+// moment, it slumps into a glowing lump that cools where it stands. (A bullet still shatters it, whole or melted.)
+function bottleLase(T, at, dt) {
+  T.lasedT = TGT.t; if (T.state !== "stand") return; T.heat += dt;
+  if (T.heat >= 0.22) { T.state = "melt"; T.melt = 0; T.heat = 0; Sound.sizzle(at, 0.5); }
+}
+function updateBottles(dt) {
+  TGT.t += dt;
+  for (const T of TGT.items) { if (T.kind !== "bottle" || !T.U) continue; const U = T.U;
+    if (T.state === "stand") { if (TGT.t - T.lasedT > 0.06 && T.heat > 0) T.heat = Math.max(0, T.heat - dt * 0.5); U.uHeat.value = Math.min(1, T.heat / 0.22) * 0.85; } // (the beam's moved off it: it cools)
+    else if (T.state === "melt") { T.melt += dt; const t = T.melt, e = smoothstep(0.15, 1.3, t); U.uHeat.value = 1 - 0.6 * smoothstep(1.3, 4, t); T.mesh.scale.set(1 + 0.6 * e, 1 - 0.74 * e, 1 + 0.6 * e);
+      if (Math.random() < dt * 5 * (1 - e * 0.6)) puff(T.mesh.position.clone().add(_t1.set(0, 0.12 * (1 - e) + 0.04, 0)), 2, 0.1, 0.06, 0.8, 0.35, 0xd8d0c8);
+      if (t >= 4) { T.state = "melted"; T.cool = 1; } } // (a lump of glass, still warm)
+    else if (T.state === "melted") { if (T.cool > 0) T.cool = Math.max(0, T.cool - dt); U.uHeat.value = Math.min(1, T.cool / 2.5); }
+    else U.uHeat.value = 0; }
 }
 function updateCans(dt) {
   for (const T of TGT.items) { if (T.kind !== "can" || T.state !== "fly") continue; const m = T.mesh;
@@ -221,7 +239,7 @@ function envShot(env, rd, laser) { // (laser: the beam, 12k, which scorches and 
 }
 function updateTargets(dt) {
   if (!TGT.grp) return;
-  updateCans(dt); updateDebris(dt); updatePoints(TGT.sparks, dt, true, 0.8); updatePoints(TGT.water, dt, false, 0.3); updatePoints(TGT.dirt, dt, false, 0.6);
+  updateCans(dt); updateBottles(dt); updateDebris(dt); updatePoints(TGT.sparks, dt, true, 0.8); updatePoints(TGT.water, dt, false, 0.3); updatePoints(TGT.dirt, dt, false, 0.6);
   for (let i = TGT.spouts.length - 1; i >= 0; i--) { const s = TGT.spouts[i]; s.t += dt; const k = 1 - s.t / s.life; if (k <= 0) { TGT.spouts.splice(i, 1); continue; }
     s.acc += dt * 130 * k; while (s.acc >= 1) { s.acc -= 1; emit(TGT.water, s.p, _t3.copy(s.n).multiplyScalar(rnd(1.7, 2.5) * (0.35 + 0.65 * k)).add(_t2.set(rnd(-0.06, 0.06), rnd(-0.04, 0.1), rnd(-0.06, 0.06))), 1.2, rnd(0.75, 1)); } }
 }

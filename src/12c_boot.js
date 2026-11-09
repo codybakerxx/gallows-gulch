@@ -129,6 +129,7 @@ async function boot() {
   Sound.preloadClips(SIEGE_CLIPS);
   for (let i = 0; i < 3; i++) { await nextFrame(); tick(performance.now()); }
   $("loading").hidden = true; openMenu(); shot("wide", 4);
+  loadGLB(ASSETS + "Revolver.glb").then(prepRevolver).catch(e => console.warn("detailed revolver unavailable", e)); // (v56: your revolver, 12v: the simple one stands in till it's in)
   loadGLB(ASSETS + "ARC09.glb").then(prepLaser).catch(e => console.warn("laser gun unavailable", e)); // (the shootout's laser, 12k: fetched once the game's up)
   last = performance.now(); requestAnimationFrame(loop);
 }
@@ -155,7 +156,7 @@ function tick(now) {
   updateWind(dt); updateCrowd(dt, STATE.mood); updatePanic(dt); setTrapOpen(dt, STATE.trap); updateRopeState(T, dt); updateLanterns(dt);
   if (MAN.hang && MAN.hang.caught && MAN.hang.t - MAN.hang.tCatch > 2.5 && Math.random() < dt * 0.3) Sound.ropeCreak(GAL.anchor, 0.35); // the odd creak once he hangs still
   updateHorse(dt); updateHerd(dt); updateBirds(dt); updateCrows(dt); updateTargets(dt); updateMeat(dt); updateAsh(dt); updateBreak(dt); updateWeed(dt); updateDust(rdt, T); updateTumbleweeds(dt); updateWindmill(dt); updatePuffs(dt); updateFlag(dt); updateSmoke(dt);
-  updateSiege(rdt, dt); updateAmmo(rdt); updateArms(rdt); updateRange(rdt); updateDrawBtn(); updateScopeBtn(); updateLaser(rdt, dt); updateGunProp(rdt); updateArmed(rdt, dt); updateBell(rdt, dt); updateChase(rdt, dt); updateCamera(rdt, T, dt); siegeLate(rdt); laserLate(rdt); chaseLate(rdt); armedLate(rdt); freeApply(rdt); endPanel(); updateSky(T, R.camera); Sound.setListener(R.camera); updateBubble(rdt); updatePlay(rdt);
+  updateSiege(rdt, dt); updateAmmo(rdt); updateArms(rdt); updateRange(rdt); updateDrawBtn(); updateScopeBtn(); updateLaser(rdt, dt); updateGunProp(rdt); updateArmed(rdt, dt); updateBell(rdt, dt); updateChase(rdt, dt); updateCamera(rdt, T, dt); siegeLate(rdt); laserLate(rdt); chaseLate(rdt); armedLate(rdt); updateRevolver(rdt); freeApply(rdt); endPanel(); updateSky(T, R.camera); Sound.setListener(R.camera); updateBubble(rdt); updatePlay(rdt);
   renderFrame(T);
   if (perf.steps < 7 && $("menu").hidden && $("gfx").value === "auto" && !window.GULCH_PAUSE) { perf.n++; perf.acc += rdt;
     if (perf.n === 150) { const avg = perf.acc / perf.n; perf.n = 0; perf.acc = 0; if (avg > 1 / 27) perfStep(); } }

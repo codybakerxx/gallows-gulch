@@ -181,6 +181,10 @@ MODEL_ABOUT = {
     "Stork.glb": "The vultures circling over the gulch (re-coloured in code; flapping by its morph targets).",
     "ARC09.glb": "The ARC-09 laser gun on the crate at your middle cover in the town shootout, and in your hand once you take it up "
                  "(the repository owner's model, packed by tools/pack_arc09.py; its meshes merged into one in code).",
+    "Revolver.glb": "Your revolver: in your hand, on the barrel by the gallows, on the laser's crate when you have the laser, and the "
+                    "gunsmith's Colt (the repository owner's model, packed by tools/pack_revolver.py: the parts that never move merged into one "
+                    "mesh, a primitive for each material; the hammer, trigger and cylinder at their pivots, moved in code at each shot). Its texture "
+                    "UVs are stored with an offset and scale in each primitive's extras, which the game applies (12v prepRevolver).",
 }
 TEX_ABOUT = {
     "Map-COL.jpg": "Skin colour map for the head scan",

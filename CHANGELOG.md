@@ -2,6 +2,29 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v56
+- **The way to the gunsmith's range is easier to find.** A board now hangs on a post out over the street in front of
+  the gunsmith's, **SHOOTING RANGE · OUT BACK** with an arrow, and while the door is glimmering a band of light runs
+  along the board's paint and stars wink at its ends. The door used to be the only sign, and it faces across the
+  street, so it was easy to miss. The board can be seen from down the street, and a tap on it takes you to the range
+  like the door does. The door's own glow is a little brighter and can be seen from more of the street. Until you've
+  been to the range once (remembered on the device), a small star twinkles every few seconds at the edge of the picture
+  on the side where the door is, while the door is off the screen.
+- **Bottles melt in the town too.** In the shootout, a bottle held in the laser's beam glows orange where it's struck,
+  then slumps into a glowing lump of glass and cools, just as the gunsmith's bottles do at his range (it used to shatter
+  as if shot). A bullet still shatters it, whole or melted; they're all set back up for the next shootout. Cans in the
+  beam still jump.
+- **Your revolver is the detailed one.** The repository owner's single-action revolver model (made with Claude in
+  another chat) replaces the simple blocky one everywhere it's shown: on the barrel by the gallows (still gleaming to be
+  picked up), in your hand, on the laser's crate, and as the gunsmith's Colt. Nickel frame, blued cylinder with six
+  rounds, brass trigger guard and backstrap, ebony grips with the star, case-hardened hammer. In your hand the hammer is
+  back and the gun is tilted a little in the wrist, so you see some of its side (it still points straight down the
+  sight); at each shot the hammer falls and is thumbed back
+  and the cylinder turns a sixth. It's fetched once the game is up (about 5 MB), the simple one standing in until it
+  arrives. The townsfolk's and the riders' guns stay simple.
+- The laser gun's lighting is as it was modelled: the way its packed meshes were placed bent its surface normals, so
+  some faces caught the light wrongly.
+
 ## v55
 - **No more fast-forward with a gun in hand.** A tap while the round is held up (the host answering a guess) hurries
   him along at six times speed. Holding a gun, at the range and on the way there hold the round up too, so a second

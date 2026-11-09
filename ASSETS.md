@@ -12,6 +12,7 @@ glTF 2.0 binary. The build writes each one to `dist/models/<name>.glb.txt` as ba
 | `ARC09.glb` | 2.02 MB | 10 (10) | 66,987 | 86,552 | – | – | – | 512×512 jpeg, 1024×1024 jpeg, 1024×1024 jpeg, 1024×1024 jpeg |
 | `Horse.glb` | 177.5 KB | 1 (1) | 796 | 984 | – | 15 | 1 | – |
 | `LeePerrySmith.glb` | 395.5 KB | 1 (1) | 9,279 | 17,684 | – | – | – | – |
+| `Revolver.glb` | 3.82 MB | 4 (11) | 122,462 | 161,814 | – | – | – | 512×512 jpeg, 1024×1024 jpeg, 512×512 jpeg, 512×512 jpeg, 512×512 jpeg, 512×512 jpeg, 512×512 jpeg, 512×512 jpeg, 1024×512 jpeg, 1024×512 jpeg, 1024×512 jpeg, 1024×512 jpeg, 1024×512 jpeg, 1024×512 jpeg, 512×512 jpeg, 512×512 jpeg |
 | `Stork.glb` | 75.1 KB | 1 (1) | 358 | 542 | – | 13 | 1 | – |
 | `Xbot.glb` | 2.79 MB | 2 (2) | 28,374 | 49,112 | 67 joints | – | 7 | – |
 
@@ -27,6 +28,9 @@ Mesh extent (model units, before node transforms): 61.1 × 182 × 322. 1 nodes, 
 
 **`LeePerrySmith.glb`** — The scanned head every face is made from: skinned onto the body, given eyes, hair and hats in code, with the three textures below.
 Mesh extent (model units, before node transforms): 8.55 × 7.95 × 5.18. 3 nodes, 1 material.
+
+**`Revolver.glb`** — Your revolver: in your hand, on the barrel by the gallows, on the laser's crate when you have the laser, and the gunsmith's Colt (the repository owner's model, packed by tools/pack_revolver.py: the parts that never move merged into one mesh, a primitive for each material; the hammer, trigger and cylinder at their pivots, moved in code at each shot). Its texture UVs are stored with an offset and scale in each primitive's extras, which the game applies (12v prepRevolver).
+Mesh extent (model units, quantized positions through their nodes' scale and offset): 0.33 × 0.15 × 0.0476. 8 nodes, 10 materials.
 
 **`Stork.glb`** — The vultures circling over the gulch (re-coloured in code; flapping by its morph targets).
 Mesh extent (model units, before node transforms): 197 × 29.9 × 174. 1 nodes, 1 material.
@@ -230,4 +234,4 @@ Most of the world has no asset file: it is generated when the page loads, sized 
 
 ## Totals
 
-128 asset files: models 5.45 MB, textures 349.9 KB, audio 4.57 MB (together 10.36 MB).
+129 asset files: models 9.26 MB, textures 349.9 KB, audio 4.57 MB (together 14.17 MB).
