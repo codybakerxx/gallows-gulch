@@ -63,6 +63,11 @@ async def main():
             if act == "eval":
                 r = await pg.evaluate(arg)
                 print("eval ->", str(r)[:4000])
+            elif act == "dump":  # (an eval whose whole result goes to a file: [js, path]; for results past the 4000 characters printed)
+                r = await pg.evaluate(arg[0])
+                with open(arg[1], "w") as out:
+                    out.write(str(r))
+                print("dump ->", arg[1], len(str(r)))
             elif act == "wait":
                 await pg.wait_for_timeout(int(arg))
             elif act == "waitfor":

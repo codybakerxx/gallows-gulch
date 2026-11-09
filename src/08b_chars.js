@@ -669,7 +669,7 @@ function buildCharacter(spec) {
   const hm = new THREE.SkinnedMesh(spec.lod ? CHAR.headLowSkin : CHAR.headSkin, sm); hm.bind(ch.skeleton, new THREE.Matrix4()); root.add(hm); ch.headMesh = hm;
   const head = new THREE.Group(); ch.head = head; attachBone(ch, "Head", head, V3(0, 1.578, -0.008), 0.0555); // scan-space anchor for eyes, hats, hoods
   if (spec.lod) { joints.visible = false; sm.normalMap = null; }
-  if (spec.shells && R.tier !== "low") root.add(ch.shells = hairShells(ch.skeleton, sm.userData.U, R.tier === "high" ? 14 : 9));
+  if (spec.shells && R.tier !== "low") root.add(ch.shells = hairShells(ch.skeleton, sm.userData.U, R.tier === "ultra" ? 18 : R.tier === "high" ? 14 : 9));
   ch.eyes = [];
   for (const E of EYE.list) { const em = eyeMat(spec.iris || 0x4a3624, sm.userData.U); const e = new THREE.Mesh(spec.lod ? CHAR.eyeGeoLow : CHAR.eyeGeo, em);
     e.position.copy(E.c); e.scale.setScalar(EYE.R); em.userData.U.eyeLocal.value = e.matrix; head.add(e); ch.eyes.push(e);

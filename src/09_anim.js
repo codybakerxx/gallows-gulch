@@ -6,6 +6,7 @@ function floorAt(x, z) {
   const P = LAY.plat, S = LAY.stairs;
   if (x > P.x - P.w / 2 && x < P.x + P.w / 2 && z > P.z - P.d / 2 && z < P.z + P.d / 2 + 0.03) return P.h + 0.028;
   if (Math.abs(x - S.x) < S.w / 2 + 0.08 && z <= S.zBot + 0.1 && z >= S.zTop - 0.05) return P.h * clamp((S.zBot - z) / (S.zBot - S.zTop), 0, 1) + 0.026;
+  for (const Rf of WORLD.roofs) { const l = roofLocal(Rf, x, z); if (onRoof(Rf, l)) return roofTop(Rf, l[0]); } // (the roofs the shootout's gunmen stand on)
   return groundHeight(x, z);
 }
 // tread k: 0 = ground at the foot of the stairs, 1..12 = treads, 13 = platform deck
@@ -55,6 +56,28 @@ function buildCurl() {
   return C;
 }
 const _gq = new THREE.Quaternion();
+// v53: a hand turned so what it holds lies in its grip: the line across its knuckles (pinky to index, through the curled fingers) along s,
+// the palm facing n (both world directions). The hand's own axes for these, and where its grip point sits from the wrist, are fixed by the
+// rig: taken once. handQ gives the hand's world turn for (s, n); handWrist the wrist that puts its grip on G turned so (the arm's target);
+// alignHand turns it so after the arm is solved, before the fingers close (w blends it in)
+const _ah = { a: new THREE.Vector3(), b: new THREE.Vector3(), c: new THREE.Vector3(), d: new THREE.Vector3(), m1: new THREE.Matrix4(), m2: new THREE.Matrix4(), q: new THREE.Quaternion(), q2: new THREE.Quaternion() };
+function handAxes(actor) {
+  if (actor._hax) return actor._hax; const ax = {}; // (per actor: their sizes differ)
+  for (const side of ["L", "R"]) { const S = side === "L" ? "Left" : "Right", B = actor.ch.bones, h = B[S + "Hand"]; h.updateWorldMatrix(true, false); const qi = h.getWorldQuaternion(new THREE.Quaternion()).invert(), w = h.getWorldPosition(new THREE.Vector3());
+    const s = new THREE.Vector3().subVectors(B[S + "HandIndex1"].getWorldPosition(_ah.a), B[S + "HandPinky1"].getWorldPosition(_ah.b)).normalize(), n = palmNormal(actor, side, new THREE.Vector3());
+    n.addScaledVector(s, -n.dot(s)).normalize(); const off = gripPt(actor, side, new THREE.Vector3()).sub(w);
+    ax[side] = { s: s.applyQuaternion(qi), n: n.applyQuaternion(qi), off: off.applyQuaternion(qi) }; }
+  return (actor._hax = ax);
+}
+function handQ(actor, side, s, n, out = new THREE.Quaternion()) { const L = handAxes(actor)[side], A = _ah;
+  const ts = A.a.copy(s).normalize(), tn = A.b.copy(n).addScaledVector(ts, -n.dot(ts)); if (tn.lengthSq() < 1e-8) tn.set(ts.y, -ts.x, ts.z).cross(ts); tn.normalize();
+  A.m2.makeBasis(ts, tn, A.c.crossVectors(ts, tn)); A.m1.makeBasis(L.s, L.n, A.d.crossVectors(L.s, L.n)); return out.setFromRotationMatrix(A.m2.multiply(A.m1.transpose())); }
+function handWrist(actor, side, G, s, n, out = new THREE.Vector3()) { return out.copy(handAxes(actor)[side].off).applyQuaternion(handQ(actor, side, s, n, _ah.q2)).negate().add(G); }
+function alignHand(actor, side, s, n, w = 1) {
+  const hand = actor.ch.bones[(side === "L" ? "Left" : "Right") + "Hand"], A = _ah; handQ(actor, side, s, n, A.q);
+  if (w < 1) A.q.slerp(hand.getWorldQuaternion(A.q2), 1 - w).normalize();
+  hand.parent.getWorldQuaternion(A.q2).invert(); hand.quaternion.copy(A.q2.multiply(A.q)); hand.updateMatrixWorld(true);
+}
 // rotate a bone in world space: yaw about up, pitch about actor's left axis, roll about actor's forward axis
 function turnBone(bone, actor, yaw, pitch, roll) {
   const q = actor.root.quaternion;
@@ -85,7 +108,9 @@ class Actor {
   gesture(k) { const a = this.act[k]; a.reset(); a.setEffectiveWeight(1); a.play(); }
   setSad(w) { const a = this.act.sad; if (w > 0 && !a.isRunning()) a.play(); a.setEffectiveWeight(w); }
   update(dt) {
+    if (this.frozen) return; // (burning to ash: caught as he stood, 12o)
     this.time += dt;
+    if (this.ride) { this.path = null; this.yawTarget = this.yaw; } // in the saddle (the getaway, 12g): the horse carries him; whoever seats him sets pos and yaw
     if (this.path) {
       const tg = this.path[0], dx = tg.x - this.pos.x, dz = tg.z - this.pos.z, d = Math.hypot(dx, dz);
       if (d < 0.04) { this.path.shift(); if (!this.path.length) { this.path = null; const r = this.arrive; this.arrive = null; if (r) r(); } }
@@ -95,7 +120,7 @@ class Actor {
     this.walkW = clamp(this.walkW + (moving ? dt * 3.2 : -dt * 3.6), 0, 1);
     let dy = ((this.yawTarget - this.yaw + Math.PI) % TAU + TAU) % TAU - Math.PI; this.yaw += dy * Math.min(1, dt * 5.5);
     if (this.stair) this.updateStair(dt);
-    else if (!this.hang) { const fy = floorAt(this.pos.x, this.pos.z); this.pos.y += (fy - this.pos.y) * Math.min(1, dt * 14); }
+    else if (!this.hang && !this.ride) { const fy = floorAt(this.pos.x, this.pos.z) + (this.yOff || 0); this.pos.y += (fy - this.pos.y) * Math.min(1, dt * 14); } // (yOff: a man ducking down behind a false front)
     this.root.position.copy(this.pos); this.root.rotation.set(0, this.yaw, 0);
     const run = this.act.run; if (run) this.runK += (clamp((this.speed - 1.9) / 0.9, 0, 1) - this.runK) * Math.min(1, dt * 6);
     const rk = run ? this.runK : 0;
@@ -120,8 +145,8 @@ class Actor {
     const lw = this.lookPt ? 1 : 0; this.lookW += (lw - this.lookW) * Math.min(1, dt * 4);
     if (this.lookW > 0.02 && this.lookPt) {
       B.Head.getWorldPosition(A5); const d = A4.copy(this.lookPt || A5).sub(A5).applyQuaternion(Q4.copy(this.root.quaternion).invert());
-      const yaw = clamp(Math.atan2(d.x, d.z), -1.15, 1.15) * this.lookW, pitch = clamp(Math.atan2(d.y, Math.hypot(d.x, d.z)), -0.6, 0.5) * this.lookW;
-      turnBone(B.Neck, this, yaw * 0.4, -pitch * 0.4, 0); turnBone(B.Head, this, yaw * 0.6, -pitch * 0.6, 0);
+      const yl = this.lookYaw ?? 1.15, yaw = clamp(Math.atan2(d.x, d.z), -yl, yl) * this.lookW, pitch = clamp(Math.atan2(d.y, Math.hypot(d.x, d.z)), this.lookDown ?? -0.6, this.lookUp ?? 0.5) * this.lookW; // (lookDown, lookYaw: v53, the noose on his neck holds his chin up)
+      const nk = this.lookNeck ?? 0.4; turnBone(B.Neck, this, yaw * nk, -pitch * nk, 0); turnBone(B.Head, this, yaw * (1 - nk), -pitch * (1 - nk), 0);
     }
     if (this.talkAmt > 0.01) { const k = this.talkAmt, t = this.time; // speech: small emphasis nods riding the syllables
       turnBone(B.Neck, this, 0, -0.025 * k, 0); turnBone(B.Head, this, Math.sin(t * 2.1) * 0.025 * k, -(0.045 * k + Math.sin(t * 6.3) * 0.015 * k), Math.sin(t * 1.6) * 0.02 * k); }
@@ -137,7 +162,8 @@ class Actor {
       const k = this.ik[side]; k.w += (k.goal - k.w) * Math.min(1, dt * (k.fast ? 14 : 7));
       if (k.w > 0.01) { const S = side === "R" ? "Right" : "Left", sh = B[S + "Arm"].getWorldPosition(new THREE.Vector3());
         const pole = k.pole || sh.clone().add(A1.set(side === "R" ? -0.5 : 0.5, -1, -0.4).applyQuaternion(this.root.quaternion));
-        twoBoneIK(B[S + "Arm"], B[S + "ForeArm"], B[S + "Hand"], k.t, pole, k.w); }
+        twoBoneIK(B[S + "Arm"], B[S + "ForeArm"], B[S + "Hand"], k.t, pole, k.w);
+        const hd = this.hold && this.hold[side]; if (hd && hd.s && hd.n && (hd.w ?? 1) > 0) alignHand(this, side, hd.s, hd.n, Math.min(k.w, hd.w ?? 1)); } // (v53: what it holds lies in its grip)
     }
     if (this.grip) this.applyGrip(dt);
     this.updateTie();
