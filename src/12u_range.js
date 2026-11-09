@@ -1,9 +1,11 @@
-// ---------- THE GUNSMITH'S RANGE (v54, v55) ----------
-// An Easter egg: the gunsmith's front door (the ASSAY OFFICE with GUNSMITH hanging under its sign, up the street on the right) glimmers
-// while you're free in a round, and (v56) a board on a post in front of it, SHOOTING RANGE · OUT BACK, catches the light and twinkles: it
-// hangs out over the street, so it's seen from up and down it when the door, facing across, isn't. A tap on either takes you there. Till
-// you've been, a twinkle at the edge of the picture now and then shows which way to look (rangeEdgeGlint). Tap it and you're out the back, at the firing line of his range, his weapons on a rack beside you (12t:
-// nine of them) and his laser on the bench.
+// ---------- THE GUNSMITH'S RANGE (v54, v55, v56) ----------
+// An Easter egg: a door glimmers while you're free in a round, and a tap on it takes you out the back, to the firing line of the
+// gunsmith's range, his weapons on a rack beside you (12t: nine of them, and his laser).
+//   - The door (v56): in the side wall of the GENERAL STORE, the one with GUNS & AMMUNITION painted on it that looks back up the street
+//     toward the gallows, between its two side windows. It was the assay office's front door (GUNSMITH hangs under its sign), facing
+//     across the street and easy to miss; then a board out over the street in front of it, too far off. The range is still out the back
+//     of the assay office (RANGE.home): you go in by the fade, and come back out at the store. Till you've been once, a twinkle at the
+//     edge of the picture now and then shows which way to look (rangeEdgeGlint).
 //   - Practice (v55): nothing moves. Six bottles on a fence, five tin targets hanging from a rail, six bandit cut-outs standing, a jackrabbit
 //     cut-out, three clays standing on the trap house's roof and a gong at the back. Shot, a bottle or a clay breaks, a tin target flips up
 //     on its hanger, a cut-out falls back flat, and they stay that way till Reset stands them all up again. (In v54 they all moved, all
@@ -37,70 +39,39 @@ const rangeTime = (t, dp = 1) => `${Math.floor(t / 60)}:${(t % 60).toFixed(dp).p
 // warm light leaking round its edges and under it (pulsing), a soft halo on it, sparks running along the frame and one on the knob; the
 // sparks and the halo keep a size on the screen however far off you are, so it can be picked out from down the street
 function buildRangeDoor() {
-  const B = (WORLD.blds || []).find(b => b.name === "ASSAY OFFICE"); if (!B) return; const zx = V3(B.s, 0, B.c), xx = V3(B.c, 0, -B.s);
-  const at = (lx, ly, lz) => V3(B.x, B.y0, B.z).addScaledVector(xx, lx).addScaledVector(zx, lz).add(V3(0, ly, 0)), fz = B.d / 2 + 0.27;
-  RANGE.door = { B, c: at(0, 1.35, fz), knob: at(0.4, 1.3, fz + 0.02), out: zx, frame: [[-0.58, 0.28], [-0.58, 2.47], [0.58, 2.47], [0.58, 0.28]].map(([x, y]) => at(x, y, fz)) };
+  const H = RANGE.home = (WORLD.blds || []).find(b => b.name === "ASSAY OFFICE"), B = (WORLD.blds || []).find(b => b.name === "GENERAL STORE"); if (!B || !H) return;
+  const zx = V3(B.s, 0, B.c), xx = V3(B.c, 0, -B.s), side = xx.x * -STREET.a[0] + xx.z * -STREET.a[1] > 0 ? 1 : -1; // (the side wall that looks up the street: 07c buildingAd)
+  const out = xx.clone().multiplyScalar(side), wx = side * (B.w / 2 + 0.03), dz = -0.18; // (between the side windows, at -0.22 d and 0.18 d: 06 building)
+  const at = (u, y, o = 0) => V3(B.x, B.y0, B.z).addScaledVector(xx, wx).addScaledVector(out, o).addScaledVector(zx, dz + u).add(V3(0, y, 0)); // (u along the wall, o out from it)
+  const D = RANGE.door = { B, c: at(0, 1.35, 0.06), knob: at(-side * 0.4, 1.3, 0.1), out, frame: [[-0.58, 0.28], [-0.58, 2.47], [0.58, 2.47], [0.58, 0.28]].map(([u, y]) => at(u, y, 0.08)) };
+  // the door itself, as the fronts' (06 building): planks, a frame, a knob, a step up to it
+  const dg = new THREE.Group(); dg.position.copy(at(0, 0)); dg.rotation.y = Math.atan2(out.x, out.z); R.scene.add(dg); // (its +z out of the wall, +x along it)
+  const slab = new THREE.Mesh(boxUV(new THREE.BoxGeometry(1.05, 2.15, 0.06), 1.05, 2.15, 0.06), MAT.door); slab.position.set(0, 1.33, 0.02); dg.add(slab);
+  for (const e of [-1, 1]) { const j = woodBox(0.09, 2.3, 0.08, MAT.woodDark); j.position.set(e * 0.575, 1.35, 0.04); dg.add(j); }
+  const lintel = woodBox(1.25, 0.1, 0.09, MAT.woodDark); lintel.position.set(0, 2.47, 0.04); dg.add(lintel);
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 8), MAT.iron); knob.position.set(-side * 0.4, 1.3, 0.08); dg.add(knob);
+  const gy = groundVis(D.c.x, D.c.z) - B.y0, step = woodBox(1.2, Math.max(0.08, 0.27 - gy), 0.42, MAT.wood); step.position.set(0, (0.27 + gy) / 2, 0.24); dg.add(step);
+  dg.traverse(o => { if (o.isMesh) o.castShadow = o.receiveShadow = true; });
   const tex = starTex(), spr = (c, s, map = tex) => { const m = new THREE.Sprite(new THREE.SpriteMaterial({ fog: false, map, color: new THREE.Color(c, c * 0.9, c * 0.62), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 }));
     m.renderOrder = 5; m.scale.setScalar(s); m.visible = false; R.scene.add(m); return m; };
   RANGE.doorSparks = Array.from({ length: 7 }, () => ({ s: spr(1.5, 0.4), t: 1, wait: Math.random(), u: 0, life: 0.5 })); RANGE.doorGlow = spr(1.2, 0.6);
-  RANGE.doorHalo = spr(0.9, 2.6, rangeGlowTex()); RANGE.doorHalo.position.copy(RANGE.door.c);
+  RANGE.doorHalo = spr(0.9, 2.6, rangeGlowTex()); RANGE.doorHalo.position.copy(D.c);
   // the light at the edges: strips of a soft band (bright down the middle, nothing at its sides) round the door, a little in front of it
   const c = document.createElement("canvas"); c.width = 64; c.height = 4; const g = c.getContext("2d"), gr = g.createLinearGradient(0, 0, 64, 0);
   gr.addColorStop(0, "rgba(255,200,120,0)"); gr.addColorStop(0.5, "rgba(255,214,150,1)"); gr.addColorStop(1, "rgba(255,200,120,0)"); g.fillStyle = gr; g.fillRect(0, 0, 64, 4);
   const band = canvasTex(c), mat = new THREE.MeshBasicMaterial({ map: band, color: 0xffc27a, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, side: THREE.DoubleSide });
   const edge = new THREE.Group(), strip = (w, h, x, y, rz) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); m.position.set(x, y, 0); m.rotation.z = rz; m.renderOrder = 4; edge.add(m); };
   strip(0.16, 2.22, -0.57, 1.36, 0); strip(0.16, 2.22, 0.57, 1.36, 0); strip(0.16, 1.26, 0, 2.47, Math.PI / 2); strip(0.22, 1.2, 0, 0.27, Math.PI / 2);
-  edge.position.copy(at(0, 0, fz - 0.01)); edge.rotation.y = Math.atan2(B.s, B.c); edge.visible = false; R.scene.add(edge); RANGE.doorEdge = edge; RANGE.doorMat = mat;
-  rangeSignBuild(B, at, spr);
+  edge.position.copy(at(0, 0, 0.1)); edge.rotation.y = dg.rotation.y; edge.visible = false; R.scene.add(edge); RANGE.doorEdge = edge; RANGE.doorMat = mat;
   rangeLoadBest(); try { RANGE.seen = localStorage.getItem("gg_range_seen") === "1"; } catch (e) { RANGE.seen = false; } // (been there: no more twinkles at the edge)
-}
-// v56: a board, SHOOTING RANGE · OUT BACK, out over the street in front of the gunsmith's. Painted both sides, its
-// arrow to the back of the building whichever side you read it from; a band of light runs along the paint and a star winks at its ends
-// while the door's open to you
-function rangeSignTex(arrow) {
-  const c = document.createElement("canvas"); c.width = 512; c.height = 152; const g = c.getContext("2d"); g.fillStyle = "#d9c79e"; g.fillRect(0, 0, 512, 152);
-  for (let i = 0; i < 300; i++) { g.fillStyle = `rgba(60,30,10,${Math.random() * 0.09})`; g.fillRect(Math.random() * 512, Math.random() * 152, Math.random() * 30, 1 + Math.random() * 2); }
-  g.fillStyle = "#7a1e12"; g.textAlign = "center"; g.textBaseline = "middle"; g.font = '64px "Sancreek","Rye",Georgia,serif'; g.fillText("SHOOTING RANGE", 256, 58, 470);
-  g.fillStyle = "#3a2214"; g.font = '700 34px "Zilla Slab",Georgia,serif'; g.fillText("OUT BACK", 256 - arrow * 52, 118, 300);
-  const x0 = 256 + arrow * 60, x1 = 256 + arrow * 178; g.fillRect(Math.min(x0, x1 - arrow * 20), 113, Math.abs(x1 - x0) - 20, 10); g.beginPath(); g.moveTo(x1, 118); g.lineTo(x1 - arrow * 30, 99); g.lineTo(x1 - arrow * 30, 137); g.closePath(); g.fill(); // (the arrow drawn: no font needed)
-  g.strokeStyle = "rgba(0,0,0,.4)"; g.lineWidth = 9; g.strokeRect(0, 0, 512, 152); return canvasTex(c);
-}
-function rangeSignBuild(B, at, spr) {
-  // on a post at the edge of the boardwalk, at the end of the porch nearer the gallows, hung from an arm out over the street: past the line
-  // of the porch posts, so it's seen from down the street and not lost behind them (in the building's frame: x along the front, z out)
-  const U = RANGE.boardU = { k: { value: 0 }, pos: { value: -1 } }, P = new THREE.Group(), G = new THREE.Group(), lz = B.d / 2 + B.pd + 0.12;
-  const ends = [B.w / 2 - 0.5, -B.w / 2 + 0.5], lx = ends.reduce((a, b) => at(a, 0, lz).distanceTo(GAL.anchor) < at(b, 0, lz).distanceTo(GAL.anchor) ? a : b);
-  P.position.copy(at(lx, 0, lz)); P.position.y = groundVis(P.position.x, P.position.z); P.rotation.y = Math.atan2(B.s, B.c); R.scene.add(P);
-  const post = woodBox(0.11, 2.75, 0.11, MAT.wood); post.position.y = 1.37; P.add(post); const arm = woodBox(0.07, 0.07, 1.25, MAT.wood); arm.position.set(0, 2.62, 0.56); P.add(arm);
-  const brace = woodBox(0.05, 0.05, 0.5, MAT.wood); brace.position.set(0, 2.42, 0.16); brace.rotation.x = Math.PI / 4; P.add(brace); P.traverse(o => { if (o.isMesh) o.castShadow = o.receiveShadow = true; });
-  G.position.set(0, 2.24, 0.62); P.add(G);
-  const shine = m => { m.onBeforeCompile = q => { q.uniforms.sgK = U.k; q.uniforms.sgPos = U.pos;
-      q.fragmentShader = q.fragmentShader.replace("#include <common>", "#include <common>\nuniform float sgK, sgPos;").replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
-  { float b = exp(-pow((vUv.x - sgPos) / 0.07, 2.0)); totalEmissiveRadiance += (diffuseColor.rgb * (b * 2.4 + 0.22) + vec3(0.06, 0.04, 0.02) * b) * sgK; }`); };
-    m.customProgramCacheKey = () => "rangeSign"; return m; };
-  const board = woodBox(0.05, 0.4, 1.06, MAT.woodDark); board.castShadow = board.receiveShadow = true; G.add(board);
-  for (const side of [1, -1]) { const f = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.367), shine(new THREE.MeshStandardMaterial({ map: rangeSignTex(side), roughness: 0.85 })));
-    f.position.x = side * 0.0265; f.rotation.y = side * Math.PI / 2; G.add(f); }
-  for (const z of [-0.42, 0.42]) { const ch = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.2, 4), MAT.iron); ch.position.set(0, 0.29, z); G.add(ch); } // (on short chains from the arm)
-  P.updateMatrixWorld(true); RANGE.board = { G, c: G.localToWorld(V3(0, 0, 0)), ends: [G.localToWorld(V3(0, 0.14, -0.5)), G.localToWorld(V3(0, -0.14, 0.5)), G.localToWorld(V3(0, 0.15, 0.45))], sx: G.localToWorld(V3(1, 0, 0)).sub(G.position).normalize() };
-  RANGE.boardStars = Array.from({ length: 3 }, () => ({ s: spr(1.4, 0.3), t: 1, wait: Math.random() * 1.5, life: 0.6 })); RANGE.boardHalo = spr(0.7, 1.6, rangeGlowTex()); RANGE.boardHalo.position.copy(RANGE.board.c);
-}
-function updateRangeSign(rdt, on, px) {
-  const S = RANGE.board; if (!S) return; const U = RANGE.boardU, h = RANGE.boardHalo; U.k.value += ((on ? 1 : 0) - U.k.value) * Math.min(1, rdt * 3); h.visible = on;
-  if (!on && U.k.value < 0.01) { for (const p of RANGE.boardStars) { p.t = 1; p.s.visible = false; } return; }
-  const T0 = RANGE.doorT, side = Math.abs(_rg2.copy(R.camera.position).sub(S.c).normalize().dot(S.sx)); // (it's read edge-on from across the street: light for those looking along it)
-  U.pos.value = -0.3 + ((T0 * 0.55) % 1.9); h.material.opacity = (0.17 + 0.11 * Math.sin(T0 * 2.2)) * side; h.scale.setScalar(Math.max(1.6, px * 60));
-  for (const p of RANGE.boardStars) {
-    if (p.t < 1) { p.t = Math.min(1, p.t + rdt / p.life); const e = Math.sin(p.t * Math.PI); p.s.material.opacity = e * U.k.value * (0.3 + 0.7 * side); p.s.scale.setScalar(Math.max(0.18 + 0.4 * e, px * 32 * e)); p.s.material.rotation += rdt * 2; if (p.t >= 1) { p.s.visible = false; p.wait = rnd(0.15, 0.9); } } // (big enough to catch the eye from down the street)
-    else if ((p.wait -= rdt) <= 0 && on) { p.t = 0; p.life = rnd(0.5, 0.8); p.s.position.copy(S.ends[Math.floor(Math.random() * S.ends.length)]); p.s.visible = true; } }
 }
 const doorLive = () => !!RANGE.door && !RANGE.on && STATE.played && !STATE.locked && !STATE.trap && (!STATE.over || STATE.lastWon) && !SIEGE.on && !CHASE.on && !ARMED.on && $("menu").hidden;
 function updateRangeDoor(rdt) {
   const D = RANGE.door; if (!D) return; const on = doorLive(), T0 = RANGE.doorT += rdt, g = RANGE.doorGlow, h = RANGE.doorHalo; g.visible = h.visible = RANGE.doorEdge.visible = on;
   const pxAt = p => p.distanceTo(R.camera.position) * Math.tan(THREE.MathUtils.degToRad(R.camera.fov) / 2) / 420; // (a pixel on a phone's screen, in metres there)
-  if (RANGE.board) updateRangeSign(rdt, on, pxAt(RANGE.board.c)); rangeEdgeGlint(rdt, on); if (!on) { for (const p of RANGE.doorSparks) p.s.visible = false; return; }
+  rangeEdgeGlint(rdt, on); if (!on) { for (const p of RANGE.doorSparks) p.s.visible = false; return; }
   const cam = R.camera.position, px = pxAt(D.c);
-  const facing = clamp(_rg1.copy(cam).sub(D.c).normalize().dot(D.out) * 1.6, 0, 1), beat = 0.5 + 0.5 * Math.sin(T0 * 2.2); // (the light's for the street side: v56 more of it, a little brighter)
+  const facing = clamp(_rg1.copy(cam).sub(D.c).normalize().dot(D.out) * 1.6, 0, 1), beat = 0.5 + 0.5 * Math.sin(T0 * 2.2); // (the light's for the side it opens on: v56 more of it, a little brighter)
   RANGE.doorMat.opacity = (0.45 + 0.45 * beat) * facing; h.material.opacity = (0.18 + 0.18 * beat) * facing; h.scale.setScalar(Math.max(2.6, px * 70));
   g.position.copy(D.knob); g.material.opacity = (0.6 + 0.4 * Math.sin(T0 * 3.1)) * facing; g.scale.setScalar(Math.max(0.45 + 0.2 * Math.sin(T0 * 2.3), px * 20)); g.material.rotation += rdt * 0.8;
   // light running round the frame: sparks that travel a little way along it and go out
@@ -109,14 +80,14 @@ function updateRangeDoor(rdt) {
       p.s.position.lerpVectors(F[i], F[i + 1], f); p.s.material.opacity = e * facing; p.s.scale.setScalar(Math.max(0.22 + 0.45 * e, px * 26 * e)); p.s.material.rotation += rdt * 2.5; if (p.t >= 1) { p.s.visible = false; p.wait = rnd(0.1, 0.6); } }
     else if ((p.wait -= rdt) <= 0) { p.t = 0; p.u = Math.random(); p.life = rnd(0.45, 0.8); p.s.visible = true; } }
 }
-// v56: till you've found the range (kept on the device), now and then a twinkle at the edge of the picture, on the side the gunsmith's
-// door is, while neither it nor the board is on the screen (and it's not behind you): something catching the light, over there
+// v56: till you've found the range (kept on the device), now and then a twinkle at the edge of the picture, on the side the door is,
+// while it's not on the screen (and not behind you): something catching the light, over there
 function rangeEdgeGlint(rdt, on) {
   let el = RANGE.glintEl; if (!el) { el = RANGE.glintEl = document.createElement("div"); el.id = "rangeGlint"; el.setAttribute("aria-hidden", "true"); el.style.backgroundImage = `url(${starTex().image.toDataURL()})`; document.body.appendChild(el); }
   RANGE.glintT = on && !RANGE.seen ? (RANGE.glintT || 0) + rdt : 0; const t = RANGE.glintT - 4, cyc = t % 5.5, e = t > 0 && cyc < 1.1 ? Math.sin(cyc / 1.1 * Math.PI) : 0; // (after a few seconds free in the round, a twinkle every five and a half)
   const onScr = c => { const p = _rg2.copy(c).project(R.camera); return p.z < 1 && Math.abs(p.x) < 0.98 && Math.abs(p.y) < 0.98; };
   let show = false;
-  if (e > 0 && !onScr(RANGE.door.c) && !(RANGE.board && onScr(RANGE.board.c))) { const v = _rg1.copy(RANGE.door.c).applyMatrix4(R.camera.matrixWorldInverse);
+  if (e > 0 && !onScr(RANGE.door.c)) { const v = _rg1.copy(RANGE.door.c).applyMatrix4(R.camera.matrixWorldInverse);
     if (v.z < 0 && Math.abs(Math.atan2(v.x, -v.z)) < 1.4) { const p = _rg2.copy(RANGE.door.c).project(R.camera), k = 1 / Math.max(Math.abs(p.x), Math.abs(p.y), 1e-3), r = $("scene").getBoundingClientRect(), m = 24;
       const x = r.left + m + (p.x * k * 0.5 + 0.5) * (r.width - 2 * m), y = r.top + m + (-p.y * k * 0.5 + 0.5) * (r.height - 2 * m);
       el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -50%) rotate(${(cyc * 50).toFixed(1)}deg) scale(${(0.55 + 0.6 * e).toFixed(3)})`; el.style.opacity = (e * 0.9).toFixed(3); show = true; } }
@@ -127,7 +98,7 @@ function doorTap(e) {
   const near = (c, size) => { const p = _rg1.copy(c).project(R.camera); if (p.z > 1 || Math.abs(p.x) > 1.05 || Math.abs(p.y) > 1.05) return false;
     const sx = r.left + (p.x * 0.5 + 0.5) * r.width, sy = r.top + (-p.y * 0.5 + 0.5) * r.height, rad = Math.max(40, size / Math.max(1, c.distanceTo(R.camera.position)) / Math.tan(THREE.MathUtils.degToRad(R.camera.fov) / 2) * r.height * 0.5);
     return Math.hypot(e.clientX - sx, e.clientY - sy) <= rad; };
-  if (!near(RANGE.door.c, 1.2) && !(RANGE.board && near(RANGE.board.c, 0.7))) return false; // (the door, or v56 the board under GUNSMITH)
+  if (!near(RANGE.door.c, 1.2)) return false;
   if (e.cancelable) e.preventDefault(); rangeEnter(); return true;
 }
 
@@ -154,15 +125,15 @@ float rgN(vec3 p) { vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
   return m;
 }
 function buildRange() {
-  if (RANGE.built || !RANGE.door) return; RANGE.built = true; const B = RANGE.door.B, zx = V3(B.s, 0, B.c);
+  if (RANGE.built || !RANGE.home) return; RANGE.built = true; const B = RANGE.home, zx = V3(B.s, 0, B.c); // (out the back of the assay office, where it's always been)
   RANGE.f.copy(zx).negate(); RANGE.r.set(-RANGE.f.z, 0, RANGE.f.x); RANGE.o.set(B.x, 0, B.z).addScaledVector(zx, -B.d / 2 - 2.6); // (r: to your right as you face downrange)
   const G = RANGE.grp = new THREE.Group(); R.scene.add(G); const yaw = rangeYaw();
   // ry turns a thing from facing downrange (its +z away from you)
   const put = (o, u, v, y = 0, ry = 0) => { rangePt(u, v, y, o.position); o.rotation.order = "YXZ"; o.rotation.y = yaw + ry; G.add(o); o.traverse(q => { if (q.isMesh) { q.castShadow = true; q.receiveShadow = true; } }); return o; };
   const box = (w, h, d, mat) => woodBox(w, h, d, mat), dyn = o => { o.traverse(q => { if (q.isMesh) q.userData.dyn = true; }); return o; };
-  // the firing line: a bench (the laser on it), the rack of his weapons, posts and rope down both sides; the backstop: an earth bank behind a plank wall
+  // the firing line: a bench, the rack of his weapons, posts and rope down both sides; the backstop: an earth bank behind a plank wall
   { const b = new THREE.Group(); const top = box(1.8, 0.07, 0.62, MAT.woodDark); top.position.y = 0.9; b.add(top); for (const x of [-0.8, 0.8]) for (const z of [-0.25, 0.25]) { const l = box(0.08, 0.9, 0.08, MAT.wood); l.position.set(x, 0.45, z); b.add(l); }
-    if (LASER.geo) { const lz = new THREE.Mesh(LASER.geo, LASER.mat); lz.position.set(0.45, 0.962, 0.05); lz.rotation.set(0, -2.3, Math.PI / 2, "YXZ"); b.add(lz); } put(b, 0.6, 0.85); }
+    put(b, 0.6, 0.85); } // (v56: bare: his laser's on the rack's list, not lying here)
   { const rack = new THREE.Group(), bd = box(2.4, 1.3, 0.06, MAT.woodDark); bd.position.y = 1.35; rack.add(bd); for (const x of [-1.1, 1.1]) { const l = box(0.1, 2.1, 0.1, MAT.wood); l.position.set(x, 1.05, 0); rack.add(l); }
     ARMS_LIST.forEach((id, i) => { const m = armsBuild(id); const col = i % 3, row = (i / 3) | 0, s = id === "bow" ? 0.5 : id === "gatling" ? 0.7 : ["winchester", "sharps", "shotgun"].includes(id) ? 0.85 : 1.6;
       m.scale.setScalar(s); m.position.set(-0.75 + col * 0.75, 1.82 - row * 0.4, 0.07); m.rotation.set(0, -Math.PI / 2, id === "bow" ? Math.PI / 2 : 0); if (id === "bow") m.position.x += 0.25; rack.add(m); });
@@ -409,7 +380,7 @@ function rangePick(id) { const A = ARMED; armsEquip(id); armsLoad(A); if (ARMS_D
   const t = $("siegeTip"); t.textContent = `${ARMS_DEF[id].name}: ${ARMS_DEF[id].blurb}`; t.hidden = false; A.tip = 3.5; A.tipNext = id === "sharps" ? "Scope to look down it" : id === "laser" ? "It stays here when you leave" : null; }
 function rangeReset() { rangeModeStop(); $("rangeRes").hidden = true; rangeStand(null); $("meta").textContent = rangeMeta(); }
 // out the way you came: back in the round where you were, at the barrel, the weapon in your hand (a fresh load from the gunsmith). Not the
-// laser: it's his, and stays on his bench; you take the last of his guns you had, or the Colt
+// laser: it's his, and stays at the range; you take the last of his guns you had, or the Colt
 function rangeLeave() {
   if (!RANGE.on || RANGE.going) return; RANGE.going = true; armsBeamOff();
   rangeFade(0.35, () => { const A = ARMED, laser = ARMS.cur === "laser"; RANGE.going = false; ARMS.own = laser ? RANGE.lastGun || ARMS.own || "colt" : ARMS.cur || ARMS.own || "colt"; rangeOff(); STATE.ts = 1;

@@ -131,10 +131,9 @@ button:focus-visible,input:focus-visible+span,input[type=range]:focus-visible{ou
 #armBack{position:absolute;left:max(14px,env(safe-area-inset-left,0px));top:64px;z-index:6;min-height:40px;padding:0 16px;border-radius:999px;
   border:1px solid rgba(216,162,70,.6);background:rgba(23,16,12,.78);color:var(--parch);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:12px}
 /* v54: the gunsmith's range (12u) and his weapons (12t): the bar along the top, the picker, the score, the scope, Draw */
-#rangeBar{position:absolute;left:max(14px,env(safe-area-inset-left,0px));right:max(14px,env(safe-area-inset-right,0px));top:64px;z-index:6;display:flex;gap:6px;justify-content:flex-end;pointer-events:none}
+#rangeBar{position:absolute;left:max(14px,env(safe-area-inset-left,0px));right:max(14px,env(safe-area-inset-right,0px));top:64px;z-index:6;display:flex;gap:6px;justify-content:space-between;max-width:560px;margin:0 auto;pointer-events:none} /* (v56: the four spread evenly across, the same gap between each) */
 #rangeBar button,#drawBtn,#scopeBtn,.rpLeave{min-height:40px;padding:0 12px;border-radius:999px;border:1px solid rgba(216,162,70,.6);background:rgba(23,16,12,.78);color:var(--parch);
   font-weight:700;letter-spacing:.07em;text-transform:uppercase;font-size:11.5px;white-space:nowrap;pointer-events:auto}
-#rangeBar #rangeLeave{margin-right:auto}
 @media (max-width:370px){#rangeBar button{padding:0 9px;letter-spacing:.04em}}
 #drawBtn{position:absolute;left:max(14px,env(safe-area-inset-left,0px));top:64px;z-index:6;border-color:rgba(216,162,70,.9);animation:drawGlow 2.4s ease-in-out infinite}
 @keyframes drawGlow{50%{box-shadow:0 0 14px 2px rgba(216,162,70,.45)}}

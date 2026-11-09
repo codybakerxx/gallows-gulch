@@ -885,7 +885,7 @@ function siegeLate(rdt) {
   vm.visible = show && (S.cv < 0.85 || !!S.vm.lift) && !ARMS.zoom;
   if (vm.visible) { const k = S.vm.kick, down = Ease.inOut(clamp(S.cv, 0, 1)) * 0.22, rl = S.reloadT > 0 ? Math.sin(clamp(1 - S.reloadT / armsReload(), 0, 1) * Math.PI) : 0; // (rl: down and tipped up for the reload)
     vm.scale.setScalar(0.8); vm.position.copy(toW(Math.min(0.2, hw(0.62) * 0.46), -hh(0.62) * 0.56 - down - rl * 0.12 + k * 0.02, -0.62 + k * 0.04));
-    vm.lookAt(toW(0, 0, -25)); vm.rotateX(-k * 0.5 + rl * 0.9); revCant(vm); // the barrel lines up on the crosshair (v56: tilted a little in the wrist: 12v revCant)
+    vm.lookAt(toW(0, 0, -25)); vm.rotateX(-k * 0.5 + rl * 0.9); // the barrel lines up on the crosshair
     if (ARMS.cur) { armsVmPose(vm, cam, k, down, rl); if (ARMS.zoom && S.cv > 0.5) armsScope(false); } // (v54: the gunsmith's weapon, held its own way)
     if (S.vm.lift) { const T0 = S.vm.lift; T0.t = Math.min(1, T0.t + rdt / 0.35); const e = Ease.inOut(T0.t); // (v39: up off the crate into your hand, the laser left there)
       vm.position.lerpVectors(T0.p, _s2.copy(vm.position), e); vm.quaternion.slerpQuaternions(T0.q, _s4q.copy(vm.quaternion), e); vm.scale.setScalar(lerp(1, 0.8, e)); if (T0.t >= 1) S.vm.lift = null; } }

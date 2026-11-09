@@ -1,7 +1,7 @@
 # builds test/s149.json: v56.
-#   - the gunsmith's: a board on a post out over the street, SHOOTING RANGE · OUT BACK, twinkling while the door does; till you've been
-#     to the range, a twinkle now and then at the edge of the picture on the side the door is (none when it's in view); a tap on the board
-#     takes you there
+#   - the door to the range: in the side wall of the GUNS & AMMUNITION store that looks up the street, glimmering in a round (the range
+#     still out the back of the assay office); till you've been there, a twinkle now and then at the edge of the picture on the side the
+#     door is (none when it's in view); a tap on it takes you there
 #   - the detailed revolver (assets/models/Revolver.glb, 12v) arrives and takes the simple one's place: on the barrel by the gallows (the
 #     gleam on every part of it), in your hand, as the gunsmith's Colt, on the crate where the laser lay
 #   - in your hand: its muzzle where the shot's flash comes from (on the bore line the laser's beam is matched to), the hammer back; a shot:
@@ -34,19 +34,24 @@ E("""(async () => { await __go(200, () => !STATE.locked); STATE.hintShown = true
   return __check('the detailed revolver on the barrel by the gallows, gleaming (its shadow cast by the simple one)', !!REV.proto && !!m && __tris(m) > 100000 && gleam === n && mats.size >= 10 && GUNPROP.shine.k.value > 0.5 && !!g.userData.rev && lit === 0 && stand >= 3,
     { loaded: !!REV.proto, tris: m && __tris(m), parts: n, materials: mats.size, gleaming: gleam, castShadow: lit, shadowStandIn: stand, k: +GUNPROP.shine.k.value.toFixed(2) }); })()""")
 shot("a_on_barrel")
-# ---- the gunsmith's: a board out over the street, twinkling; till you've been, a twinkle at the edge of the picture, the side it's on ----
-E("""(async () => { const D = RANGE.door, Bd = RANGE.board, B = D.B, ctr = new THREE.Vector3(B.x, Bd.c.y, B.z), out = Bd.c.clone().sub(ctr).dot(D.out); let stars = 0;
-  await __go(90, () => { stars = Math.max(stars, RANGE.boardStars.filter(p => p.s.visible).length); return false; });
-  return __check("the gunsmith's board, SHOOTING RANGE, out over the street past the porch, twinkling in a round", doorLive() && !!Bd && out > B.d / 2 + B.pd && RANGE.boardU.k.value > 0.9 && RANGE.boardHalo.visible && stars >= 1,
-    { live: doorLive(), out: +out.toFixed(2), porch: B.d / 2 + B.pd, k: +RANGE.boardU.k.value.toFixed(2), stars }); })()""")
-E("""(async () => { RANGE.glintT = 0; const scr = c => { const p = c.clone().project(R.camera); return p.z < 1 && Math.abs(p.x) < 0.98 && Math.abs(p.y) < 0.98; }, inView = scr(RANGE.door.c) || scr(RANGE.board.c); let seen = null;
+# ---- the door to the range: in the side wall of the GUNS & AMMUNITION store, glimmering; till you've been, a twinkle at the edge of the
+# picture, the side it's on; a tap on it takes you there ----
+E("""(async () => { const D = RANGE.door, B = D.B, a = new THREE.Vector3(-STREET.a[0], 0, -STREET.a[1]), ctr = new THREE.Vector3(B.x, D.c.y, B.z), fromMid = D.c.clone().sub(ctr), xx = new THREE.Vector3(B.c, 0, -B.s);
+  let sp = 0; await __go(90, () => { sp = Math.max(sp, RANGE.doorSparks.filter(p => p.s.visible).length); return false; }); const side = Math.abs(fromMid.dot(xx)), facing = D.out.dot(a);
+  const H = RANGE.home, back = H ? RANGE.o.distanceTo(new THREE.Vector3(H.x, 0, H.z)) : -1; /* (the range itself: still out the back of the assay office, built when you go) */
+  return __check("the door to the range: in the side wall of the GUNS & AMMUNITION store that looks up the street, glimmering in a round", doorLive() && B.name === 'GENERAL STORE' && Math.abs(side - B.w / 2) < 0.2 && facing > 0.9 && RANGE.doorEdge.visible && RANGE.doorHalo.visible && sp >= 1 && H && H.name === 'ASSAY OFFICE',
+    { live: doorLive(), store: B.name, fromWall: +(side - B.w / 2).toFixed(2), facingUpStreet: +facing.toFixed(2), sparks: sp, rangeBehind: H && H.name }); })()""")
+E("""(async () => { RANGE.glintT = 0; const scr = c => { const p = c.clone().project(R.camera); return p.z < 1 && Math.abs(p.x) < 0.98 && Math.abs(p.y) < 0.98; }, inView = scr(RANGE.door.c); let seen = null;
   await __go(420, () => { if (RANGE.glintOn && !seen) { const r = $('rangeGlint').getBoundingClientRect(), sc = $('scene').getBoundingClientRect(); seen = { x: Math.round(r.left + r.width / 2 - sc.left), w: Math.round(sc.width), op: +$('rangeGlint').style.opacity }; } return false; });
-  const p = RANGE.door.c.clone().project(R.camera), side = Math.sign(p.x), ok = inView ? !seen : !!seen && (side > 0 ? seen.x > seen.w * 0.8 : seen.x < seen.w * 0.2);
+  const p = RANGE.door.c.clone().project(R.camera), sd = Math.sign(p.x), ok = inView ? !seen : !!seen && (sd > 0 ? seen.x > seen.w * 0.8 : seen.x < seen.w * 0.2);
   return __check('till you have been there, a twinkle now and then at the edge of the picture on the side the door is (none with it in view)', ok, { inView, ndcX: +p.x.toFixed(2), seen }); })()""")
-E("""(async () => { const Bd = RANGE.board, c = R.camera.position, d = Bd.c.clone().sub(c), f = new THREE.Vector3(0, 0, -1).applyQuaternion(R.camera.quaternion); /* (turned to it, as a drag would) */
+E("""(async () => { const D = RANGE.door, c = R.camera.position, d = D.c.clone().sub(c), f = new THREE.Vector3(0, 0, -1).applyQuaternion(R.camera.quaternion); /* (turned to it, as a drag would) */
   LOOK.yaw += Math.atan2(d.x, d.z) - Math.atan2(f.x, f.z); LOOK.pitch += Math.atan2(d.y, Math.hypot(d.x, d.z)) - Math.asin(f.y); await __go(4); const real = window.rangeEnter; let went = 0; window.rangeEnter = () => { went++; };
-  const off = doorTap(Object.assign(__tapAt(Bd.c), { clientX: __tapAt(Bd.c).clientX + 170 })), on = doorTap(__tapAt(Bd.c)); window.rangeEnter = real; await __go(40, () => { lookHome(); return false; }); LOOK.yaw = LOOK.pitch = 0;
-  return __check('a tap on the board takes you to the range', on && !off && went === 1, { on, off, went }); })()""")
+  const p = D.c.clone().project(R.camera), shown = Math.abs(p.x) < 0.9 && Math.abs(p.y) < 0.9;
+  const off = doorTap(Object.assign(__tapAt(D.c), { clientX: __tapAt(D.c).clientX + 170 })), on = doorTap(__tapAt(D.c)); window.rangeEnter = real; window.__tap = { shown, on, off, went }; return JSON.stringify(window.__tap); })()""")
+shot("a2_door")
+E("""(async () => { await __go(40, () => { lookHome(); return false; }); LOOK.yaw = LOOK.pitch = 0; const T = window.__tap;
+  return __check('turned to it, the door is in view, and a tap on it takes you to the range (not a tap beside it)', T.shown && T.on && !T.off && T.went === 1, T); })()""")
 # ---- in your hand ----
 E("""(async () => { armedStart(); await __go(90, () => !ARMED.lift); await __go(20); const vm = SIEGE.vm.gun, h = vm.children[0], m = __rev(vm);
   const P = REV.proto; P.updateMatrixWorld(true); const box = new THREE.Box3().setFromObject(P), v = V3(), sum = V3(); let n = 0; // (the front of the barrel, in the gun's own frame: the muzzle and the bore)

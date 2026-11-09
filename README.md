@@ -53,20 +53,19 @@ up, to cut him down and fight for the round.
 
 **The revolver on the barrel.** Somewhere off to the side, out of the view the round ends on, a revolver lies on a
 barrel, catching the light: a single-action with a nickel frame, a blued cylinder with six rounds in it, brass trigger
-guard and backstrap, ebony grips and a case-hardened hammer. In your hand the hammer's back, tilted a little in the wrist
-so you see some of its side; at each shot it falls and is thumbed back, the cylinder turning a sixth. Look round, find it and tap it, any time the host isn't busy (from the very start of a
+guard and backstrap, ebony grips and a case-hardened hammer. In your hand the hammer's back and it's held upright,
+pointing straight down the sight; at each shot it falls and is thumbed back, the cylinder turning a sixth. Look round, find it and tap it, any time the host isn't busy (from the very start of a
 round, or after you've saved him), and it's in your hand: the letters give way to an Aim and Fire pad and a **Put it
 back** button. Drag to look round and shoot what you like; the crowd jumps at every shot. Shoot one of the townsfolk
 or the executioner and the town turns on you: the shootout, right there, as the stranger, with no hangman to finish
 and no rope to cut. The host can be shot too: he goes down where he stood, and the town draws on you just the same.
 The condemned man isn't a target. Put it back and the round goes on.
 
-**The gunsmith's range.** Up the street on the right, the door of the assay office (GUNSMITH hangs under its sign)
-glimmers while you're free in a round: warm light round its edges, sparks running along the frame. In front of it a
-board on a post hangs out over the street, **SHOOTING RANGE · OUT BACK**, light running along its paint and stars
-winking at its ends, so it can be seen from down the street. Until you've been there once, a little star twinkles now
-and then at the edge of the picture on the side where the door is, while it's off the screen. Tap the door or the
-board and you're out the back at his range, his weapons on a rack beside you. Pick one of ten (**Weapons** along the top brings the
+**The gunsmith's range.** The store on the right nearest the gallows has **GUNS & AMMUNITION** painted on its side
+wall, the one that looks back up the street toward you. Under it, between the side windows, a door glimmers while
+you're free in a round: warm light round its edges, sparks running along the frame. Until you've been there once, a
+little star twinkles now and then at the edge of the picture on the side where the door is, while it's off the screen.
+Tap the door and you're out the back at the gunsmith's range, his weapons on a rack beside you. Pick one of ten (**Weapons** along the top brings the
 picker back):
 - **Colt Peacemaker** (6 rounds), **Derringer** (2, wide), **Winchester '73** (14), **Coach Gun** (2 shells of nine
   pellets each), **Sharps Buffalo Rifle** (1 heavy round, a **Scope** button to look down its brass scope);
@@ -317,7 +316,7 @@ src/                     the game: one HTML shell and 37 JavaScript modules, loa
   12r_ammo.js            the spare rounds by the board: the box, its glimmer, taking it in the shootout
   12s_solid.js           the buildings, the church and the water tower as solids: nothing walks, rolls or falls through them
   12t_arms.js            the gunsmith's nine weapons: their models, how each is held and fires, what it hits, Holster and Draw's load
-  12u_range.js           the gunsmith's door and board, his range out the back (practice, Reset, the challenges, the laser's burning), going and coming back
+  12u_range.js           the door to it (the store's side door), the gunsmith's range out the back (practice, Reset, the challenges, the laser's burning), going and coming back
   12v_revolver.js        your revolver: the detailed model put in its place (hand, barrel, crate, the Colt), the hammer and cylinder at each shot
   12g_chase.js           the getaway: posse, horses, the turn, the fight, the results
   12h_runner.js          the getaway's run: three lanes, swipes and jumps, the course, the desert along the trail

@@ -137,7 +137,7 @@ function armedLate(rdt) {
   const A = ARMED, S = SIEGE; if (!A.on) return; const vm = S.vm.gun, cam = R.camera; cam.updateMatrixWorld();
   const th = Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2), hw = d => d * th * cam.aspect, hh = d => d * th, toW = (x, y, z) => _ar1.set(x, y, z).applyMatrix4(cam.matrixWorld);
   const k = S.vm.kick, rl = A.reloadT > 0 ? Math.sin(clamp(1 - A.reloadT / armsReload(), 0, 1) * Math.PI) : 0;
-  vm.scale.setScalar(0.8); vm.position.copy(toW(Math.min(0.2, hw(0.62) * 0.46), -hh(0.62) * 0.56 - rl * 0.12 + k * 0.02, -0.62 + k * 0.04)); vm.lookAt(toW(0, 0, -25)); vm.rotateX(-k * 0.5 + rl * 0.9); revCant(vm);
+  vm.scale.setScalar(0.8); vm.position.copy(toW(Math.min(0.2, hw(0.62) * 0.46), -hh(0.62) * 0.56 - rl * 0.12 + k * 0.02, -0.62 + k * 0.04)); vm.lookAt(toW(0, 0, -25)); vm.rotateX(-k * 0.5 + rl * 0.9);
   if (A.back && A.back.holster) ARMS.drawT = 1 - A.back.t; // (v54: a weapon from the range holstered: down out of view as you go)
   if (ARMS.cur) armsVmPose(vm, cam, k, 0, rl); // (v54: held its own way)
   if (A.back && A.back.holster) { if (A.back.t >= 1) { armedDone(); return; } }

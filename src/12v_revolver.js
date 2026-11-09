@@ -41,13 +41,8 @@ function revFill(h) {
   if (REV.proto && !o.hand) { const s = revolver(false), inv = REV.noColour || (REV.noColour = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }));
     s.traverse(q => { if (q.isMesh) { q.material = inv; q.castShadow = true; q.userData.dyn = true; } }); h.add(s); }
 }
-// in your hand, tilted a little in the wrist (rolled about the barrel), so you see some of its side (the cylinder, the frame, the grips)
-// and not only the back of the hammer. Still pointing straight down the sight: turned out, it pointed off to the right, which is how the
-// Derringer was held till v55 and wasn't wanted. On a phone held upright it's near the middle and seen from behind, so it's tilted more;
-// on a wide screen it's off to the side already
-REV.pose = [0.4, 0.25]; // (the roll: upright phone; wide screen)
-function revCant(vm) { if (!REV.proto || (ARMS.cur && ARMS.cur !== "colt")) return; const b = 0.035 * vm.scale.y; // (about the bore, so its line, the flash's and the laser's, doesn't move)
-  vm.translateY(b); vm.rotateZ(lerp(REV.pose[0], REV.pose[1], clamp((R.camera.aspect - 0.6) / 1.2, 0, 1))); vm.translateY(-b); }
+// in your hand it's held as the simple one was: upright, square on, pointing straight down the sight (12d siegeLate, 12q armedLate).
+// (It was tilted in the wrist for a while in v56, to show more of its side; that read as held wrong.)
 // a shot from the revolver in your hand (12d siegeFire, 12q armedFire, 12g chase, 12t the Colt): the hammer falls, and is thumbed back
 function revShot() { REV.fireT = 0; REV.turn++; }
 function updateRevolver(rdt) {

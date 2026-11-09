@@ -110,7 +110,6 @@ function armsVmPose(vm, cam, k, down, rl) {
   vm.scale.setScalar(sc * (d.view || 1)); const x = sx >= 0 ? Math.min(cap, hw(z) * sx) : Math.max(cap, hw(z) * sx);
   vm.position.copy(toW(x, hh(z) * sy - dip + k * 0.02, -z + k * (H === "rifle" ? 0.05 : 0.04)));
   vm.lookAt(toW(0, 0, -25)); vm.rotateX(-k * (H === "rifle" ? 0.25 : H === "gatling" ? 0.08 : 0.5) + rl * 0.9);
-  if (ARMS.cur === "colt") revCant(vm); // (v56: the detailed revolver, tilted a little to show its side: 12v)
   if (H === "bow") vm.rotateZ(-0.2); else if (H === "knife") { vm.rotateX(-0.95); vm.rotateZ(0.5); } else if (H === "stick") { vm.rotateX(-0.9); vm.rotateZ(-0.4); }
   if (m && m.userData.spin) m.userData.spin.rotation.z = ARMS.spin;
   if (m && m.userData.string) { const a = m.userData.arrow; a.visible = armsReady(); armsBowString(m, a.visible ? 1 - Math.max(0, ARMS.snap) : 0); }

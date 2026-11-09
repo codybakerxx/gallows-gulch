@@ -1,6 +1,7 @@
 # builds test/s148.json: the gunsmith's range (v54; v55: still targets, Reset, challenges against the clock, the laser).
-#   - the gunsmith's door glimmers in a round (light round its edges, sparks along the frame, the knob), not with a gun in hand
-#   - a tap on it: out the back at his range (ten weapons to pick from, the bar along the top, the lanes cleared of scrub, the host's
+#   - the door glimmers in a round (v56: the side door of the GUNS & AMMUNITION store; light round its edges, sparks along the frame,
+#     the knob), not with a gun in hand
+#   - a tap on it: out the back at his range (ten weapons to pick from, the bar along the top (v56: evenly spaced; the bench bare), the lanes cleared of scrub, the host's
 #     bubble kept off the screen); a second tap while the view fades doesn't set the town running at six times speed (v55)
 #   - practice: nothing moves; what's shot stays down (a bottle broken, a tin target flipped up, a cut-out flat) till Reset stands it all up
 #   - each weapon on its targets (the Colt, the Derringer, the Winchester's head shot, the Sharps through its scope, the coach gun's pellets
@@ -39,13 +40,15 @@ E("""window.__sleep = ms => new Promise(r => setTimeout(r, ms));
 E("""(async () => { await __go(200, () => !STATE.locked); STATE.hintShown = true; await __go(90); const D = RANGE.door, sp = RANGE.doorSparks.filter(p => p.s.visible).length;
   const near = D.c.distanceTo(new THREE.Vector3(D.B.x, D.B.y0 + 1.35, D.B.z)), edge = RANGE.doorEdge.visible, glow = RANGE.doorGlow.visible && RANGE.doorHalo.visible;
   armedStart(); await __go(60, () => !ARMED.lift); const offArmed = !doorLive() && !RANGE.doorEdge.visible; armedPutBack(); await __go(80, () => !ARMED.on);
-  return __check("the gunsmith's door glimmers in a round; not with a gun in hand", doorLive() && sp >= 1 && edge && glow && offArmed && near < D.B.d / 2 + 0.6, { sp, edge, glow, offArmed, near: +near.toFixed(2) }); })()""")
+  return __check("the door in the GUNS & AMMUNITION store's side wall glimmers in a round; not with a gun in hand", doorLive() && sp >= 1 && edge && glow && offArmed && near < D.B.d / 2 + 0.6, { sp, edge, glow, offArmed, near: +near.toFixed(2) }); })()""")
 E("""(async () => { const D = RANGE.door; const at = D.c.clone().addScaledVector(D.out, 9).add(new THREE.Vector3(0, 0.3, 0)), fn = () => { CAM.pos.copy(at); CAM.tgt.copy(D.c); CAM.fov = 50; CAM.name = 'look'; CAM.to = null; CAM.follow = null; };
   for (let i = 0; i < 4; i++) { fn(); await __go(1, () => { fn(); return false; }); } const miss = doorTap(Object.assign(__tapAt(D.c), { clientX: __tapAt(D.c).clientX + 160 })); const ok = doorTap(__tapAt(D.c));
   const r = $('scene').getBoundingClientRect(), ev = { clientX: r.left + 150, clientY: r.top + 250, pointerId: 9, button: 0, cancelable: false, type: 'pointerdown', preventDefault() {} }; lookDown(ev, 'town'); lookUp(Object.assign({}, ev, { type: 'pointerup' })); const tsTap = STATE.ts; /* (a second tap while it fades) */
   await __sleep(1000); await __go(60); const tiles = document.querySelectorAll('#rangePick .rpw').length, scrub = (RANGE.cleared || []).reduce((n, [o, l]) => n + l.length, 0);
-  return __check("a tap on it: out the back at his range, ten weapons to pick from; a second tap as it fades doesn't speed the town up", !miss && ok && RANGE.on && ARMED.on && ARMED.range && RANGE.grp.visible && __vis('rangePick') && tiles === 10 && __vis('rangeBar') && !__vis('armBack') && __vis('pad') && STATE.locked && $('bubble').hidden && tsTap === 1 && STATE.ts === 1,
-    { miss, ok, tiles, scrub, tsTap, ts: STATE.ts, cur: ARMS.cur }); })()""")
+  const bb = [...$('rangeBar').children].map(b => b.getBoundingClientRect()), gaps = bb.slice(1).map((b, i) => Math.round(b.left - bb[i].right)), even = bb.length === 4 && Math.max(...gaps) - Math.min(...gaps) <= 1 && bb.every(b => b.width > 30); /* (v56: the four spread evenly) */
+  let benchGun = 0; RANGE.grp.traverse(o => { if (o.isMesh && LASER.geo && o.geometry === LASER.geo) benchGun++; }); /* (v56: nothing lying on the bench) */
+  return __check("a tap on it: out the back at his range, ten weapons to pick from, the four buttons along the top evenly spaced, the bench bare; a second tap as it fades doesn't speed the town up", !miss && ok && RANGE.on && ARMED.on && ARMED.range && RANGE.grp.visible && __vis('rangePick') && tiles === 10 && __vis('rangeBar') && even && benchGun === 0 && !__vis('armBack') && __vis('pad') && STATE.locked && $('bubble').hidden && tsTap === 1 && STATE.ts === 1,
+    { miss, ok, tiles, gaps, benchGun, scrub, tsTap, ts: STATE.ts, cur: ARMS.cur }); })()""")
 steps.append(["wait", 600]); shot("a_picker")
 E("""(async () => { await __pick('colt'); const moved = await __still(180), n = RANGE.tg.length;
   return __check('practice: nothing downrange moves; all 22 standing', moved < 1e-4 && n === 22 && /0 of 22/.test($('meta').textContent) && RANGE.tg.every(g => !g.done && g.m.visible) && !__vis('rangePick'), { moved, n, meta: $('meta').textContent }); })()""")

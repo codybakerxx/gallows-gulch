@@ -2,6 +2,19 @@
 
 The version numbers are the published versions of the game (first published as a claude.ai artifact). Newest first.
 
+## v57
+- **The way to the range is a side door now.** The board out over the street (v56) was too far down the street to
+  notice, so it's gone. Instead there's a new door in the side wall of the store with **GUNS & AMMUNITION** painted on
+  it, the wall that looks back up the street toward the gallows. It sits between the two side windows, under the
+  painted sign, and it glimmers the way the gunsmith's front door used to (light round its edges, sparks along the
+  frame); a tap on it takes you to the range. The assay office's front door is just a door again. The star that
+  twinkles at the edge of the picture until you've been to the range now shows the way to the new door.
+- **No laser lying on the range's bench.** The gunsmith's laser is still on his list of weapons to pick from.
+- **Your revolver is held upright.** v56 tilted it in the wrist to show more of its side; now it's held square, as
+  the Derringer and the laser are, pointing straight down the sight. The gunsmith's Colt too.
+- **The range's four buttons are evenly spaced.** Leave, Weapons, Challenges and Reset are spread across the top
+  with the same gap between each (Leave used to sit alone at the left, the other three bunched at the right).
+
 ## v56
 - **The way to the gunsmith's range is easier to find.** A board now hangs on a post out over the street in front of
   the gunsmith's, **SHOOTING RANGE · OUT BACK** with an arrow, and while the door is glimmering a band of light runs
